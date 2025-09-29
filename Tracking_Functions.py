@@ -2303,7 +2303,7 @@ def jetstream_tracking(
                                     int(MinTimeJS/dT),
                                     dT)
     elif breakup == 'watershed':
-        jet_objects = watershed_2d_overlap(uv200,
+        jet_objects = watershed_3d_overlap(uv200,
                                     js_min_anomaly,
                                     js_min_anomaly * 1.05,
                                     int(3000 * 10**3/Gridspacing), # this setting sets the size of jet objects
@@ -2389,7 +2389,7 @@ def ar_850hpa_tracking(
                                 dT)
     elif breakup == 'watershed':
         min_dist=int((4000 * 10**3)/Gridspacing)
-        MS_objects = watershed_2d_overlap(
+        MS_objects = watershed_3d_overlap(
                 VapTrans,
                 MinMSthreshold,
                 MinMSthreshold*1.05,
@@ -2432,7 +2432,7 @@ def ar_ivt_tracking(IVT,
                                         dT)
             elif breakup == 'watershed':
                 min_dist=int((4000 * 10**3)/Gridspacing)
-                IVT_objects = watershed_2d_overlap(
+                IVT_objects = watershed_3d_overlap(
                         IVT,
                         IVTtrheshold,
                         IVTtrheshold*1.05,
@@ -2602,7 +2602,7 @@ def cy_acy_psl_tracking(
         low_pres_an[low_pres_an < -999999999] = 0
         low_pres_an[low_pres_an > 999999999] = 0
 
-        CY_objects = watershed_2d_overlap(
+        CY_objects = watershed_3d_overlap(
                 low_pres_an * -1,
                 MaxPresAnCY * -1,
                 MaxPresAnCY * -1,
@@ -3159,7 +3159,7 @@ def cloud_tracking(
             mintime = 0,
             connectLon = connectLon,
             extend_size_ratio = 0.10,
-            erosion_disk = erosion_disk
+            # erosion_disk = erosion_disk
             )
 
     print("        make sure that each object has at least one grid cell with more than min_pr threshold of precipitation")
@@ -4194,21 +4194,24 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
                 [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=axis
             )
         
-    mask = data >= object_threshold
+    image = data >= object_threshold
     coords = peak_local_max(data, 
                             min_distance = min_dist,
                             threshold_abs = max_treshold,
-                            labels = mask
+                            labels = image
                            )
     mask = np.zeros(data.shape, dtype=bool)
     mask[tuple(coords.T)] = True
     markers, _ = ndi.label(mask)
+    # print(f"Number of markers found: {np.max(markers)}")
+    # print(f"Binary mask has {np.sum(image)} True pixels")
+    
     conection = np.ones((3, 3, 3))
     watershed_results = watershed(image = np.array(data)*-1,  # watershedding field with maxima transformed to minima
                     markers = markers, # maximum points in 3D matrix
                     connectivity = conection, # connectivity
                     offset = (np.ones((3)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
-                    mask = mask, # binary mask for areas to watershed on
+                    mask = image, # binary mask for areas to watershed on
                     compactness = 0) # high values --> more regular shaped watersheds
 
     if connectLon == 1:
@@ -4220,12 +4223,12 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
         watershed_results = ConnectLon_on_timestep(watershed_results.astype("int"))
 
     ### CONNECT OBJECTS IN 3D BASED ON MAX OVERLAP
-    labels = np.array(watershed_results).astype('int')
-    objects = connect_3d_objects(labels, 
-                                 int(mintime/dT), 
-                                 dT)
-
-    return objects
+    # labels = np.array(watershed_results).astype('int')
+    # objects = connect_3d_objects(labels, 
+    #                              int(mintime/dT), 
+    #                              dT)
+    return watershed_results
+    # return objects
 
 
 # This function performs watershedding on 2D anomaly fields and

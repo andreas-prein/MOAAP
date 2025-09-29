@@ -39,3 +39,10 @@
 
 # debug information files
 *.dwo
+
+__pycache__/
+*.pyc
+
+20210701-04_MOAAP-Input_24h.nc
+moaap_output/
+images/
