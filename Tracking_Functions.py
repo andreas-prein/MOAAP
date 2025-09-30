@@ -4171,46 +4171,47 @@ def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array
                                  dT)
     return objects
 
-def post_process_3d_objects(data, # 3D matrix with labeled objects [np.array]
-                            min_dist, # minimum distance (in grid cells) between maximum points [int]
-                            dT, # time interval in hours [int]
-                            mintime = 24): # minimum time an object has to exist in dT [int]
-    from scipy import ndimage as ndi
-    T, H, W = data.shape
-    new_data = np.zeros_like(data, dtype=int)
-    next_id = 1
+import numpy as np
+from scipy.spatial import cKDTree
 
-    for t in range(T):
-        slice_t = data[t]
-        unique_labels = np.unique(slice_t)
-        unique_labels = unique_labels[unique_labels != 0]  # Exclude background
+def label_peaks_over_time_3d(coords, max_dist=5):
+    """
+    coords: np.ndarray of shape (N_peaks, 3), each row is [t, y, x]
+    max_dist: maximum allowed distance to consider peaks as the same object (in grid units)
+    Returns: labels, np.ndarray of shape (N_peaks,), integer labels for each peak
+    """
+    import numpy as np
+    from scipy.spatial import cKDTree
 
-        for label in unique_labels:
-            mask = (slice_t == label)
+    # Split coords by timestep
+    timesteps = np.unique(coords[:, 0])
+    labels = np.zeros(coords.shape[0], dtype=int)
+    next_label = 1
+    prev_coords = None
+    prev_labels = None
 
-            sub_labels, num_sub_labels = ndi.label(mask) # , structure=np.ones((3,3))
-            print("num_sub_labels:", num_sub_labels)
-            if num_sub_labels == 1:
-                new_data[t][mask] = next_id
-                next_id += 1
-            else:
-                centers = ndi.center_of_mass(mask, sub_labels, range(1, num_sub_labels + 1))
-                # print(centers)
-
-                for i in range(num_sub_labels):
-                    sub_mask = (sub_labels == (i + 1))
-                    split = False
-                    for j in range(i + 1, num_sub_labels):
-                        dist = np.linalg.norm(np.array(centers[i]) - np.array(centers[j]))
-                        if dist < min_dist:
-                            split = True
-                            break
-
-                    new_data[t][sub_mask] = next_id
-                    next_id += 1
-
-    return new_data
-    
+    for t in timesteps:
+        idx_t = np.where(coords[:, 0] == t)[0]
+        coords_t = coords[idx_t][:, 1:3]  # [y, x] only
+        labels_t = np.zeros(coords_t.shape[0], dtype=int)
+        if prev_coords is None or prev_coords.shape[0] == 0:
+            # First timestep: assign new labels
+            labels_t[:] = np.arange(next_label, next_label + coords_t.shape[0])
+            next_label += coords_t.shape[0]
+        else:
+            # Build KDTree for previous peaks
+            tree = cKDTree(prev_coords)
+            for i, peak in enumerate(coords_t):
+                dist, idx = tree.query(peak, distance_upper_bound=max_dist)
+                if dist < max_dist and idx < prev_coords.shape[0]:
+                    labels_t[i] = prev_labels[idx]
+                else:
+                    labels_t[i] = next_label
+                    next_label += 1
+        labels[idx_t] = labels_t
+        prev_coords = coords_t
+        prev_labels = labels_t
+    return labels
 
 def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to create binary object mast [float]
@@ -4240,11 +4241,12 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
     coords_list = []
 
     # find peaks in each time slice and add time as an additional coordinate
-    for t in range(1):
+    for t in range(data.shape[0]):
         coords_t = peak_local_max(data[t], 
                                 min_distance = min_dist,
                                 threshold_abs = max_treshold,
-                                labels = image[t]
+                                labels = image[t],
+                                exclude_border=False
                                )
         coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
         coords_list.append(coords_with_time)
@@ -4261,8 +4263,15 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
     #                        )
     mask = np.zeros(data.shape, dtype=bool)
     mask[tuple(coords.T)] = True
-    markers, _ = ndi.label(mask)
-    print(markers.nonzero())
+    # markers = label_peaks_over_time_3d(coords, max_dist=min_dist)
+    print(f"coords: ",coords)
+    labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
+    # print(f"labels: ",labels)
+    markers = np.zeros(data.shape, dtype=int)
+    markers[tuple(coords.T)] = labels
+    # print(f"Number of markers found: {np.max(markers)}")
+    # markers, _ = ndi.label(mask)
+    # print(markers.nonzero())
     # print(f"Number of markers found: {np.max(markers)}")
     # print(f"Binary mask has {np.sum(image)} True pixels")
 
