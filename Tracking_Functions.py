@@ -4171,6 +4171,47 @@ def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array
                                  dT)
     return objects
 
+def post_process_3d_objects(data, # 3D matrix with labeled objects [np.array]
+                            min_dist, # minimum distance (in grid cells) between maximum points [int]
+                            dT, # time interval in hours [int]
+                            mintime = 24): # minimum time an object has to exist in dT [int]
+    from scipy import ndimage as ndi
+    T, H, W = data.shape
+    new_data = np.zeros_like(data, dtype=int)
+    next_id = 1
+
+    for t in range(T):
+        slice_t = data[t]
+        unique_labels = np.unique(slice_t)
+        unique_labels = unique_labels[unique_labels != 0]  # Exclude background
+
+        for label in unique_labels:
+            mask = (slice_t == label)
+
+            sub_labels, num_sub_labels = ndi.label(mask) # , structure=np.ones((3,3))
+            print("num_sub_labels:", num_sub_labels)
+            if num_sub_labels == 1:
+                new_data[t][mask] = next_id
+                next_id += 1
+            else:
+                centers = ndi.center_of_mass(mask, sub_labels, range(1, num_sub_labels + 1))
+                # print(centers)
+
+                for i in range(num_sub_labels):
+                    sub_mask = (sub_labels == (i + 1))
+                    split = False
+                    for j in range(i + 1, num_sub_labels):
+                        dist = np.linalg.norm(np.array(centers[i]) - np.array(centers[j]))
+                        if dist < min_dist:
+                            split = True
+                            break
+
+                    new_data[t][sub_mask] = next_id
+                    next_id += 1
+
+    return new_data
+    
+
 def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to create binary object mast [float]
                          max_treshold, # value for identifying max. points for spreading [float]
@@ -4195,16 +4236,36 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
             )
         
     image = data >= object_threshold
-    coords = peak_local_max(data, 
-                            min_distance = min_dist,
-                            threshold_abs = max_treshold,
-                            labels = image
-                           )
+    
+    coords_list = []
+
+    # find peaks in each time slice and add time as an additional coordinate
+    for t in range(1):
+        coords_t = peak_local_max(data[t], 
+                                min_distance = min_dist,
+                                threshold_abs = max_treshold,
+                                labels = image[t]
+                               )
+        coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
+        coords_list.append(coords_with_time)
+
+    if len(coords_list) > 0:
+        coords = np.vstack(coords_list)
+    else:
+        coords = np.empty((0, 3), dtype=int)
+    # coords = peak_local_max(data, 
+    #                         min_distance = min_dist,
+    #                         threshold_abs = max_treshold,
+    #                         labels = image,
+    #                         footprint=np.ones((3,3,3))
+    #                        )
     mask = np.zeros(data.shape, dtype=bool)
     mask[tuple(coords.T)] = True
     markers, _ = ndi.label(mask)
+    print(markers.nonzero())
     # print(f"Number of markers found: {np.max(markers)}")
     # print(f"Binary mask has {np.sum(image)} True pixels")
+
     
     conection = np.ones((3, 3, 3))
     watershed_results = watershed(image = np.array(data)*-1,  # watershedding field with maxima transformed to minima
@@ -4213,6 +4274,11 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
                     offset = (np.ones((3)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
                     mask = image, # binary mask for areas to watershed on
                     compactness = 0) # high values --> more regular shaped watersheds
+
+    # watershed_results = post_process_3d_objects(watershed_results,
+    #                                             min_dist,
+    #                                             dT,
+    #                                             mintime)
 
     if connectLon == 1:
         # Crop to the original size
