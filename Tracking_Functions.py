@@ -2303,7 +2303,7 @@ def jetstream_tracking(
                                     int(MinTimeJS/dT),
                                     dT)
     elif breakup == 'watershed':
-        jet_objects = watershed_3d_overlap(uv200,
+        jet_objects = watershed_2d_overlap(uv200,
                                     js_min_anomaly,
                                     js_min_anomaly * 1.05,
                                     int(3000 * 10**3/Gridspacing), # this setting sets the size of jet objects
@@ -4229,13 +4229,15 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
     from Tracking_Functions import clean_up_objects
     from Tracking_Functions import ConnectLon_on_timestep
 
+    # Determine if we need to extend the data for date line crossing
     if connectLon == 1:
         axis = 2
         extension_size = int(data.shape[2] * extend_size_ratio)
         data = np.concatenate(
                 [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=axis
             )
-        
+    
+    # Create binary mask for watershedding, all data that needs to be segmented is True
     image = data >= object_threshold
     
     coords_list = []
@@ -4246,36 +4248,28 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
                                 min_distance = min_dist,
                                 threshold_abs = max_treshold,
                                 labels = image[t],
-                                exclude_border=False
+                                exclude_border=True
                                )
+
         coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
         coords_list.append(coords_with_time)
 
+    # Combine all coordinates into a single array
     if len(coords_list) > 0:
         coords = np.vstack(coords_list)
     else:
         coords = np.empty((0, 3), dtype=int)
-    # coords = peak_local_max(data, 
-    #                         min_distance = min_dist,
-    #                         threshold_abs = max_treshold,
-    #                         labels = image,
-    #                         footprint=np.ones((3,3,3))
-    #                        )
+
     mask = np.zeros(data.shape, dtype=bool)
     mask[tuple(coords.T)] = True
-    # markers = label_peaks_over_time_3d(coords, max_dist=min_dist)
-    print(f"coords: ",coords)
+
+    # label peaks over time to ensure temporal consistency
     labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
-    # print(f"labels: ",labels)
     markers = np.zeros(data.shape, dtype=int)
     markers[tuple(coords.T)] = labels
-    # print(f"Number of markers found: {np.max(markers)}")
-    # markers, _ = ndi.label(mask)
-    # print(markers.nonzero())
-    # print(f"Number of markers found: {np.max(markers)}")
-    # print(f"Binary mask has {np.sum(image)} True pixels")
 
-    
+
+    # define connectivity for 3D watershedding and perform watershedding
     conection = np.ones((3, 3, 3))
     watershed_results = watershed(image = np.array(data)*-1,  # watershedding field with maxima transformed to minima
                     markers = markers, # maximum points in 3D matrix
@@ -4284,26 +4278,13 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
                     mask = image, # binary mask for areas to watershed on
                     compactness = 0) # high values --> more regular shaped watersheds
 
-    # watershed_results = post_process_3d_objects(watershed_results,
-    #                                             min_dist,
-    #                                             dT,
-    #                                             mintime)
-
+    # correct objects on date line if needed
     if connectLon == 1:
-        # Crop to the original size
-        # start = extension_size
-        # end = start + image.shape[axis]
         if extension_size != 0:
             watershed_results = np.array(watershed_results[:, :, extension_size:-extension_size])
         watershed_results = ConnectLon_on_timestep(watershed_results.astype("int"))
 
-    ### CONNECT OBJECTS IN 3D BASED ON MAX OVERLAP
-    # labels = np.array(watershed_results).astype('int')
-    # objects = connect_3d_objects(labels, 
-    #                              int(mintime/dT), 
-    #                              dT)
     return watershed_results
-    # return objects
 
 
 # This function performs watershedding on 2D anomaly fields and

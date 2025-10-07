@@ -46,3 +46,4 @@ __pycache__/
 20210701-04_MOAAP-Input_24h.nc
 moaap_output/
 images/
+outputs/synthetic_cells.nc

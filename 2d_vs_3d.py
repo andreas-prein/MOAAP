@@ -125,65 +125,6 @@ if print_gif:
     ax.coastlines(color='#969696')
     ax.gridlines()
 
-    # MCSs
-    # if 'MCS_Tb_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                     data_moaap['lat'],
-    #                     np.array(data_moaap['MCS_Tb_Objects'][tt,:,:])>0,
-    #                     colors = '#33a02c', levels=range(0,2,1))
-    # ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
-
-    # # Mid-Level Cyclones
-    # if 'CY_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                     data_moaap['lat'],
-    #                     np.array(data_moaap['CY_Objects'][tt,:,:])>0,
-    #                     colors = 'k', levels=range(0,2,1))
-
-    # # COL
-    # if 'COL_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                     data_moaap['lat'],
-    #                     np.array(data_moaap['COL_Objects'][tt,:,:])>0,
-    #                     colors = 'k', levels=range(0,2,1), linestyles = '--')
-
-    # # Anticyclones
-    # if 'ACY_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                     data_moaap['lat'],
-    #                     np.array(data_moaap['ACY_Objects'][tt,:,:])>0,
-    #                     colors = '#ff7f00', levels=range(0,2,1))
-
-    # # Jets
-    # if 'JET_Objects' in data_moaap.data_vars:
-       
-    #     sc = plt.contour(data_moaap['lon'],
-    #                     data_moaap['lat'],
-    #                     np.array(data_moaap['JET_Objects'][tt,:,:])>0,
-    #                     colors = '#6a3d9a', levels=range(0,2,1))
-
-    # # ARs
-    # if 'AR_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                         data_moaap['lat'],
-    #                         np.array(data_moaap['AR_Objects'][tt,:,:])>0,
-    #                         colors = 'r', levels=range(0,2,1))
-
-    # # Fronts
-    # if 'FR_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                         data_moaap['lat'],
-    #                         np.array(data_moaap['FR_Objects'][tt,:,:])>1,
-    #                         colors = '#cab2d6', levels=range(0,2,1),
-    #                         linewidths = 0.5)
-
-    # # # Equatorial Rossby Wave
-    # if 'ER_Objects' in data_moaap.data_vars:
-    #     sc = plt.contour(data_moaap['lon'],
-    #                         data_moaap['lat'],
-    #                         np.array(data_moaap['ER_Objects'][tt,:,:])>1,
-    #                         colors = '#8c510a', levels=range(0,2,1),
-    #                         linewidths = 0.5)
     # Define mapping of object types to colors/styles
     object_plotting_config = {
         'MCS_Tb_Objects': {'colors': '#33a02c', 'threshold': 0, 'linewidth': 1},
