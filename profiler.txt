@@ -1,0 +1,1383 @@
+Timer unit: 1e-06 s
+
+Total time: 0.868917 s
+File: /home/raphael/Documents/Studium/9.Semester/Semester_thesis/Semester-thesis/Tracking_Functions.py
+Function: label_peaks_over_time_3d at line 4187
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+  4187                                           @profile
+  4188                                           def label_peaks_over_time_3d(coords, max_dist=5):
+  4189                                               """
+  4190                                               coords: np.ndarray of shape (N_peaks, 3), each row is [t, y, x]
+  4191                                               max_dist: maximum allowed distance to consider peaks as the same object (in grid units)
+  4192                                               Returns: labels, np.ndarray of shape (N_peaks,), integer labels for each peak
+  4193                                               """
+  4194                                               # Split coords by timestep
+  4195         2        282.0    141.0      0.0      timesteps = np.unique(coords[:, 0])
+  4196         2         12.1      6.0      0.0      labels = np.zeros(coords.shape[0], dtype=int)
+  4197         2          2.0      1.0      0.0      next_label = 1
+  4198         2          2.1      1.1      0.0      prev_coords = None
+  4199         2          2.9      1.5      0.0      prev_labels = None
+  4200                                           
+  4201        50         69.9      1.4      0.0      for t in timesteps:
+  4202        48       1432.2     29.8      0.2          idx_t = np.where(coords[:, 0] == t)[0]
+  4203        48        604.5     12.6      0.1          coords_t = coords[idx_t][:, 1:3]  # [y, x] only
+  4204        48        128.9      2.7      0.0          labels_t = np.zeros(coords_t.shape[0], dtype=int)
+  4205        48         53.4      1.1      0.0          if prev_coords is None or prev_coords.shape[0] == 0:
+  4206                                                       # First timestep: assign new labels
+  4207         2         21.3     10.7      0.0              labels_t[:] = np.arange(next_label, next_label + coords_t.shape[0])
+  4208         2          2.8      1.4      0.0              next_label += coords_t.shape[0]
+  4209                                                   else:
+  4210                                                       # Build KDTree for previous peaks
+  4211        46       6134.4    133.4      0.7              tree = cKDTree(prev_coords)
+  4212     16577      13967.3      0.8      1.6              for i, peak in enumerate(coords_t):
+  4213     16531     815270.4     49.3     93.8                  dist, idx = tree.query(peak, distance_upper_bound=max_dist)
+  4214     16531      13353.1      0.8      1.5                  if dist < max_dist and idx < prev_coords.shape[0]:
+  4215     12105      11381.2      0.9      1.3                      labels_t[i] = prev_labels[idx]
+  4216                                                           else:
+  4217      4426       3369.7      0.8      0.4                      labels_t[i] = next_label
+  4218      4426       2596.5      0.6      0.3                      next_label += 1
+  4219        48        133.8      2.8      0.0          labels[idx_t] = labels_t
+  4220        48         51.6      1.1      0.0          prev_coords = coords_t
+  4221        48         39.8      0.8      0.0          prev_labels = labels_t
+  4222         2          4.6      2.3      0.0      return labels
+
+Total time: 5.52596 s
+File: /home/raphael/Documents/Studium/9.Semester/Semester_thesis/Semester-thesis/Tracking_Functions.py
+Function: watershed_3d_overlap at line 4266
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+  4266                                           @profile
+  4267                                           def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array]
+  4268                                                                    object_threshold, # float to create binary object mast [float]
+  4269                                                                    max_treshold, # value for identifying max. points for spreading [float]
+  4270                                                                    min_dist, # minimum distance (in grid cells) between maximum points [int]
+  4271                                                                    dT, # time interval in hours [int]
+  4272                                                                    mintime = 24, # minimum time an object has to exist in dT [int]
+  4273                                                                    connectLon = 0,  # do we have to track features over the date line?
+  4274                                                                    extend_size_ratio = 0.25, _timer=None): # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
+  4275                                               
+  4276                                               # from Tracking_Functions import ConnectLon_on_timestep
+  4277                                               # with _timer("setup"):
+  4278                                                   # Determine if we need to extend the data for date line crossing
+  4279         2          6.5      3.3      0.0      if connectLon == 1:
+  4280         2          3.0      1.5      0.0          axis = 2
+  4281         2         10.9      5.5      0.0          extension_size = int(data.shape[2] * extend_size_ratio)
+  4282         4     117891.6  29472.9      2.1          data = np.concatenate(
+  4283         2         14.7      7.4      0.0                  [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=axis
+  4284                                                       )
+  4285                                               
+  4286                                               # Create binary mask for watershedding, all data that needs to be segmented is True
+  4287         2      41259.5  20629.7      0.7      image = data >= object_threshold
+  4288                                               
+  4289                                               # with _timer("find peaks"):
+  4290         2          4.5      2.2      0.0      coords_list = []
+  4291                                           
+  4292                                               # find peaks in each time slice and add time as an additional coordinate
+  4293        50         63.9      1.3      0.0      for t in range(data.shape[0]):
+  4294        96    1742663.2  18152.7     31.5          coords_t = peak_local_max(data[t], 
+  4295        48         53.4      1.1      0.0                                  min_distance = min_dist,
+  4296        48         33.5      0.7      0.0                                  threshold_abs = max_treshold,
+  4297        48         67.2      1.4      0.0                                  labels = image[t],
+  4298        48         26.8      0.6      0.0                                  exclude_border=True
+  4299                                                                       )
+  4300                                           
+  4301        48       2111.4     44.0      0.0          coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
+  4302        48         55.9      1.2      0.0          coords_list.append(coords_with_time)
+  4303                                           
+  4304                                               # Combine all coordinates into a single array
+  4305         2          3.0      1.5      0.0      if len(coords_list) > 0:
+  4306         2        202.9    101.5      0.0          coords = np.vstack(coords_list)
+  4307                                               else:
+  4308                                                   coords = np.empty((0, 3), dtype=int)
+  4309                                           
+  4310                                               # with _timer("label peaks over time"):
+  4311         2        509.7    254.9      0.0      mask = np.zeros(data.shape, dtype=bool)
+  4312         2       7907.4   3953.7      0.1      mask[tuple(coords.T)] = True
+  4313                                           
+  4314                                               # label peaks over time to ensure temporal consistency
+  4315         2     889756.8 444878.4     16.1      labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
+  4316         2        111.2     55.6      0.0      markers = np.zeros(data.shape, dtype=np.int16)
+  4317         2      17370.8   8685.4      0.3      markers[tuple(coords.T)] = labels
+  4318                                               
+  4319                                               # with _timer("watershed"):
+  4320                                                   # define connectivity for 3D watershedding and perform watershedding
+  4321         2         76.2     38.1      0.0      conection = np.ones((3, 3, 3))
+  4322         4    2609728.1 652432.0     47.2      watershed_results = watershed(image = np.array(data)*-1,  # watershedding field with maxima transformed to minima
+  4323         2          4.4      2.2      0.0                      markers = markers, # maximum points in 3D matrix
+  4324         2          1.9      1.0      0.0                      connectivity = conection, # connectivity
+  4325         2        102.1     51.1      0.0                      offset = (np.ones((3)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
+  4326         2          1.9      0.9      0.0                      mask = image, # binary mask for areas to watershed on
+  4327         2          1.6      0.8      0.0                      compactness = 0) # high values --> more regular shaped watersheds
+  4328                                           
+  4329                                               # correct objects on date line if needed
+  4330         2          4.4      2.2      0.0      if connectLon == 1:
+  4331         2          2.1      1.0      0.0          if extension_size != 0:
+  4332         2      17847.5   8923.8      0.3              watershed_results = np.array(watershed_results[:, :, extension_size:-extension_size])
+  4333         2      78056.0  39028.0      1.4          watershed_results = ConnectLon_on_timestep(watershed_results.astype("int"))
+  4334                                           
+  4335         2          6.5      3.3      0.0      return watershed_results
+
+Total time: 18.0813 s
+File: /home/raphael/Documents/Studium/9.Semester/Semester_thesis/Semester-thesis/Tracking_Functions.py
+Function: moaap at line 4782
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+  4782                                           @profile
+  4783                                           def moaap(
+  4784                                               Lon,                           # 2D longitude grid centers
+  4785                                               Lat,                           # 2D latitude grid spacing
+  4786                                               Time,                          # datetime vector of data
+  4787                                               dT,                            # integer - temporal frequency of data [hour]
+  4788                                               Mask,                          # mask with dimensions [lat,lon] defining analysis region
+  4789                                               *, 
+  4790                                               config_file=None, 
+  4791                                               **kw):
+  4792                                               
+  4793                                               """
+  4794                                               Parameters
+  4795                                               ----------
+  4796                                               Lon : array_like
+  4797                                                   2D array of longitude grid centers.
+  4798                                               Lat : array_like
+  4799                                                   2D array of latitude grid centers.
+  4800                                               Time : array_like of datetime
+  4801                                                   1D vector of datetimes for each time step.
+  4802                                               dT : int
+  4803                                                   Temporal frequency of the data in hours.
+  4804                                               Mask : array_like
+  4805                                                   2D mask defining the analysis region.
+  4806                                           
+  4807                                               Keyword Arguments
+  4808                                               -----------------
+  4809                                               v850 : array_like or None, default=None
+  4810                                                   850 hPa zonal wind speed (m/s).
+  4811                                               u850 : array_like or None, default=None
+  4812                                                   850 hPa meridional wind speed (m/s).
+  4813                                               t850 : array_like or None, default=None
+  4814                                                   850 hPa air temperature (K).
+  4815                                               q850 : array_like or None, default=None
+  4816                                                   850 hPa mixing ratio (g/kg).
+  4817                                               slp : array_like or None, default=None
+  4818                                                   Sea level pressure (Pa).
+  4819                                               ivte : array_like or None, default=None
+  4820                                                   Zonal integrated vapor transport (kg m⁻¹ s⁻¹).
+  4821                                               ivtn : array_like or None, default=None
+  4822                                                   Meridional integrated vapor transport (kg m⁻¹ s⁻¹).
+  4823                                               z500 : array_like or None, default=None
+  4824                                                   Geopotential height at 500 hPa (gpm).
+  4825                                               v200 : array_like or None, default=None
+  4826                                                   200 hPa zonal wind speed (m/s).
+  4827                                               u200 : array_like or None, default=None
+  4828                                                   200 hPa meridional wind speed (m/s).
+  4829                                               pr : array_like or None, default=None
+  4830                                                   Accumulated surface precipitation (mm per time step).
+  4831                                               tb : array_like or None, default=None
+  4832                                                   Brightness temperature (K).
+  4833                                               DataName : str, default=''
+  4834                                                   Name of the common grid.
+  4835                                               OutputFolder : str, default=''
+  4836                                                   Path to the output directory.
+  4837                                           
+  4838                                               # — Precipitation objects —
+  4839                                               SmoothSigmaP : float, default=0
+  4840                                                   Gaussian σ for precipitation smoothing.
+  4841                                               Pthreshold : float, default=2
+  4842                                                   Precipitation threshold (mm h⁻¹).
+  4843                                               MinTimePR : int, default=4
+  4844                                                   Minimum lifetime of precipitation features (h).
+  4845                                               MinAreaPR : float, default=5000
+  4846                                                   Minimum area of precipitation features (km²).
+  4847                                           
+  4848                                               # — Moisture streams —
+  4849                                               MinTimeMS : int, default=9
+  4850                                                   Minimum lifetime of moisture stream features (h).
+  4851                                               MinAreaMS : float, default=100000
+  4852                                                   Minimum area of moisture stream features (km²).
+  4853                                               MinMSthreshold : float, default=0.11
+  4854                                                   Detection threshold for moisture streams (g·m/g·s).
+  4855                                           
+  4856                                               # — Cyclones & anticyclones —
+  4857                                               MinTimeCY : int, default=12
+  4858                                                   Minimum lifetime of cyclones (h).
+  4859                                               MaxPresAnCY : float, default=-8
+  4860                                                   Pressure anomaly threshold for cyclones (hPa).
+  4861                                               breakup_cy : str, default='watershed'
+  4862                                                   Method for cyclone breakup.
+  4863                                               MinTimeACY : int, default=12
+  4864                                                   Minimum lifetime of anticyclones (h).
+  4865                                               MinPresAnACY : float, default=6
+  4866                                                   Pressure anomaly threshold for anticyclones (hPa).
+  4867                                           
+  4868                                               # — Frontal zones —
+  4869                                               MinAreaFR : float, default=50000
+  4870                                                   Minimum area of frontal zones (km²).
+  4871                                               front_treshold : float, default=1
+  4872                                                   Threshold for masking frontal zones.
+  4873                                           
+  4874                                               # — Cloud tracking —
+  4875                                               SmoothSigmaC : float, default=0
+  4876                                                   Gaussian σ for cloud‐shield smoothing.
+  4877                                               Cthreshold : float, default=241
+  4878                                                   Brightness temperature threshold for ice‐cloud shields (K).
+  4879                                               MinTimeC : int, default=4
+  4880                                                   Minimum lifetime of ice‐cloud shields (h).
+  4881                                               MinAreaC : float, default=40000
+  4882                                                   Minimum area of ice‐cloud shields (km²).
+  4883                                           
+  4884                                               # — Atmospheric rivers (AR) —
+  4885                                               IVTtrheshold : float, default=500
+  4886                                                   Integrated vapor transport threshold for AR detection (kg m⁻¹ s⁻¹).
+  4887                                               MinTimeIVT : int, default=12
+  4888                                                   Minimum lifetime of ARs (h).
+  4889                                               breakup_ivt : str, default='watershed'
+  4890                                                   Method for AR breakup.
+  4891                                               AR_MinLen : float, default=2000
+  4892                                                   Minimum length of an AR (km).
+  4893                                               AR_Lat : float, default=20
+  4894                                                   Minimum centroid latitude for ARs (degrees N).
+  4895                                               AR_width_lenght_ratio : float, default=2
+  4896                                                   Minimum length‐to‐width ratio for ARs.
+  4897                                           
+  4898                                               # — Tropical cyclone detection —
+  4899                                               TC_Pmin : float, default=995
+  4900                                                   Minimum central pressure for TC detection (hPa).
+  4901                                               TC_lat_genesis : float, default=35
+  4902                                                   Maximum latitude for TC genesis (degrees).
+  4903                                               TC_lat_max : float, default=60
+  4904                                                   Maximum latitude for TC existence (degrees).
+  4905                                               TC_deltaT_core : float, default=0
+  4906                                                   Minimum core‐to‐environment temperature difference (K).
+  4907                                               TC_T850min : float, default=285
+  4908                                                   Minimum core temperature at 850 hPa for TCs (K).
+  4909                                           
+  4910                                               # — Mesoscale convective systems (MCS) —
+  4911                                               MCS_Minsize : float, default=5000
+  4912                                                   Minimum precipitation area size for MCS (km²).
+  4913                                               MCS_minPR : float, default=15
+  4914                                                   Precipitation threshold for MCS detection (mm h⁻¹).
+  4915                                               CL_MaxT : float, default=215
+  4916                                                   Maximum brightness temperature in ice shield for MCS (K).
+  4917                                               CL_Area : float, default=40000
+  4918                                                   Minimum cloud area for MCS detection (km²).
+  4919                                               MCS_minTime : int, default=4
+  4920                                                   Minimum lifetime of MCS (h).
+  4921                                           
+  4922                                               # — Jet streams & tropical waves —
+  4923                                               js_min_anomaly : float, default=37
+  4924                                                   Minimum jet‐stream anomaly (m/s).
+  4925                                               MinTimeJS : int, default=24
+  4926                                                   Minimum lifetime of jet streams (h).
+  4927                                               breakup_jet : str, default='watershed'
+  4928                                                   Method for jet‐stream breakup.
+  4929                                               tropwave_minTime : int, default=48
+  4930                                                   Minimum lifetime of tropical waves (h).
+  4931                                               breakup_mcs : str, default='watershed'
+  4932                                                   Method for MCS breakup.
+  4933                                           
+  4934                                               # — 500 hPa cyclones/anticyclones —
+  4935                                               z500_low_anom : float, default=-80
+  4936                                                   Minimum anomaly for 500 hPa cyclones (m).
+  4937                                               z500_high_anom : float, default=70
+  4938                                                   Minimum anomaly for 500 hPa anticyclones (m).
+  4939                                               breakup_zcy : str, default='watershed'
+  4940                                                   Method for 500 hPa cyclone/anticyclone breakup.
+  4941                                           
+  4942                                               # — Equatorial waves —
+  4943                                               er_th : float, default=0.05
+  4944                                                   Threshold for equatorial Rossby waves.
+  4945                                               mrg_th : float, default=0.05
+  4946                                                   Threshold for mixed Rossby‐gravity waves.
+  4947                                               igw_th : float, default=0.20
+  4948                                                   Threshold for inertia–gravity waves.
+  4949                                               kel_th : float, default=0.10
+  4950                                                   Threshold for Kelvin waves.
+  4951                                               eig0_th : float, default=0.10
+  4952                                                   Threshold for n≥1 inertia–gravity waves.
+  4953                                               breakup_tw : str, default='watershed'
+  4954                                                   Method for equatorial wave breakup.
+  4955                                           
+  4956                                               Returns
+  4957                                               -------
+  4958                                               dict
+  4959                                                   A dictionary containing detected features grouped by type
+  4960                                                   (e.g., 'precip', 'moisture', 'cyclones', etc.).
+  4961                                               """
+  4962                                               
+  4963         1          4.3      4.3      0.0      params = MOAAP_DEFAULTS.copy()
+  4964                                               # ... load/merge config_file if given ...
+  4965         1          2.7      2.7      0.0      params.update(kw)
+  4966                                               # check if the input variables are np.arrays
+  4967         1          1.5      1.5      0.0      required_keys = [
+  4968                                                   "v850",  "u850",  "t850",  "q850",  "slp",
+  4969                                                   "ivte",  "ivtn",  "z500",  "v200",  "u200",
+  4970                                                   "pr",    "tb"
+  4971                                               ]
+  4972                                           
+  4973        13         10.4      0.8      0.0      for key in required_keys:
+  4974        12          8.9      0.7      0.0          if key in params:
+  4975        12         11.1      0.9      0.0              if type(params[key]) is not type(None):
+  4976         2          3.8      1.9      0.0                  if not isinstance(params[key], np.ndarray):
+  4977                                                               # Display which variable is wrong, then stop
+  4978                                                               raise TypeError(f"Parameter '{key}' must be a numpy.ndarray, got {type(params[key]).__name__}")
+  4979                                           
+  4980         1          1.2      1.2      0.0      v850 = params["v850"]                   # 850 hPa zonal wind speed [m/s]
+  4981         1          1.4      1.4      0.0      u850 = params["u850"]                   # 850 hPa meridional wind speed [m/s]
+  4982         1          1.3      1.3      0.0      t850 = params["t850"]                   # 850 hPa air temperature [K]
+  4983         1          1.3      1.3      0.0      q850 = params["q850"]                   # 850 hPa mixing ratio [g/kg]
+  4984         1          1.7      1.7      0.0      slp =  params["slp"]                    # sea level pressure [Pa]
+  4985         1          1.5      1.5      0.0      ivte = params["ivte"]                   # zonal integrated vapor transport [kg m-1 s-1]
+  4986         1          1.5      1.5      0.0      ivtn = params["ivtn"]                   # meridional integrated vapor transport [kg m-1 s-1]
+  4987         1          1.2      1.2      0.0      z500 = params["z500"]                   # geopotential height [gpm]
+  4988         1          1.4      1.4      0.0      v200 = params["v200"]                   # 200 hPa zonal wind speed [m/s]
+  4989         1          1.2      1.2      0.0      u200 = params["u200"]                   # 200 hPa meridional wind speed [m/s]
+  4990         1          1.2      1.2      0.0      pr   = params["pr"]                     # accumulated surface precipitation [mm/time]
+  4991         1          1.7      1.7      0.0      tb   = params["tb"]                     # brightness temperature [K]
+  4992                                                   
+  4993                                           
+  4994                                               # calculate grid spacing assuming a regular lat/lon grid
+  4995         1     181521.4 181521.4      1.0      _,_,Area,Gridspacing = calc_grid_distance_area(Lon,Lat)
+  4996         1        557.3    557.3      0.0      Area[Area < 0] = 0
+  4997                                               
+  4998         1          2.2      2.2      0.0      EarthCircum = 40075000 #[m]
+  4999         1       3914.2   3914.2      0.0      Lat = np.array(Lat)
+  5000         1       2321.4   2321.4      0.0      Lon = np.array(Lon)
+  5001         1       2999.8   2999.8      0.0      dLat = np.copy(Lon); dLat[:] = EarthCircum/(360/(Lat[1,0]-Lat[0,0]))
+  5002         1       2405.1   2405.1      0.0      dLon = np.copy(Lon)
+  5003       722       1079.2      1.5      0.0      for la in range(Lat.shape[0]):
+  5004       721       4328.3      6.0      0.0          dLon[la,:] = EarthCircum/(360/(Lat[1,0]-Lat[0,0]))*np.cos(np.deg2rad(Lat[la,0]))
+  5005         1       2407.7   2407.7      0.0      dLat = np.abs(dLat)
+  5006         1       1145.6   1145.6      0.0      dLon = np.abs(dLon)
+  5007                                               
+  5008         1        123.8    123.8      0.0      StartDay = Time[0]
+  5009         1          5.7      5.7      0.0      SetupString = '_dt-'+str(dT)+'h_MOAAP-masks'
+  5010         1         10.1     10.1      0.0      NCfile = params["OutputFolder"] + str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+params["DataName"]+'_ObjectMasks_'+SetupString+'.nc'
+  5011         1        626.4    626.4      0.0      FrontMask = np.copy(Mask)
+  5012         1          3.4      3.4      0.0      try:
+  5013         1       3339.5   3339.5      0.0          FrontMask[np.abs(Lat) < 10] = 0
+  5014                                               except:
+  5015                                                   print('            latitude does not expand into the tropics')
+  5016                                           
+  5017                                               # connect over date line?
+  5018         1          6.6      6.6      0.0      if (Lon[0,0] < -176) & (Lon[0,-1] > 176):
+  5019         1          2.9      2.9      0.0          connectLon= 1
+  5020                                               else:
+  5021                                                   connectLon= 0
+  5022                                           
+  5023                                               ### print out which phenomenon can be investigated
+  5024         1          2.7      2.7      0.0      if slp is not None:
+  5025                                                   slp_test = 'yes'
+  5026                                               else:
+  5027         1          2.8      2.8      0.0          slp_test = 'no'
+  5028         1          3.2      3.2      0.0      if (ivte is not None) & (ivtn is not None):
+  5029                                                   ar_test = 'yes'
+  5030                                               else:
+  5031         1          2.6      2.6      0.0          ar_test = 'no'
+  5032         1          3.2      3.2      0.0      if (v850 is not None) & (u850 is not None) & (t850 is not None):
+  5033                                                   front_test = 'yes'
+  5034                                               else:
+  5035         1          2.7      2.7      0.0          front_test = 'no'
+  5036         3          9.6      3.2      0.0      if (slp is not None) & (tb is not None) \
+  5037         2          5.4      2.7      0.0         & (t850 is not None) & (pr is not None):
+  5038                                                   tc_test = 'yes'
+  5039                                               else:
+  5040         1          2.8      2.8      0.0          tc_test = 'no'
+  5041         1          3.1      3.1      0.0      if z500 is not None:
+  5042                                                   z500_test = 'yes'
+  5043                                               else:
+  5044         1          3.3      3.3      0.0          z500_test = 'no'
+  5045         2          6.7      3.3      0.0      if (z500 is not None) & (front_test == 'yes') & \
+  5046         1          2.6      2.6      0.0         (u200 is not None):
+  5047                                                   col_test = 'yes'
+  5048                                               else:
+  5049         1          3.0      3.0      0.0          col_test = 'no'
+  5050         1          3.1      3.1      0.0      if (v200 is not None) & (u200 is not None):
+  5051                                                   jet_test = 'yes'
+  5052                                               else:
+  5053         1          3.1      3.1      0.0          jet_test = 'no'
+  5054         1          3.2      3.2      0.0      if (pr is not None) & (tb is not None):
+  5055         1          3.2      3.2      0.0          mcs_tb_test = 'yes'
+  5056                                               else:
+  5057                                                   mcs_tb_test = 'no'
+  5058         1          3.2      3.2      0.0      if (pr is not None) & (tb is not None):
+  5059         1          3.3      3.3      0.0          cloud_test = 'yes'
+  5060                                               else:
+  5061                                                   cloud_test = 'no'
+  5062         2          6.2      3.1      0.0      if (q850 is not None) & (v850 is not None) & \
+  5063         1          2.9      2.9      0.0         (u850 is not None):
+  5064                                                   ms_test = 'yes'
+  5065                                               else:
+  5066         1          3.0      3.0      0.0          ms_test = 'no'
+  5067         1          6.7      6.7      0.0      if (pr is not None):
+  5068         1          3.7      3.7      0.0          ew_test = 'yes'
+  5069                                               else:
+  5070                                                   ew_test = 'no'
+  5071                                           
+  5072         1          3.2      3.2      0.0      """
+  5073                                               jet_test =  'no'
+  5074                                               slp_test = 'yes'
+  5075                                               z500_test =  'no'
+  5076                                               col_test = 'no' 
+  5077                                               ar_test =  'no'
+  5078                                               ms_test =  'no'
+  5079                                               front_test =  'no'
+  5080                                               tc_test = 'yes'
+  5081                                               mcs_tb_test =  'no'
+  5082                                               cloud_test =  'no'
+  5083                                               ew_test =  'no'
+  5084                                               """
+  5085         1          3.1      3.1      0.0      ew_test =  'no'
+  5086                                               
+  5087         1         26.4     26.4      0.0      print(' ')
+  5088         1          7.3      7.3      0.0      print('The provided variables allow tracking the following phenomena')
+  5089         1          5.8      5.8      0.0      print(' ')
+  5090         1          6.5      6.5      0.0      print('|  phenomenon  | tracking |')
+  5091         1          5.6      5.6      0.0      print('---------------------------')
+  5092         1          6.3      6.3      0.0      print('   Jetstream   |   ' + jet_test)
+  5093         1          6.0      6.0      0.0      print('   PSL CY/ACY  |   ' + slp_test)
+  5094         1          5.7      5.7      0.0      print('   Z500 CY/ACY |   ' + z500_test)
+  5095         1          5.6      5.6      0.0      print('   COLs        |   ' + col_test)
+  5096         1          5.9      5.9      0.0      print('   IVT ARs     |   ' + ar_test)
+  5097         1          5.6      5.6      0.0      print('   MS ARs      |   ' + ms_test)
+  5098         1          5.7      5.7      0.0      print('   Fronts      |   ' + front_test)
+  5099         1          5.8      5.8      0.0      print('   TCs         |   ' + tc_test)
+  5100         1          5.7      5.7      0.0      print('   MCSs        |   ' + mcs_tb_test)
+  5101         1          7.3      7.3      0.0      print('   clouds      |   ' + cloud_test)
+  5102         1          7.0      7.0      0.0      print('   Equ. Waves  |   ' + ew_test)
+  5103         1          6.8      6.8      0.0      print('---------------------------')
+  5104         1          7.4      7.4      0.0      print(' ')
+  5105                                           
+  5106                                               
+  5107         1         16.6     16.6      0.0      import time
+  5108                                               
+  5109                                               # Mask data outside of Focus domain
+  5110         1          3.9      3.9      0.0      try:
+  5111         1        536.7    536.7      0.0          v850[:,Mask == 0] = np.nan
+  5112         1         28.6     28.6      0.0      except:
+  5113         1         14.7     14.7      0.0          pass
+  5114         1          3.8      3.8      0.0      try:
+  5115         1        487.2    487.2      0.0          u850[:,Mask == 0] = np.nan
+  5116         1         22.3     22.3      0.0      except:
+  5117         1         16.6     16.6      0.0          pass
+  5118         1          5.2      5.2      0.0      try:
+  5119         1        364.4    364.4      0.0          t850[:,Mask == 0] = np.nan
+  5120         1         25.1     25.1      0.0      except:
+  5121         1         15.1     15.1      0.0          pass
+  5122         1          4.5      4.5      0.0      try:
+  5123         1        350.1    350.1      0.0          q850[:,Mask == 0] = np.nan
+  5124         1         24.4     24.4      0.0      except:
+  5125         1         15.0     15.0      0.0          pass
+  5126         1          4.6      4.6      0.0      try:
+  5127         1        310.8    310.8      0.0          slp[:,Mask == 0]  = np.nan
+  5128         1         10.6     10.6      0.0      except:
+  5129         1          2.5      2.5      0.0          pass
+  5130         1          3.8      3.8      0.0      try:
+  5131         1        271.3    271.3      0.0          ivte[:,Mask == 0] = np.nan
+  5132         1          0.7      0.7      0.0      except:
+  5133         1          2.5      2.5      0.0          pass
+  5134         1          3.9      3.9      0.0      try:
+  5135         1        276.0    276.0      0.0          ivtn[:,Mask == 0] = np.nan
+  5136         1          0.8      0.8      0.0      except:
+  5137         1          2.4      2.4      0.0          pass
+  5138         1          3.9      3.9      0.0      try:
+  5139         1        277.4    277.4      0.0          z500[:,Mask == 0] = np.nan
+  5140         1          0.6      0.6      0.0      except:
+  5141         1          2.5      2.5      0.0          pass
+  5142         1          4.5      4.5      0.0      try:
+  5143         1        253.9    253.9      0.0          v200[:,Mask == 0] = np.nan
+  5144         1          0.8      0.8      0.0      except:
+  5145         1          2.7      2.7      0.0          pass
+  5146         1          4.0      4.0      0.0      try:
+  5147         1        290.9    290.9      0.0          u200[:,Mask == 0] = np.nan
+  5148         1          0.7      0.7      0.0      except:
+  5149         1          2.5      2.5      0.0          pass
+  5150         1          3.7      3.7      0.0      try:
+  5151         1        355.3    355.3      0.0          pr[:,Mask == 0]   = np.nan
+  5152                                               except:
+  5153                                                   pass
+  5154         1          4.1      4.1      0.0      try:
+  5155         1        329.9    329.9      0.0          tb[:,Mask == 0]   = np.nan
+  5156                                               except:
+  5157                                                   pass
+  5158                                           
+  5159         1          5.6      5.6      0.0      if jet_test == 'yes':
+  5160                                                   print('======> track jetstream')
+  5161                                                   start = time.perf_counter()
+  5162                                                   uv200 = (u200 ** 2 + v200 ** 2) ** 0.5
+  5163                                           
+  5164                                                   jet_objects, object_split = jetstream_tracking(uv200,
+  5165                                                                                 params["js_min_anomaly"],
+  5166                                                                                 params["MinTimeJS"],
+  5167                                                                                 dT,
+  5168                                                                                 Gridspacing,
+  5169                                                                                 connectLon,
+  5170                                                                                 breakup = params["breakup_jet"])
+  5171                                                   jet_objects_characteristics = calc_object_characteristics(jet_objects, # feature object file
+  5172                                                                                uv200,         # original file used for feature detection
+  5173                                                                                params["OutputFolder"]+'jet_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5174                                                                                Time,            # timesteps of the data
+  5175                                                                                Lat,             # 2D latidudes
+  5176                                                                                Lon,             # 2D Longitudes
+  5177                                                                                Gridspacing,
+  5178                                                                                Area,
+  5179                                                                                min_tsteps=int(params["MinTimeJS"]/dT),
+  5180                                                                                split_merge = object_split)
+  5181                                                   
+  5182                                                   end = time.perf_counter()
+  5183                                                   timer(start, end)
+  5184                                                   
+  5185                                               
+  5186         1          6.3      6.3      0.0      if ew_test == 'yes':
+  5187                                                   print('======> track tropical waves')
+  5188                                                   start = time.perf_counter()
+  5189                                                   mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects = track_tropwaves_tb(
+  5190                                                                   tb,
+  5191                                                                   Lat,
+  5192                                                                   connectLon,
+  5193                                                                   dT,
+  5194                                                                  Gridspacing,
+  5195                                                                  er_th = params["er_th"],  # threshold for Rossby Waves
+  5196                                                                  mrg_th = params["mrg_th"], # threshold for mixed Rossby Gravity Waves
+  5197                                                                  igw_th = params["igw_th"],  # threshold for inertia gravity waves
+  5198                                                                  kel_th = params["kel_th"],  # threshold for Kelvin waves
+  5199                                                                  eig0_th = params["eig0_th"], # threshold for n>=1 Inertio Gravirt Wave
+  5200                                                                  breakup = params["breakup_tw"]
+  5201                                                                   )
+  5202                                                   end = time.perf_counter()
+  5203                                                   timer(start, end)
+  5204                                           
+  5205                                                   gr_mrg = calc_object_characteristics(mrg_objects, # feature object file
+  5206                                                                            pr,         # original file used for feature detection
+  5207                                                                            params["OutputFolder"]+'MRG_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+  5208                                                                            Time,            # timesteps of the data
+  5209                                                                            Lat,             # 2D latidudes
+  5210                                                                            Lon,             # 2D Longitudes
+  5211                                                                            Gridspacing,
+  5212                                                                            Area,
+  5213                                                                            min_tsteps=int(params["tropwave_minTime"]/dT))      # minimum livetime in hours
+  5214                                                   
+  5215                                                   gr_igw = calc_object_characteristics(igw_objects, # feature object file
+  5216                                                                            pr,         # original file used for feature detection
+  5217                                                                            params["OutputFolder"]+'IGW_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+  5218                                                                            Time,            # timesteps of the data
+  5219                                                                            Lat,             # 2D latidudes
+  5220                                                                            Lon,             # 2D Longitudes
+  5221                                                                            Gridspacing,
+  5222                                                                            Area,
+  5223                                                                            min_tsteps=int(48/dT))      # minimum livetime in hours
+  5224                                                   
+  5225                                                   gr_kelvin = calc_object_characteristics(kelvin_objects, # feature object file
+  5226                                                                            pr,         # original file used for feature detection
+  5227                                                                            params["OutputFolder"]+'Kelvin_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+  5228                                                                            Time,            # timesteps of the data
+  5229                                                                            Lat,             # 2D latidudes
+  5230                                                                            Lon,             # 2D Longitudes
+  5231                                                                            Gridspacing,
+  5232                                                                            Area,
+  5233                                                                            min_tsteps=int(48/dT))      # minimum livetime in hours
+  5234                                                   
+  5235                                                   gr_eig0 = calc_object_characteristics(eig0_objects, # feature object file
+  5236                                                                            pr,         # original file used for feature detection
+  5237                                                                            params["OutputFolder"]+'Eig0_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+  5238                                                                            Time,            # timesteps of the data
+  5239                                                                            Lat,             # 2D latidudes
+  5240                                                                            Lon,             # 2D Longitudes
+  5241                                                                            Gridspacing,
+  5242                                                                            Area,
+  5243                                                                            min_tsteps=int(48/dT))      # minimum livetime in hours
+  5244                                                   
+  5245                                                   gr_er = calc_object_characteristics(er_objects, # feature object file
+  5246                                                                            pr,         # original file used for feature detection
+  5247                                                                            params["OutputFolder"]+'ER_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+  5248                                                                            Time,            # timesteps of the data
+  5249                                                                            Lat,             # 2D latidudes
+  5250                                                                            Lon,             # 2D Longitudes
+  5251                                                                            Gridspacing,
+  5252                                                                            Area,
+  5253                                                                            min_tsteps=int(48/dT))      # minimum livetime in hours
+  5254                                                   
+  5255                                                   
+  5256         1          7.0      7.0      0.0      if ms_test == 'yes':
+  5257                                                   print('======> track moisture streams and atmospheric rivers (ARs)')
+  5258                                                   start = time.perf_counter()
+  5259                                                   VapTrans = ((u850 * q850)**2 + 
+  5260                                                               (v850 * q850)**2)**(1/2)
+  5261                                           
+  5262                                                   MS_objects = ar_850hpa_tracking(
+  5263                                                                                   VapTrans,
+  5264                                                                                   params["MinMSthreshold"],
+  5265                                                                                   params["MinTimeMS"],
+  5266                                                                                   params["MinAreaMS"],
+  5267                                                                                   Area,
+  5268                                                                                   dT,
+  5269                                                                                   connectLon,
+  5270                                                                                   Gridspacing,
+  5271                                                                                   breakup = params["breakup_ivt"])
+  5272                                                   
+  5273                                                   grMSs = calc_object_characteristics(MS_objects, # feature object file
+  5274                                                                            VapTrans,         # original file used for feature detection
+  5275                                                                            params["OutputFolder"]+'MS850_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+  5276                                                                            Time,            # timesteps of the data
+  5277                                                                            Lat,             # 2D latidudes
+  5278                                                                            Lon,             # 2D Longitudes
+  5279                                                                            Gridspacing,
+  5280                                                                            Area,
+  5281                                                                            min_tsteps=int(params["MinTimeMS"]/dT))      # minimum livetime in hours
+  5282                                                   
+  5283                                                   end = time.perf_counter()
+  5284                                                   timer(start, end)
+  5285                                                   
+  5286                                               
+  5287         1          8.2      8.2      0.0      if ar_test == 'yes':
+  5288                                                   print('======> track IVT streams and atmospheric rivers (ARs)')
+  5289                                                   start = time.perf_counter()
+  5290                                                   IVT = (ivte ** 2 + ivtn ** 2) ** 0.5
+  5291                                           
+  5292                                                   IVT_objects = ar_ivt_tracking(IVT,
+  5293                                                                               params["IVTtrheshold"],
+  5294                                                                               params["MinTimeIVT"],
+  5295                                                                               dT,
+  5296                                                                               Gridspacing,
+  5297                                                                               connectLon,
+  5298                                                                               breakup = params["breakup_ivt"])
+  5299                                           
+  5300                                                   grIVTs = calc_object_characteristics(IVT_objects, # feature object file
+  5301                                                                                IVT,         # original file used for feature detection
+  5302                                                                                params["OutputFolder"]+'IVT_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5303                                                                                Time,            # timesteps of the data
+  5304                                                                                Lat,             # 2D latidudes
+  5305                                                                                Lon,             # 2D Longitudes
+  5306                                                                                Gridspacing,
+  5307                                                                                Area,
+  5308                                                                                min_tsteps=int(params["MinTimeIVT"]/dT))      # minimum livetime in hours
+  5309                                                   
+  5310                                                   print('        check if MSs quallify as ARs')
+  5311                                                   AR_obj = ar_check(IVT_objects,
+  5312                                                                    params["AR_Lat"],
+  5313                                                                    params["AR_width_lenght_ratio"],
+  5314                                                                    params["AR_MinLen"],
+  5315                                                                    Lon,
+  5316                                                                    Lat)
+  5317                                               
+  5318                                                   grACs = calc_object_characteristics(AR_obj, # feature object file
+  5319                                                                    IVT,         # original file used for feature detection
+  5320                                                                    params["OutputFolder"]+'ARs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5321                                                                    Time,            # timesteps of the data
+  5322                                                                    Lat,             # 2D latidudes
+  5323                                                                    Lon,             # 2D Longitudes
+  5324                                                                    Gridspacing,
+  5325                                                                    Area)
+  5326                                                   
+  5327                                                   end = time.perf_counter()
+  5328                                                   timer(start, end)
+  5329                                               
+  5330         1          8.2      8.2      0.0      if front_test == 'yes':
+  5331                                                   print('======> identify frontal zones')
+  5332                                                   start = time.perf_counter()
+  5333                                                   
+  5334                                                   # -------
+  5335                                                   dx = dLon
+  5336                                                   dy = dLat
+  5337                                                   du = np.gradient( np.array(u850) )
+  5338                                                   dv = np.gradient( np.array(v850) )
+  5339                                                   PV = np.abs( dv[-1]/dx[None,:] - du[-2]/dy[None,:] )
+  5340                                                   vgrad = np.gradient(np.array(t850), axis=(1,2))
+  5341                                                   Tgrad = np.sqrt(vgrad[0]**2 + vgrad[1]**2)
+  5342                                           
+  5343                                                   Fstar = PV * Tgrad
+  5344                                           
+  5345                                                   Tgrad_zero = 0.45 #*100/(np.mean([dLon,dLat], axis=0)/1000.)  # 0.45 K/(100 km)
+  5346                                                   import metpy.calc as calc
+  5347                                                   from metpy.units import units
+  5348                                                   CoriolisPar = np.array(calc.coriolis_parameter(np.deg2rad(Lat)))
+  5349                                                   Frontal_Diagnostic = np.array(Fstar/(CoriolisPar * Tgrad_zero))
+  5350                                                   
+  5351                                                   FrontMask = np.copy(Mask)
+  5352                                                   FrontMask[np.abs(Lat) < 10] = 0
+  5353                                                   
+  5354                                                   Frontal_Diagnostic = np.abs(Frontal_Diagnostic)
+  5355                                                   Frontal_Diagnostic[:,FrontMask == 0] = 0
+  5356                                                   # -------
+  5357                                                   
+  5358                                                   
+  5359                                                   FR_objects = frontal_identification(Frontal_Diagnostic,
+  5360                                                                         params["front_treshold"],
+  5361                                                                         params["MinAreaFR"],
+  5362                                                                         Area)
+  5363                                                   
+  5364                                                   end = time.perf_counter()
+  5365                                                   timer(start, end)
+  5366                                                   
+  5367         1          9.8      9.8      0.0      if slp_test == 'yes':
+  5368                                                   print('======> track cyclones from PSL')
+  5369                                                   start = time.perf_counter()
+  5370                                                   
+  5371                                                   CY_objects, ACY_objects= cy_acy_psl_tracking(
+  5372                                                                                               slp,
+  5373                                                                                               params["MaxPresAnCY"],
+  5374                                                                                               params["MinTimeCY"],
+  5375                                                                                               params["MinPresAnACY"],
+  5376                                                                                               params["MinTimeACY"],
+  5377                                                                                               dT,
+  5378                                                                                               Gridspacing,
+  5379                                                                                               connectLon,
+  5380                                                                                               breakup = params["breakup_cy"],
+  5381                                                                                               )
+  5382                                           
+  5383                                                   grCyclonesPT = calc_object_characteristics(CY_objects, # feature object file
+  5384                                                                                    slp,         # original file used for feature detection
+  5385                                                                                    params["OutputFolder"]+'CY_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5386                                                                                    Time,            # timesteps of the data
+  5387                                                                                    Lat,             # 2D latidudes
+  5388                                                                                    Lon,             # 2D Longitudes
+  5389                                                                                    Gridspacing,
+  5390                                                                                    Area,
+  5391                                                                                    min_tsteps=int(params["MinTimeCY"]/dT)) 
+  5392                                           
+  5393                                                   grACyclonesPT = calc_object_characteristics(ACY_objects, # feature object file
+  5394                                                                                    slp,         # original file used for feature detection
+  5395                                                                                    params["OutputFolder"]+'ACY_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5396                                                                                    Time,            # timesteps of the data
+  5397                                                                                    Lat,             # 2D latidudes
+  5398                                                                                    Lon,             # 2D Longitudes
+  5399                                                                                    Gridspacing,
+  5400                                                                                    Area,
+  5401                                                                                    min_tsteps=int(params["MinTimeCY"]/dT)) 
+  5402                                           
+  5403                                                   end = time.perf_counter()
+  5404                                                   timer(start, end)
+  5405                                           
+  5406         1          9.9      9.9      0.0      if z500_test == 'yes':
+  5407                                                   print('======> track cyclones from Z500')
+  5408                                                   start = time.perf_counter()
+  5409                                                   cy_z500_objects, acy_z500_objects = cy_acy_z500_tracking(
+  5410                                                                                       z500,
+  5411                                                                                       params["MinTimeCY"],
+  5412                                                                                       dT,
+  5413                                                                                       Gridspacing,
+  5414                                                                                       connectLon,
+  5415                                                                                       z500_low_anom = params["z500_low_anom"],
+  5416                                                                                       z500_high_anom = params["z500_high_anom"],
+  5417                                                                                       breakup = params["breakup_zcy"],
+  5418                                                                                       )
+  5419                                                   
+  5420                                                   cy_z500_objects_characteristics = calc_object_characteristics(cy_z500_objects, # feature object file
+  5421                                                                                z500,         # original file used for feature detection
+  5422                                                                                params["OutputFolder"]+'CY-z500_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5423                                                                                Time,            # timesteps of the data
+  5424                                                                                Lat,             # 2D latidudes
+  5425                                                                                Lon,             # 2D Longitudes
+  5426                                                                                Gridspacing,
+  5427                                                                                Area,
+  5428                                                                                min_tsteps=int(params["MinTimeCY"]/dT))
+  5429                                                   
+  5430                                                   acy_z500_objects_characteristics = calc_object_characteristics(acy_z500_objects, # feature object file
+  5431                                                                            z500,         # original file used for feature detection
+  5432                                                                            params["OutputFolder"]+'ACY-z500_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5433                                                                            Time,            # timesteps of the data
+  5434                                                                            Lat,             # 2D latidudes
+  5435                                                                            Lon,             # 2D Longitudes
+  5436                                                                            Gridspacing,
+  5437                                                                            Area,
+  5438                                                                            min_tsteps=int(params["MinTimeCY"]/dT)) 
+  5439                                                   
+  5440                                                   if col_test == 'yes':
+  5441                                                       print('    Check if cyclones qualify as Cut Off Low (COL)')
+  5442                                                       col_obj = col_identification(cy_z500_objects,
+  5443                                                                              z500,
+  5444                                                                              u200,
+  5445                                                                              Frontal_Diagnostic,
+  5446                                                                              params["MinTimeC"],
+  5447                                                                              dx,
+  5448                                                                              dy,
+  5449                                                                              Lon,
+  5450                                                                              Lat)
+  5451                                           
+  5452                                                       col_stats = calc_object_characteristics(col_obj, # feature object file
+  5453                                                                        z500*9.81,            # original file used for feature detection
+  5454                                                                        params["OutputFolder"]+'COL_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5455                                                                        Time,            # timesteps of the data
+  5456                                                                        Lat,             # 2D latidudes
+  5457                                                                        Lon,             # 2D Longitudes
+  5458                                                                        Gridspacing,
+  5459                                                                        Area,
+  5460                                                                        min_tsteps=1)      # minimum livetime in hours
+  5461                                           
+  5462                                                   end = time.perf_counter()
+  5463                                                   timer(start, end)
+  5464                                           
+  5465                                           
+  5466         1         10.6     10.6      0.0      if mcs_tb_test == 'yes':
+  5467         1         26.9     26.9      0.0          print("======> 'check if Tb objects qualify as MCS (or selected storm type)")
+  5468         1         12.5     12.5      0.0          start = time.perf_counter()
+  5469         2    5140140.0 2.57e+06     28.4          MCS_objects_Tb, C_objects = mcs_tb_tracking(tb,
+  5470         1         10.3     10.3      0.0                              pr,
+  5471         1         11.1     11.1      0.0                              params["SmoothSigmaC"],
+  5472         1         10.6     10.6      0.0                              params["Pthreshold"],
+  5473         1         11.2     11.2      0.0                              params["CL_Area"],
+  5474         1         19.9     19.9      0.0                              params["CL_MaxT"],
+  5475         1         11.1     11.1      0.0                              params["Cthreshold"],
+  5476         1         10.5     10.5      0.0                              params["MinAreaC"],
+  5477         1         10.5     10.5      0.0                              params["MinTimeC"],
+  5478         1         10.7     10.7      0.0                              params["MCS_minPR"],
+  5479         1         10.9     10.9      0.0                              params["MCS_minTime"],
+  5480         1         10.7     10.7      0.0                              params["MCS_Minsize"],
+  5481         1         27.3     27.3      0.0                              dT,
+  5482         1         10.6     10.6      0.0                              Area,
+  5483         1         10.6     10.6      0.0                              connectLon,
+  5484         1         10.1     10.1      0.0                              Gridspacing,                 
+  5485         1         10.8     10.8      0.0                              breakup=params["breakup_mcs"],
+  5486                                                                      )
+  5487                                                   
+  5488         2    3679518.8 1.84e+06     20.3          grCs = calc_object_characteristics(C_objects, # feature object file
+  5489         1         11.6     11.6      0.0                               tb,         # original file used for feature detection
+  5490         1         23.7     23.7      0.0                               params["OutputFolder"]+'Clouds_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5491         1         11.2     11.2      0.0                               Time,            # timesteps of the data
+  5492         1         11.4     11.4      0.0                               Lat,             # 2D latidudes
+  5493         1         11.7     11.7      0.0                               Lon,             # 2D Longitudes
+  5494         1         11.0     11.0      0.0                               Gridspacing,
+  5495         1         10.7     10.7      0.0                               Area,
+  5496         1         12.3     12.3      0.0                               min_tsteps=int(params["MinTimeC"]/dT))      # minimum livetime in hours
+  5497                                                   
+  5498         2     391987.2 195993.6      2.2          grMCSs_Tb = calc_object_characteristics(
+  5499         1         11.6     11.6      0.0              MCS_objects_Tb,  # feature object file
+  5500         1         11.4     11.4      0.0              pr,  # original file used for feature detection
+  5501         1         25.9     25.9      0.0              params["OutputFolder"]+'MCSs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5502         1         11.4     11.4      0.0              Time,            # timesteps of the data
+  5503         1         11.8     11.8      0.0              Lat,             # 2D latidudes
+  5504         1         11.2     11.2      0.0              Lon,             # 2D Longitudes
+  5505         1         11.2     11.2      0.0              Gridspacing,
+  5506         1         10.8     10.8      0.0              Area)
+  5507                                                   
+  5508         1         17.3     17.3      0.0          end = time.perf_counter()
+  5509         1         75.0     75.0      0.0          timer(start, end)
+  5510                                           
+  5511                                               
+  5512         1         12.3     12.3      0.0      if cloud_test == "yes":
+  5513         1         14.9     14.9      0.0          print("======> 'track high clouds in Tb field by excluding MCS objects")
+  5514         1         31.2     31.2      0.0          start = time.perf_counter()
+  5515         1      37175.9  37175.9      0.2          tb_no_mcs = tb.copy()
+  5516         1      38239.7  38239.7      0.2          tb_no_mcs[MCS_objects_Tb > 0] = 330 # remove MCSs from cloud field
+  5517                                                   
+  5518         2    2547242.3 1.27e+06     14.1          cloud_objects = cloud_tracking(
+  5519         1         13.8     13.8      0.0                          tb_no_mcs,
+  5520         1         14.3     14.3      0.0                          pr,
+  5521         1         13.8     13.8      0.0                          connectLon,
+  5522         1         13.6     13.6      0.0                          Gridspacing,
+  5523         1         13.0     13.0      0.0                          dT,
+  5524         1         13.9     13.9      0.0                          tb_threshold = params["Cthreshold"],
+  5525         1         12.7     12.7      0.0                          tb_overshoot = params["cloud_overshoot"],
+  5526         1         11.9     11.9      0.0                          erosion_disk = 1.5,
+  5527         1         11.6     11.6      0.0                          min_dist = 8
+  5528                                                                   )
+  5529                                           
+  5530         2    1241236.6 620618.3      6.9          grclouds_Tb = calc_object_characteristics(
+  5531         1         12.4     12.4      0.0              cloud_objects,  # feature object file
+  5532         1         13.0     13.0      0.0              pr,  # original file used for feature detection
+  5533         1         20.1     20.1      0.0              params["OutputFolder"]+'non-MCS-clouds_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5534         1         11.7     11.7      0.0              Time,            # timesteps of the data
+  5535         1         12.5     12.5      0.0              Lat,             # 2D latidudes
+  5536         1         12.3     12.3      0.0              Lon,             # 2D Longitudes
+  5537         1         12.0     12.0      0.0              Gridspacing,
+  5538         1         11.5     11.5      0.0              Area)
+  5539                                                   
+  5540         1         17.0     17.0      0.0          end = time.perf_counter()
+  5541         1         58.5     58.5      0.0          timer(start, end)
+  5542                                                   
+  5543         1         16.8     16.8      0.0      if tc_test == 'yes':
+  5544                                                   print('======> Check if cyclones qualify as TCs')
+  5545                                                   start = time.perf_counter()
+  5546                                           
+  5547                                                   TC_obj, TC_Tracks = tc_tracking(CY_objects,
+  5548                                                                                   slp,
+  5549                                                                   t850,
+  5550                                                                   tb,
+  5551                                                                   np.sqrt(u850**2 + v850**2),
+  5552                                                                   np.sqrt(u200**2 + v200**2),
+  5553                                                                   Lon,
+  5554                                                                   Lat,
+  5555                                                                   params["TC_lat_genesis"],
+  5556                                                                   params["TC_T850min"]
+  5557                                                                  )
+  5558                                                   """
+  5559                                                   TC_obj, TC_Tracks = tc_tracking(CY_objects,
+  5560                                                                   t850,
+  5561                                                                   slp,
+  5562                                                                   tb,
+  5563                                                                   C_objects,
+  5564                                                                   Lon,
+  5565                                                                   Lat,
+  5566                                                                   params["TC_lat_genesis"],
+  5567                                                                   params["TC_deltaT_core"],
+  5568                                                                   params["TC_T850min"],
+  5569                                                                   params["TC_Pmin"],
+  5570                                                                   params["TC_lat_max"],
+  5571                                                                  )
+  5572                                                   """
+  5573                                           
+  5574                                                   
+  5575                                                   grTCs = calc_object_characteristics(TC_obj, # feature object file
+  5576                                                                        slp*100.,         # original file used for feature detection
+  5577                                                                        params["OutputFolder"]+'TC_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+  5578                                                                        Time,            # timesteps of the data
+  5579                                                                        Lat,             # 2D latidudes
+  5580                                                                        Lon,             # 2D Longitudes
+  5581                                                                        Gridspacing,
+  5582                                                                        Area,
+  5583                                                                        min_tsteps=int(params["MinTimeC"]/dT))      # minimum livetime in hours
+  5584                                                   ### SAVE THE TC TRACKS TO PICKL FILE
+  5585                                                   a_file = open(params["OutputFolder"]+str(Time[0].year)+str(Time[0].month).zfill(2)+'_TCs_tracks.pkl', "wb")
+  5586                                                   pickle.dump(TC_Tracks, a_file)
+  5587                                                   a_file.close()
+  5588                                                   
+  5589                                                   end = time.perf_counter()
+  5590                                                   timer(start, end)  
+  5591                                                   
+  5592                                               
+  5593                                           
+  5594                                           
+  5595         1         16.0     16.0      0.0      print(' ')
+  5596         1         16.1     16.1      0.0      print('Save the object masks into a joint netCDF')
+  5597         1         13.2     13.2      0.0      start = time.perf_counter()
+  5598                                               # ============================
+  5599                                               # Write NetCDF
+  5600         1       1014.2   1014.2      0.0      iTime = np.array((Time - Time[0]).total_seconds()).astype('int')
+  5601                                           
+  5602         1      11013.3  11013.3      0.1      dataset = Dataset(NCfile,'w',format='NETCDF4_CLASSIC')
+  5603         1        257.1    257.1      0.0      yc = dataset.createDimension('yc', Lat.shape[0])
+  5604         1        104.3    104.3      0.0      xc = dataset.createDimension('xc', Lat.shape[1])
+  5605         1        112.1    112.1      0.0      time = dataset.createDimension('time', None)
+  5606                                           
+  5607         1        320.7    320.7      0.0      times = dataset.createVariable('time', np.float64, ('time',))
+  5608         1        300.6    300.6      0.0      lat = dataset.createVariable('lat', np.float32, ('yc','xc',))
+  5609         1        260.4    260.4      0.0      lon = dataset.createVariable('lon', np.float32, ('yc','xc',))
+  5610         1         15.6     15.6      0.0      if mcs_tb_test == 'yes':
+  5611         1        309.1    309.1      0.0          PR_real = dataset.createVariable('PR', np.float32,('time','yc','xc'),zlib=True)
+  5612                                                   # PR_obj = dataset.createVariable('PR_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5613                                                   # MCSs = dataset.createVariable('MCS_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5614         1        308.7    308.7      0.0          MCSs_Tb = dataset.createVariable('MCS_Tb_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5615         1        272.3    272.3      0.0          Cloud_real = dataset.createVariable('BT', np.float32,('time','yc','xc'),zlib=True)
+  5616                                                   # Cloud_obj = dataset.createVariable('BT_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5617         1         14.9     14.9      0.0      if cloud_test == "yes":
+  5618         1        348.8    348.8      0.0          non_mcs_cloud_obj = dataset.createVariable('non_mcs_cloud_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5619         1         15.7     15.7      0.0      if front_test == 'yes':
+  5620                                                   FR_real = dataset.createVariable('FR', np.float32,('time','yc','xc'),zlib=True)
+  5621                                                   FR_obj = dataset.createVariable('FR_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5622                                                   T_real = dataset.createVariable('T850', np.float32,('time','yc','xc'),zlib=True)
+  5623         1         15.1     15.1      0.0      if slp_test == 'yes':
+  5624                                                   CY_obj = dataset.createVariable('CY_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5625                                                   ACY_obj = dataset.createVariable('ACY_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5626                                                   SLP_real = dataset.createVariable('SLP', np.float32,('time','yc','xc'),zlib=True)
+  5627         1         14.3     14.3      0.0      if tc_test == 'yes':
+  5628                                                   TCs = dataset.createVariable('TC_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5629         1         14.3     14.3      0.0      if ms_test == 'yes':
+  5630                                                   MS_real = dataset.createVariable('MS', np.float32,('time','yc','xc'),zlib=True)
+  5631                                                   MS_obj = dataset.createVariable('MS_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5632         1         27.4     27.4      0.0      if ar_test == 'yes':
+  5633                                                   IVT_real = dataset.createVariable('IVT', np.float32,('time','yc','xc'),zlib=True)
+  5634                                                   IVT_obj = dataset.createVariable('IVT_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5635                                                   ARs = dataset.createVariable('AR_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5636         1         14.8     14.8      0.0      if z500_test == 'yes':
+  5637                                                   CY_z500_obj = dataset.createVariable('CY_z500_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5638                                                   ACY_z500_obj = dataset.createVariable('ACY_z500_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5639                                                   Z500_real = dataset.createVariable('Z500', np.float32,('time','yc','xc'),zlib=True)
+  5640         1         15.1     15.1      0.0      if col_test == 'yes':
+  5641                                                   COL = dataset.createVariable('COL_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5642         1         14.2     14.2      0.0      if jet_test == 'yes':
+  5643                                                   JET = dataset.createVariable('JET_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5644                                                   UV200 = dataset.createVariable('UV200', np.float32,('time','yc','xc'),zlib=True)
+  5645         1         16.2     16.2      0.0      if ew_test == 'yes':
+  5646                                                   MRG = dataset.createVariable('MRG_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5647                                                   IGW = dataset.createVariable('IGW_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5648                                                   KELVIN = dataset.createVariable('Kelvin_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5649                                                   EIG = dataset.createVariable('EIG0_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5650                                                   ER = dataset.createVariable('ER_Objects', np.float32,('time','yc','xc'),zlib=True)
+  5651                                                   
+  5652                                           
+  5653         1        109.6    109.6      0.0      times.calendar = "standard"
+  5654         1        269.0    269.0      0.0      times.units = "seconds since "+str(Time[0].year)+"-"+str(Time[0].month).zfill(2)+"-"+str(Time[0].day).zfill(2)+" "+str(Time[0].hour).zfill(2)+":"+str(Time[0].minute).zfill(2)+":00"
+  5655         1         55.3     55.3      0.0      times.standard_name = "time"
+  5656         1        134.4    134.4      0.0      times.long_name = "time"
+  5657                                           
+  5658         1         64.6     64.6      0.0      lat.long_name = "latitude" ;
+  5659         1         55.8     55.8      0.0      lat.units = "degrees_north" ;
+  5660         1         42.5     42.5      0.0      lat.standard_name = "latitude" ;
+  5661                                           
+  5662         1         36.7     36.7      0.0      lon.long_name = "longitude" ;
+  5663         1         39.4     39.4      0.0      lon.units = "degrees_east" ;
+  5664         1         38.5     38.5      0.0      lon.standard_name = "longitude" ;
+  5665                                           
+  5666         1         20.8     20.8      0.0      if mcs_tb_test == 'yes':
+  5667         1         45.5     45.5      0.0          PR_real.coordinates = "lon lat"
+  5668         1         43.1     43.1      0.0          PR_real.longname = "precipitation"
+  5669         1         48.2     48.2      0.0          PR_real.unit = "mm/"+str(dT)+"h"
+  5670                                                   
+  5671                                                   # PR_obj.coordinates = "lon lat"
+  5672                                                   # PR_obj.longname = "precipitation objects"
+  5673                                                   # PR_obj.unit = ""
+  5674                                                   
+  5675                                           #         MCSs.coordinates = "lon lat"
+  5676                                           #         MCSs.longname = "MCSs object defined by their precipitation"
+  5677                                           #         MCSs.unit = ""
+  5678                                                   
+  5679         1         47.3     47.3      0.0          MCSs_Tb.coordinates = "lon lat"
+  5680         1         46.4     46.4      0.0          MCSs_Tb.longname = "MCSs object defined by their Tb"
+  5681         1         46.0     46.0      0.0          MCSs_Tb.unit = ""
+  5682                                                   
+  5683         1         42.4     42.4      0.0          Cloud_real.coordinates = "lon lat"
+  5684         1         39.4     39.4      0.0          Cloud_real.longname = "Tb"
+  5685         1         49.1     49.1      0.0          Cloud_real.unit = "K"
+  5686                                                   
+  5687                                                   # Cloud_obj.coordinates = "lon lat"
+  5688                                                   # Cloud_obj.longname = "Tb objects"
+  5689                                                   # Cloud_obj.unit = ""
+  5690         1         15.4     15.4      0.0      if cloud_test == 'yes':
+  5691         1         53.3     53.3      0.0          non_mcs_cloud_obj.coordinates = "lon lat"
+  5692         1         42.0     42.0      0.0          non_mcs_cloud_obj.longname = "non MCS cloud object defined by their Tb"
+  5693         1         40.2     40.2      0.0          non_mcs_cloud_obj.unit = ""
+  5694         1         19.3     19.3      0.0      if front_test == 'yes':
+  5695                                                   FR_real.coordinates = "lon lat"
+  5696                                                   FR_real.longname = "frontal index"
+  5697                                                   FR_real.unit = ""
+  5698                                                   
+  5699                                                   FR_obj.coordinates = "lon lat"
+  5700                                                   FR_obj.longname = "frontal objects"
+  5701                                                   FR_obj.unit = ""
+  5702                                                   
+  5703                                                   T_real.coordinates = "lon lat"
+  5704                                                   T_real.longname = "850 hPa air temperature"
+  5705                                                   T_real.unit = "K"
+  5706         1         16.1     16.1      0.0      if slp_test == 'yes':
+  5707                                                   CY_obj.coordinates = "lon lat"
+  5708                                                   CY_obj.longname = "cyclone objects from SLP"
+  5709                                                   CY_obj.unit = ""
+  5710                                                   
+  5711                                                   ACY_obj.coordinates = "lon lat"
+  5712                                                   ACY_obj.longname = "anticyclone objects from SLP"
+  5713                                                   ACY_obj.unit = ""
+  5714                                                   
+  5715                                                   SLP_real.coordinates = "lon lat"
+  5716                                                   SLP_real.longname = "sea level pressure (SLP)"
+  5717                                                   SLP_real.unit = "Pa"
+  5718         1         20.4     20.4      0.0      if ms_test == 'yes':
+  5719                                                   MS_real.coordinates = "lon lat"
+  5720                                                   MS_real.longname = "850 hPa moisture flux"
+  5721                                                   MS_real.unit = "g/g m/s"
+  5722                                                   
+  5723                                                   MS_obj.coordinates = "lon lat"
+  5724                                                   MS_obj.longname = "mosture streams objects according to 850 hPa moisture flux"
+  5725                                                   MS_obj.unit = ""
+  5726         1         16.8     16.8      0.0      if ar_test == 'yes':
+  5727                                                   IVT_real.coordinates = "lon lat"
+  5728                                                   IVT_real.longname = "vertically integrated moisture transport"
+  5729                                                   IVT_real.unit = "kg m−1 s−1"
+  5730                                                   
+  5731                                                   IVT_obj.coordinates = "lon lat"
+  5732                                                   IVT_obj.longname = "IVT objects"
+  5733                                                   IVT_obj.unit = ""
+  5734                                                   
+  5735                                                   ARs.coordinates = "lon lat"
+  5736                                                   ARs.longname = "atmospheric river objects"
+  5737                                                   ARs.unit = ""
+  5738         1         16.5     16.5      0.0      if tc_test == 'yes':
+  5739                                                   TCs.coordinates = "lon lat"
+  5740                                                   TCs.longname = "tropical cyclone objects"
+  5741                                                   TCs.unit = ""
+  5742         1         21.0     21.0      0.0      if z500_test == 'yes':
+  5743                                                   CY_z500_obj.coordinates = "lon lat"
+  5744                                                   CY_z500_obj.longname = "cyclone objects according to Z500"
+  5745                                                   CY_z500_obj.unit = ""
+  5746                                                   
+  5747                                                   ACY_z500_obj.coordinates = "lon lat"
+  5748                                                   ACY_z500_obj.longname = "anticyclone objects according to Z500"
+  5749                                                   ACY_z500_obj.unit = ""
+  5750                                                   
+  5751                                                   Z500_real.coordinates = "lon lat"
+  5752                                                   Z500_real.longname = "500 hPa geopotential height"
+  5753                                                   Z500_real.unit = "gpm"
+  5754         1         16.9     16.9      0.0      if col_test == 'yes':
+  5755                                                   COL.coordinates = "lon lat"
+  5756                                                   COL.longname = "cut off low objects"
+  5757                                                   COL.unit = ""
+  5758         1         17.3     17.3      0.0      if jet_test == 'yes':
+  5759                                                   JET.coordinates = "lon lat"
+  5760                                                   JET.longname = "jet stream objects"
+  5761                                                   JET.unit = ""
+  5762                                                   
+  5763                                                   UV200.coordinates = "lon lat"
+  5764                                                   UV200.longname = "200 hPa wind speed"
+  5765                                                   UV200.unit = "m s-1"
+  5766         1         17.5     17.5      0.0      if ew_test == 'yes':
+  5767                                                   MRG.coordinates = "lon lat"
+  5768                                                   MRG.longname = "Mixed Rosby Gravity wave objects"
+  5769                                                   MRG.unit = ""
+  5770                                                   
+  5771                                                   IGW.coordinates = "lon lat"
+  5772                                                   IGW.longname = "Inertia Gravity wave objects"
+  5773                                                   IGW.unit = ""
+  5774                                                   
+  5775                                                   KELVIN.coordinates = "lon lat"
+  5776                                                   KELVIN.longname = "Kelvin wave objects"
+  5777                                                   KELVIN.unit = ""
+  5778                                                   
+  5779                                                   EIG.coordinates = "lon lat"
+  5780                                                   EIG.longname = "Eastward Inertio Gravirt wave objects"
+  5781                                                   EIG.unit = ""
+  5782                                                   
+  5783                                                   ER.coordinates = "lon lat"
+  5784                                                   ER.longname = "Equatorial Rossby wave objects"
+  5785                                                   ER.unit = ""
+  5786                                           
+  5787         1       4748.0   4748.0      0.0      lat[:] = Lat
+  5788         1       3370.7   3370.7      0.0      lon[:] = Lon
+  5789         1         20.6     20.6      0.0      if mcs_tb_test == 'yes':
+  5790         1    1090379.2 1.09e+06      6.0          PR_real[:] = pr
+  5791                                                   # PR_obj[:] = PR_objects
+  5792                                                   # MCSs[:] = MCS_obj
+  5793         1     437445.2 437445.2      2.4          MCSs_Tb[:] = MCS_objects_Tb
+  5794         1    1937240.1 1.94e+06     10.7          Cloud_real[:] = tb
+  5795                                                   # Cloud_obj[:] = C_objects
+  5796         1         34.6     34.6      0.0      if cloud_test == 'yes':
+  5797         1     470614.0 470614.0      2.6          non_mcs_cloud_obj[:] = cloud_objects
+  5798         1         25.1     25.1      0.0      if front_test == 'yes':
+  5799                                                   FR_real[:] = Frontal_Diagnostic
+  5800                                                   FR_obj[:] = FR_objects
+  5801                                                   T_real[:] = t850
+  5802         1         21.2     21.2      0.0      if tc_test == 'yes':
+  5803                                                   TCs[:] = TC_obj
+  5804         1         23.6     23.6      0.0      if slp_test == 'yes':
+  5805                                                   CY_obj[:] = CY_objects
+  5806                                                   ACY_obj[:] = ACY_objects
+  5807                                                   SLP_real[:] = slp
+  5808         1         23.0     23.0      0.0      if ms_test == 'yes':
+  5809                                                   MS_real[:] = VapTrans
+  5810                                                   MS_obj[:] = MS_objects
+  5811         1         22.3     22.3      0.0      if ar_test == 'yes':
+  5812                                                   IVT_real[:] = IVT
+  5813                                                   IVT_obj[:] = IVT_objects
+  5814                                                   ARs[:] = AR_obj
+  5815         1         22.8     22.8      0.0      if z500_test == 'yes':
+  5816                                                   CY_z500_obj[:] = cy_z500_objects
+  5817                                                   ACY_z500_obj[:] = acy_z500_objects
+  5818                                                   Z500_real[:] = z500
+  5819         1         22.3     22.3      0.0      if col_test == 'yes':
+  5820                                                   COL[:] = col_obj
+  5821         1         22.9     22.9      0.0      if jet_test == 'yes':
+  5822                                                   JET[:] = jet_objects
+  5823                                                   UV200[:] = uv200
+  5824         1         22.7     22.7      0.0      if ew_test == 'yes':
+  5825                                                   MRG[:] = mrg_objects
+  5826                                                   IGW[:] = igw_objects
+  5827                                                   KELVIN[:] = kelvin_objects
+  5828                                                   EIG[:] = eig0_objects
+  5829                                                   ER[:] = er_objects
+  5830                                                           
+  5831         1        780.6    780.6      0.0      times[:] = iTime
+  5832                                               
+  5833                                               # SET GLOBAL ATTRIBUTES
+  5834                                               # Add global attributes
+  5835         1     758903.3 758903.3      4.2      dataset.title = "MOAAP object tracking output"
+  5836         1        225.5    225.5      0.0      dataset.contact = "Andreas F. Prein (prein@ucar.edu)"
+  5837                                               # dataset.breakup = 'The ' + breakup + " method has been used to segment the objects"
+  5838                                           
+  5839         1      72504.5  72504.5      0.4      dataset.close()
+  5840         1         98.7     98.7      0.0      print('Saved: '+NCfile)
+  5841         1         44.1     44.1      0.0      import time
+  5842         1         40.2     40.2      0.0      end = time.perf_counter()
+  5843         1         84.7     84.7      0.0      timer(start, end)
+  5844                                           
+  5845         1         39.0     39.0      0.0      if tc_test == 'yes':
+  5846                                                   ### SAVE THE TC TRACKS TO PICKL FILE
+  5847                                                   # ============================
+  5848                                                   a_file = open(params["OutputFolder"]+str(Time[0].year)+str(Time[0].month).zfill(2)+'_TCs_tracks.pkl', "wb")
+  5849                                                   pickle.dump(TC_Tracks, a_file)
+  5850                                                   a_file.close()
+  5851                                                   
+  5852         1         97.7     97.7      0.0      if 'object_split' in locals():
+  5853                                                   return object_split
+  5854                                               else:
+  5855         1         36.9     36.9      0.0          object_split = None
+  5856         1         19.0     19.0      0.0          return object_split
+
+Total time: 22.34 s
+File: 2d_vs_3d.py
+Function: main at line 9
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+     9                                           @profile
+    10                                           def main():
+    11         2          2.1      1.1      0.0    object_names = [['cold clouds', '#737373', '-', 2],
+    12         1          0.8      0.8      0.0                    ['surface cyclones', 'k', '-', 2],
+    13         1          0.6      0.6      0.0                    ['mid-level cyclones', 'k', '--', 2],
+    14         1          0.5      0.5      0.0                    ['anticyclones', '#ff7f00', '-', 2],
+    15         1          0.5      0.5      0.0                    ['MCS', '#33a02c', '-', 2],
+    16         1          0.4      0.4      0.0                    ['moisture streams', 'r', '-', 2],
+    17         1          0.6      0.6      0.0                    ['jets', '#6a3d9a', '-', 2],
+    18         1          0.5      0.5      0.0                    ['Rossby waves', '#8c510a', '-', 3],
+    19         1          0.5      0.5      0.0                    ['mixed Rossby gravity waves', '#bf812d', '-', 1.5],
+    20         1          0.4      0.4      0.0                    ['inertia gravity waves', '#dfc27d','-', 3],
+    21         1          0.5      0.5      0.0                    ['Kelvin waves', '#abd9e9','-', 1.5],
+    22         1          0.4      0.4      0.0                    ['eastward inertia gravity waves', '#4575b4', '-', 3],
+    23         1          0.5      0.5      0.0                    ['fronts', '#cab2d6', '-', 2]]
+    24                                           
+    25                                           
+    26         1    2216791.9 2.22e+06      9.9    data_vars = xr.open_dataset('20210701-04_MOAAP-Input_24h.nc')
+    27                                           
+    28         1          1.0      1.0      0.0    dT = 1 # time interval of input files [hours]
+    29         1       7500.8   7500.8      0.0    Mask = np.copy(data_vars['lon']); Mask[:]=1 # tracking is applied globally
+    30         1          1.3      1.3      0.0    DataName = 'ERA5'
+    31         1       1973.6   1973.6      0.0    time_datetime = pd.to_datetime(np.array(data_vars['time'].values, dtype='datetime64'))
+    32                                           
+    33        18   18096358.9 1.01e+06     81.0    object_split = moaap(
+    34         1        111.2    111.2      0.0                          data_vars['lon'],
+    35         1         84.9     84.9      0.0                          data_vars['lat'],
+    36         1          0.5      0.5      0.0                          time_datetime,
+    37         1          0.5      0.5      0.0                          dT,
+    38         1          0.4      0.4      0.0                          Mask,
+    39                                                                   # v850 =  data_vars['V850'].values,
+    40                                                                   # u850 = data_vars['U850'].values,
+    41                                                                   # t850 = data_vars['T850'].values,
+    42                                                                   # q850 = data_vars['Q850'].values,
+    43                                                                   # slp = data_vars['SLP'].values,
+    44                                                                   # ivte = data_vars['IVTE'].values,
+    45                                                                   # ivtn = data_vars['IVTN'].values,
+    46                                                                   # z500 = data_vars['Z500'].values,
+    47                                                                   # v200 = data_vars['V200'].values,
+    48                                                                   # u200 = data_vars['U200'].values,
+    49         1          0.6      0.6      0.0                          v850 =None, #  data_vars['V850'],
+    50         1          0.5      0.5      0.0                          u850 = None, #data_vars['U850'],
+    51         1          0.4      0.4      0.0                          t850 = None, #data_vars['T850'],
+    52         1          0.5      0.5      0.0                          q850 = None, #data_vars['Q850'],
+    53         1          0.4      0.4      0.0                          slp = None, #data_vars['SLP'],
+    54         1          0.7      0.7      0.0                          ivte = None, #data_vars['IVTE'],
+    55         1          0.5      0.5      0.0                          ivtn = None, #data_vars['IVTN'],
+    56         1          0.5      0.5      0.0                          z500 = None, #data_vars['Z500'],
+    57         1          0.4      0.4      0.0                          v200 = None, #data_vars['V200'],
+    58         1          0.5      0.5      0.0                          u200 = None, #data_vars['U200'],
+    59         1      47663.6  47663.6      0.2                          pr   = data_vars['PR'].values,
+    60         1      47104.1  47104.1      0.2                          tb   = data_vars['Tb'].values,
+    61         1          0.7      0.7      0.0                          DataName = DataName,
+    62         1          0.6      0.6      0.0                          OutputFolder = 'moaap_output/',
+    63         1          0.5      0.5      0.0                          js_min_anomaly = 12,
+    64         1          0.4      0.4      0.0                          MinTimeJS = 12,
+    65                                                                     )
+    66                                           
+    67                                           
+    68         1      42129.6  42129.6      0.2    data_moaap = xr.open_dataset('moaap_output/202107_ERA5_ObjectMasks__dt-1h_MOAAP-masks.nc')
+    69         1          4.1      4.1      0.0    import pickle
+    70         2         75.8     37.9      0.0    with open('moaap_output/MCSs_202107__dt-1h_MOAAP-masks.pkl', 'rb') as f:
+    71         1       5590.9   5590.9      0.0        mcs_charac = pickle.load(f)
+    72                                           
+    73         1          9.7      9.7      0.0    import cartopy.crs as ccrs
+    74         1          8.0      8.0      0.0    import matplotlib.pyplot as plt
+    75                                           
+    76                                             # Create a figure and axis with a PlateCarree projection (latitude and longitude)
+    77         2     385799.7 192899.8      1.7    fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()},
+    78         1          1.6      1.6      0.0                          figsize=(14,6))
+    79                                           
+    80                                             # Set the extent of the map (in this case, the entire globe)
+    81         1       1660.2   1660.2      0.0    ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
+    82                                           
+    83                                             # Add coastlines and gridlines for reference
+    84         1       1445.6   1445.6      0.0    ax.coastlines(color='#969696')
+    85         1       5522.7   5522.7      0.0    ax.gridlines()
+    86                                           
+    87                                             # Generate some random data (latitude, longitude, and values)
+    88         1      10414.8  10414.8      0.0    mcs_mask = np.array(data_moaap['MCS_Tb_Objects'][12,:,:])
+    89         1       1314.4   1314.4      0.0    mcs_mask[mcs_mask == 0] = np.nan
+    90         2     467309.6 233654.8      2.1    sc = plt.pcolormesh(data_moaap['lon'],
+    91         1         70.2     70.2      0.0                        data_moaap['lat'],
+    92         1          0.9      0.9      0.0                        mcs_mask,
+    93         1          0.6      0.6      0.0                        cmap = 'nipy_spectral')
+    94                                           
+    95                                           
+    96                                             # plot MCS tracks
+    97       101        103.7      1.0      0.0    for ii in range(len(mcs_charac.keys())):
+    98       100        329.6      3.3      0.0      LatLonTrack = mcs_charac[list(mcs_charac.keys())[ii]]['track']
+    99       100     202785.2   2027.9      0.9      plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='k')
+   100                                           
+   101         1       9190.0   9190.0      0.0    ax.set_extent([-180, 180, -70, 70], crs=ccrs.PlateCarree())
+   102                                           
+   103                                             # Add a colorbar to the plot
+   104         1      51293.6  51293.6      0.2    cbar = plt.colorbar(sc, ax=ax, orientation='vertical', shrink=0.7, label='MCS mask')
+   105                                           
+   106                                             # Set the title of the plot
+   107         1        771.3    771.3      0.0    plt.title('MCS tracks (black lines) and masks at '+str(time_datetime[12])[:16])
+   108                                           
+   109         1     736509.4 736509.4      3.3    plt.savefig("MCS_tracks_masks_3d.png")
+   110                                           
+   111         1          1.0      1.0      0.0    print_gif = False
+   112         1          6.2      6.2      0.0    if print_gif:
+   113                                               for tt in tqdm(range(len(time_datetime))):
+   114                                           
+   115                                                 # Create a figure and axis with a PlateCarree projection (latitude and longitude)
+   116                                                 fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()},
+   117                                                                       figsize=(14,6))
+   118                                           
+   119                                                 # Set the extent of the map (in this case, the entire globe)
+   120                                                 # ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
+   121                                           
+   122                                                 # Add coastlines and gridlines for reference
+   123                                                 ax.coastlines(color='#969696')
+   124                                                 ax.gridlines()
+   125                                           
+   126                                                 # Define mapping of object types to colors/styles
+   127                                                 object_plotting_config = {
+   128                                                     'MCS_Tb_Objects': {'colors': '#33a02c', 'threshold': 0, 'linewidth': 1},
+   129                                                     'CY_Objects': {'colors': 'k', 'threshold': 0, 'linewidth': 1},
+   130                                                     'COL_Objects': {'colors': 'k', 'threshold': 0, 'linewidth': 1, 'linestyles': '--'},
+   131                                                     'ACY_Objects': {'colors': '#ff7f00', 'threshold': 0, 'linewidth': 1},
+   132                                                     'JET_Objects': {'colors': '#6a3d9a', 'threshold': 0, 'linewidth': 1},
+   133                                                     'AR_Objects': {'colors': 'r', 'threshold': 0, 'linewidth': 1},
+   134                                                     'FR_Objects': {'colors': '#cab2d6', 'threshold': 1, 'linewidth': 0.5},
+   135                                                     'ER_Objects': {'colors': '#8c510a', 'threshold': 1, 'linewidth': 0.5}
+   136                                                 }
+   137                                           
+   138                                                 # Plot only available objects
+   139                                                 for obj_name, config in object_plotting_config.items():
+   140                                                     if obj_name in data_moaap.data_vars:
+   141                                                         plot_args = {
+   142                                                             'colors': config['colors'],
+   143                                                             'levels': range(0, 2, 1),
+   144                                                             'linewidths': config.get('linewidth', 1)
+   145                                                         }
+   146                                                         if 'linestyles' in config:
+   147                                                             plot_args['linestyles'] = config['linestyles']
+   148                                                             
+   149                                                         sc = plt.contour(data_moaap['lon'],
+   150                                                                         data_moaap['lat'],
+   151                                                                         np.array(data_moaap[obj_name][tt,:,:]) > config['threshold'],
+   152                                                                         **plot_args)
+   153                                           
+   154                                                 # Set the title of the plot
+   155                                                 plt.title('Objects identied by MOAAP at '+str(time_datetime[tt])[:16])
+   156                                           
+   157                                                 # create legend
+   158                                                 for ob in range(len(object_names)):
+   159                                                   plt.plot([],[], color = object_names[ob][1], \
+   160                                                           linestyle = object_names[ob][2],\
+   161                                                           lw = object_names[ob][3],\
+   162                                                           label = object_names[ob][0])
+   163                                           
+   164                                                 # plt.legend()
+   165                                                 ax.legend(bbox_to_anchor=(1, 0.00), ncol=4)
+   166                                           
+   167                                           
+   168                                                 # Show the plot
+   169                                                 fig.savefig('images/'+str(tt).zfill(3)+'_CausesOfExtreme_100_daily-extremes.jpg', bbox_inches='tight', dpi=100)
+   170                                           
+   171                                                 import glob
+   172                                           
+   173                                                 from PIL import Image
+   174                                                 def make_gif(frame_folder):
+   175                                                     frames = [Image.open(image) for image in np.sort(glob.glob(f"{frame_folder}/*.jpg"))]
+   176                                                     frame_one = frames[0]
+   177                                                     frame_one.save("phenomenon.gif", format="GIF", append_images=frames,
+   178                                                             save_all=True, duration=100, loop=0)
+   179                                           
+   180                                                 make_gif("images/")
+

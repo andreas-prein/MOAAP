@@ -91,3 +91,7 @@ Before committing to a particular library, I recommend:
 3.  **Assessing Integration Effort:** Estimate the effort required to integrate the library into your existing project.
 
 Good luck with your watershedding implementation!
+
+Maybe use dask.array.mapoverlap
+dask_image.ndmeasure.label
+scipy.ndimgae.watershed_ift?
