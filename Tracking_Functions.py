@@ -2320,7 +2320,7 @@ def jetstream_tracking(
                                     int(MinTimeJS/dT),
                                     dT)
     elif breakup == 'watershed':
-        jet_objects = watershed_2d_overlap(uv200,
+        jet_objects = watershed_3d_overlap_parallel(uv200,
                                     js_min_anomaly,
                                     js_min_anomaly * 1.05,
                                     int(3000 * 10**3/Gridspacing), # this setting sets the size of jet objects
@@ -2406,7 +2406,7 @@ def ar_850hpa_tracking(
                                 dT)
     elif breakup == 'watershed':
         min_dist=int((4000 * 10**3)/Gridspacing)
-        MS_objects = watershed_3d_overlap(
+        MS_objects = watershed_3d_overlap_parallel(
                 VapTrans,
                 MinMSthreshold,
                 MinMSthreshold*1.05,
@@ -2449,7 +2449,7 @@ def ar_ivt_tracking(IVT,
                                         dT)
             elif breakup == 'watershed':
                 min_dist=int((4000 * 10**3)/Gridspacing)
-                IVT_objects = watershed_3d_overlap(
+                IVT_objects = watershed_3d_overlap_parallel(
                         IVT,
                         IVTtrheshold,
                         IVTtrheshold*1.05,
@@ -2619,7 +2619,7 @@ def cy_acy_psl_tracking(
         low_pres_an[low_pres_an < -999999999] = 0
         low_pres_an[low_pres_an > 999999999] = 0
 
-        CY_objects = watershed_3d_overlap(
+        CY_objects = watershed_3d_overlap_parallel(
                 low_pres_an * -1,
                 MaxPresAnCY * -1,
                 MaxPresAnCY * -1,
@@ -2662,7 +2662,7 @@ def cy_acy_psl_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(slp_Anomaly)
         high_pres_an[ACY_objects == 0] = 0
-        ACY_objects = watershed_3d_overlap(
+        ACY_objects = watershed_3d_overlap_parallel(
                                             high_pres_an,
                                             MinPresAnACY,
                                             MinPresAnACY,
@@ -2728,7 +2728,7 @@ def cy_acy_z500_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         low_pres_an = np.copy(z500_Anomaly)
         low_pres_an[cy_z500_objects == 0] = 0
-        cy_z500_objects = watershed_3d_overlap(
+        cy_z500_objects = watershed_3d_overlap_parallel(
                 z500_Anomaly * -1,
                 z500_low_anom*-1,
                 z500_low_anom*-1,
@@ -2760,7 +2760,7 @@ def cy_acy_z500_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(z500_Anomaly)
         high_pres_an[acy_z500_objects == 0] = 0
-        acy_z500_objects = watershed_3d_overlap(
+        acy_z500_objects = watershed_3d_overlap_parallel(
                 z500_Anomaly,
                 z500_high_anom,
                 z500_high_anom,
@@ -3028,7 +3028,7 @@ def mcs_tb_tracking(
         tb_masked = tb_masked * -1
         # tb_masked = tb_masked + np.nanmin(tb_masked)
         # tb_masked[C_objects == 0] = 0
-        C_objects = watershed_3d_overlap(
+        C_objects = watershed_3d_overlap_parallel(
                 tb * -1,
                 Cthreshold * -1,
                 Cthreshold * -1, #CL_MaxT * -1,
@@ -3167,7 +3167,7 @@ def cloud_tracking(
     tb_masked = tb_masked * -1
     # tb_masked = tb_masked + np.nanmin(tb_masked)
     # tb_masked[C_objects == 0] = 0
-    cloud_objects = watershed_3d_overlap(
+    cloud_objects = watershed_3d_overlap_parallel(
             tb * -1,
             tb_threshold * -1,
             tb_overshoot * -1, #CL_MaxT * -1,
@@ -3739,7 +3739,7 @@ def track_tropwaves(pr,
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = np.copy(amplitude)
             wave_amp[rgiObjectsUD == 0] = 0
-            wave_objects = watershed_3d_overlap(
+            wave_objects = watershed_3d_overlap_parallel(
                     wave_amp,
                     threshold,
                     threshold,
@@ -3949,7 +3949,7 @@ def track_tropwaves_tb(tb,
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = amplitude
             #wave_amp[rgiObjectsUD == 0] = 0
-            wave_objects = watershed_3d_overlap(
+            wave_objects = watershed_3d_overlap_parallel(
                     wave_amp *-1,
                     np.abs(threshold),
                     np.abs(threshold),
@@ -4314,6 +4314,12 @@ def _watershed_region(data, image, max_treshold, min_dist):
 # from memory_profiler import profile
 # # @profile__sections
 # @profile_
+'''
+Full 3d version of the watershedding function, split the peak finding in 2d, connect the peaks and
+do the watershed in fast 3d. Faster, (20s vs 40s for 3d vs 2d). The results are also qualitatively better
+since the peaks for the idealized test there are approx. 35 peaks for the 3d and 60 for the 2d version, where
+from the data should only be 30.
+'''
 def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to create binary object mast [float]
                          max_treshold, # value for identifying max. points for spreading [float]
@@ -4353,7 +4359,6 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
         coords = np.vstack(coords_list)
     else:
         coords = np.empty((0, 3), dtype=int)
-    print("Total number of markers: ", len(coords))
 
     mask = np.zeros(data.shape, dtype=bool)
     mask[tuple(coords.T)] = True
@@ -4381,8 +4386,415 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
 
 
     return watershed_results
+'''
+Idea is to split the region in lat and lon slices with some overlap. For non communication time is at around 15s. Now 
+with communication it is still around 15s for 7 chunks in lon and 1 in lat. The overhead of communication is not that big.
+14s for 2 in lat and 3 in lon. The result is however not yet quite perfect, since objects which would be split in the sequential at the boundary
+are merged automatically in this version
+'''
+def watershed_3d_overlap_parallel(
+    data,
+    object_threshold,
+    max_treshold,
+    min_dist,
+    dT,
+    mintime=24,
+    connectLon=0,
+    extend_size_ratio=0.25,
+    n_chunks_lat=1,
+    n_chunks_lon=2,
+    overlap_cells=None
+):
+    """
+    Parallel version of watershed_3d_overlap using domain decomposition.
+    
+    Parameters
+    ----------
+    n_chunks_lat : int
+        Number of chunks to split latitude dimension
+    n_chunks_lon : int
+        Number of chunks to split longitude dimension
+    overlap_cells : int, optional
+        Number of overlapping cells between chunks. If None, uses min_dist * 2
+    """
+    if n_chunks_lat == 1 and n_chunks_lon == 1:
+        # No parallelization needed
+        return watershed_3d_overlap(
+            data,
+            object_threshold,
+            max_treshold,
+            min_dist,
+            dT,
+            mintime,
+            connectLon,
+            extend_size_ratio
+        )
+    import multiprocessing as mp
+    from itertools import product
+    
+    # Set default overlap
+    if overlap_cells is None:
+        overlap_cells = min_dist * 2
+    
+    # Handle dateline extension
+    if connectLon == 1:
+        extension_size = int(data.shape[2] * extend_size_ratio)
+        data = np.concatenate(
+            [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=2
+        )
+    else:
+        extension_size = 0
+    
+    nt, nlat, nlon = data.shape
+    
+    # Calculate chunk boundaries with overlap
+    lat_chunks = _calculate_chunk_boundaries(nlat, n_chunks_lat, overlap_cells)
+    lon_chunks = _calculate_chunk_boundaries(nlon, n_chunks_lon, overlap_cells)
+    
+    # Process chunks in parallel
+    print(f"    Processing {len(lat_chunks) * len(lon_chunks)} chunks in parallel...")
+    
+    # Prepare arguments for parallel processing
+    chunk_args = []
+    for i, (lat_start, lat_end, lat_core_start, lat_core_end) in enumerate(lat_chunks):
+        for j, (lon_start, lon_end, lon_core_start, lon_core_end) in enumerate(lon_chunks):
+            chunk_data = data[:, lat_start:lat_end, lon_start:lon_end]
+            chunk_args.append((
+                i, j,
+                chunk_data,
+                object_threshold,
+                max_treshold,
+                min_dist,
+                (lat_start, lat_end, lat_core_start, lat_core_end),
+                (lon_start, lon_end, lon_core_start, lon_core_end)
+            ))
+    
+    # Process chunks in parallel
+    with mp.Pool() as pool:
+        chunk_results = pool.starmap(_process_watershed_chunk, chunk_args)
+    
+    # Merge results
+    print("    Merging chunk results...")
+    merged_result = _merge_watershed_chunks(
+        chunk_results,
+        (nt, nlat, nlon),
+        lat_chunks,
+        lon_chunks
+    )
+    
+    # Handle dateline correction
+    if connectLon == 1:
+        if extension_size != 0:
+            merged_result = merged_result[:, :, extension_size:-extension_size]
+        merged_result = ConnectLon_on_timestep(merged_result.astype("int"))
+    
+    return merged_result
 
 
+def _calculate_chunk_boundaries(total_size, n_chunks, overlap):
+    """
+    Calculate chunk boundaries with overlap.
+    
+    Returns
+    -------
+    list of tuples
+        Each tuple contains (start_with_overlap, end_with_overlap, core_start, core_end)
+    """
+    chunk_size = total_size // n_chunks
+    boundaries = []
+    
+    for i in range(n_chunks):
+        # Core region (without overlap)
+        core_start = i * chunk_size
+        core_end = (i + 1) * chunk_size if i < n_chunks - 1 else total_size
+        
+        # Extended region (with overlap)
+        start = max(0, core_start - overlap)
+        end = min(total_size, core_end + overlap)
+        
+        boundaries.append((start, end, core_start, core_end))
+    
+    return boundaries
+
+
+def _process_watershed_chunk(
+    chunk_i,
+    chunk_j,
+    chunk_data,
+    object_threshold,
+    max_treshold,
+    min_dist,
+    lat_bounds,
+    lon_bounds
+):
+    """
+    Process a single chunk using watershed algorithm.
+    
+    Returns
+    -------
+    dict
+        Contains chunk indices, boundaries, and labeled data
+    """
+    from skimage.feature import peak_local_max
+    from skimage.segmentation import watershed
+    
+    lat_start, lat_end, lat_core_start, lat_core_end = lat_bounds
+    lon_start, lon_end, lon_core_start, lon_core_end = lon_bounds
+    
+    # Create binary mask
+    image = chunk_data >= object_threshold
+    
+    # Find peaks
+    coords_list = []
+    for t in range(chunk_data.shape[0]):
+        coords_t = peak_local_max(
+            chunk_data[t],
+            min_distance=min_dist,
+            threshold_abs=max_treshold,
+            labels=image[t],
+            exclude_border=True
+        )
+        coords_with_time = np.column_stack((
+            np.full(coords_t.shape[0], t),
+            coords_t
+        ))
+        coords_list.append(coords_with_time)
+    
+    if len(coords_list) > 0:
+        coords = np.vstack(coords_list)
+    else:
+        coords = np.empty((0, 3), dtype=int)
+    
+    # Create markers
+    mask = np.zeros(chunk_data.shape, dtype=bool)
+    mask[tuple(coords.T)] = True
+    
+    # Label peaks over time
+    labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
+    markers = np.zeros(chunk_data.shape, dtype=int)
+    markers[tuple(coords.T)] = labels
+    
+    # Perform watershed
+    connection = np.ones((3, 3, 3))
+    watershed_result = watershed(
+        image=chunk_data * -1,
+        markers=markers,
+        connectivity=connection,
+        offset=np.ones(3, dtype=int),
+        mask=image,
+        compactness=0
+    )
+    
+    # Extract core region (without overlap)
+    core_lat_slice = slice(lat_core_start - lat_start, lat_core_end - lat_start)
+    core_lon_slice = slice(lon_core_start - lon_start, lon_core_end - lon_start)
+    core_result = watershed_result[:, core_lat_slice, core_lon_slice]
+    
+    return {
+        'chunk_i': chunk_i,
+        'chunk_j': chunk_j,
+        'lat_core_start': lat_core_start,
+        'lat_core_end': lat_core_end,
+        'lon_core_start': lon_core_start,
+        'lon_core_end': lon_core_end,
+        'labels': core_result,
+        'max_label': watershed_result.max()
+    }
+
+
+def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks):
+    """
+    Merge watershed results from all chunks and relabel consistently.
+    
+    Returns
+    -------
+    np.ndarray
+        Merged and relabeled watershed result
+    """
+    nt, nlat, nlon = output_shape
+    merged = np.zeros((nt, nlat, nlon), dtype=int)
+    
+    # Sort chunks by position
+    chunk_results.sort(key=lambda x: (x['chunk_i'], x['chunk_j']))
+    
+    # First pass: place all chunks and track overlaps at boundaries
+    next_label = 1
+    
+    for result in chunk_results:
+        lat_start = result['lat_core_start']
+        lat_end = result['lat_core_end']
+        lon_start = result['lon_core_start']
+        lon_end = result['lon_core_end']
+        
+        chunk_labels = result['labels']
+        # old_labels = np.unique(chunk_labels[chunk_labels > 0])
+        maximal_label = result['max_label']
+        chunk_labels[chunk_labels > 0] += next_label - 1
+        next_label += maximal_label
+        
+        merged[:, lat_start:lat_end, lon_start:lon_end] = chunk_labels
+    
+    # Second pass: merge objects at chunk boundaries
+    merged = _merge_boundary_objects(merged, lat_chunks, lon_chunks)
+    print("    Final number of objects: ", np.unique(merged[merged > 0]).size)
+    
+    # Relabel to consecutive integers
+    merged = _relabel_consecutive(merged)
+    
+    return merged
+
+'''
+old version: slow and not vectorized, see new version below
+'''
+# def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
+#     """
+#     Merge objects that cross chunk boundaries.
+#     """
+#     # nt = labeled_array.shape[0]
+#     # Merge across latitude boundaries
+#     if len(lat_chunks) < 2 and len(lon_chunks) < 2:
+#         return labeled_array
+
+#     if len(lat_chunks) > 1:
+#         for i in range(len(lat_chunks) - 1):
+#             boundary = lat_chunks[i][3]  # lat_core_end of chunk i
+            
+#             # Check for objects crossing boundary
+#             if boundary < labeled_array.shape[1] - 1:
+#                 labels_before = labeled_array[:, boundary - 1, :]
+#                 labels_after = labeled_array[:, boundary, :]
+                
+#                 # Find touching objects
+#                 for lb in np.unique(labels_before[labels_before > 0]):
+#                     mask_before = labels_before == lb
+#                     labels_touching = labels_after[mask_before]
+#                     la_candidates = np.unique(labels_touching[labels_touching > 0])
+                    
+#                     if len(la_candidates) > 0:
+#                         # Merge: keep lb, replace all la with lb
+#                         for la in la_candidates:
+#                             if la != lb:
+#                                 labeled_array[labeled_array == la] = lb
+
+#     if len(lon_chunks) > 2:
+#         return labeled_array
+
+#     # Merge across longitude boundaries
+#     for j in range(len(lon_chunks) - 1):
+#         boundary = lon_chunks[j][3]  # lon_core_end of chunk j
+        
+#         if boundary < labeled_array.shape[2] - 1:
+#             labels_before = labeled_array[:, :, boundary - 1]
+#             labels_after = labeled_array[:, :, boundary]
+            
+#             for lb in np.unique(labels_before[labels_before > 0]):
+#                 mask_before = labels_before == lb
+#                 labels_touching = labels_after[mask_before]
+#                 la_candidates = np.unique(labels_touching[labels_touching > 0])
+                
+#                 if len(la_candidates) > 0:
+#                     for la in la_candidates:
+#                         if la != lb:
+#                             labeled_array[labeled_array == la] = lb
+    
+#     return labeled_array
+
+def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
+    """
+    Merge objects that cross chunk boundaries using vectorized operations.
+    """
+    if len(lat_chunks) < 2 and len(lon_chunks) < 2:
+        return labeled_array
+
+    # Use a union-find structure to track which labels should be merged
+    parent = {}
+    
+    def find(x):
+        if x not in parent:
+            parent[x] = x
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+    
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
+
+    # Merge across latitude boundaries
+    if len(lat_chunks) > 1:
+        for i in range(len(lat_chunks) - 1):
+            boundary = lat_chunks[i][3]  # lat_core_end of chunk i
+            
+            if boundary < labeled_array.shape[1] - 1:
+                labels_before = labeled_array[:, boundary - 1, :]
+                labels_after = labeled_array[:, boundary, :]
+                
+                # Vectorized approach: find all touching pairs at once
+                mask = (labels_before > 0) & (labels_after > 0)
+                pairs = np.column_stack([labels_before[mask], labels_after[mask]])
+                
+                # Get unique pairs and merge them
+                unique_pairs = np.unique(pairs, axis=0)
+                for lb, la in unique_pairs:
+                    if lb != la:
+                        union(int(lb), int(la))
+
+    # Merge across longitude boundaries
+    if len(lon_chunks) > 1:
+        for j in range(len(lon_chunks) - 1):
+            boundary = lon_chunks[j][3]  # lon_core_end of chunk j
+            
+            if boundary < labeled_array.shape[2] - 1:
+                labels_before = labeled_array[:, :, boundary - 1]
+                labels_after = labeled_array[:, :, boundary]
+                
+                # Vectorized approach
+                mask = (labels_before > 0) & (labels_after > 0)
+                pairs = np.column_stack([labels_before[mask], labels_after[mask]])
+                
+                unique_pairs = np.unique(pairs, axis=0)
+                for lb, la in unique_pairs:
+                    if lb != la:
+                        union(int(lb), int(la))
+    
+    # Apply the merging: use vectorized lookup
+    unique_labels = np.unique(labeled_array[labeled_array > 0])
+    
+    # Build mapping array for fast lookup
+    max_label = unique_labels.max()
+    mapping = np.arange(max_label + 1)
+    for label in unique_labels:
+        root = find(int(label))
+        mapping[label] = root
+    
+    # Apply mapping using fancy indexing (MUCH faster than loop)
+    labeled_array = mapping[labeled_array]
+    
+    return labeled_array
+
+
+def _relabel_consecutive(labeled_array):
+    """
+    Relabel array to have consecutive integer labels starting from 1.
+    """
+    # Get unique non-zero labels
+    unique_labels = np.unique(labeled_array[labeled_array > 0])
+    
+    if len(unique_labels) == 0:
+        return labeled_array
+    
+    # Create a lookup array: old_label -> new_label
+    # The maximum old label determines the size we need
+    max_label = unique_labels[-1]  # unique_labels is sorted
+    lookup = np.zeros(max_label + 1, dtype=labeled_array.dtype)
+    lookup[unique_labels] = np.arange(1, len(unique_labels) + 1, dtype=labeled_array.dtype)
+    
+    # Apply the mapping using fancy indexing
+    # This is MUCH faster than looping
+    result = lookup[labeled_array]
+    
+    return result
 
 
 
