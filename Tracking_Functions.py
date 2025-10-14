@@ -43,6 +43,12 @@ import netCDF4
 
 
 import os
+import dask
+import dask.array as da
+from dask.diagnostics import ProgressBar
+import dask_image.ndmeasure 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing as mp
 
 # # Add this near the top of your file, after other imports
 # ENABLE_PROFILING = os.getenv('MEMORY_PROFILING', 'false').lower() == 'true'
@@ -2400,7 +2406,7 @@ def ar_850hpa_tracking(
                                 dT)
     elif breakup == 'watershed':
         min_dist=int((4000 * 10**3)/Gridspacing)
-        MS_objects = watershed_3d_overlap_scipy_parallel(
+        MS_objects = watershed_3d_overlap_dask_array(
                 VapTrans,
                 MinMSthreshold,
                 MinMSthreshold*1.05,
@@ -2443,7 +2449,7 @@ def ar_ivt_tracking(IVT,
                                         dT)
             elif breakup == 'watershed':
                 min_dist=int((4000 * 10**3)/Gridspacing)
-                IVT_objects = watershed_3d_overlap_scipy_parallel(
+                IVT_objects = watershed_3d_overlap_dask_array(
                         IVT,
                         IVTtrheshold,
                         IVTtrheshold*1.05,
@@ -2613,7 +2619,7 @@ def cy_acy_psl_tracking(
         low_pres_an[low_pres_an < -999999999] = 0
         low_pres_an[low_pres_an > 999999999] = 0
 
-        CY_objects = watershed_3d_overlap_scipy_parallel(
+        CY_objects = watershed_3d_overlap_dask_array(
                 low_pres_an * -1,
                 MaxPresAnCY * -1,
                 MaxPresAnCY * -1,
@@ -2656,7 +2662,7 @@ def cy_acy_psl_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(slp_Anomaly)
         high_pres_an[ACY_objects == 0] = 0
-        ACY_objects = watershed_3d_overlap_scipy_parallel(
+        ACY_objects = watershed_3d_overlap_dask_array(
                                             high_pres_an,
                                             MinPresAnACY,
                                             MinPresAnACY,
@@ -2722,7 +2728,7 @@ def cy_acy_z500_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         low_pres_an = np.copy(z500_Anomaly)
         low_pres_an[cy_z500_objects == 0] = 0
-        cy_z500_objects = watershed_3d_overlap_scipy_parallel(
+        cy_z500_objects = watershed_3d_overlap_dask_array(
                 z500_Anomaly * -1,
                 z500_low_anom*-1,
                 z500_low_anom*-1,
@@ -2754,7 +2760,7 @@ def cy_acy_z500_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(z500_Anomaly)
         high_pres_an[acy_z500_objects == 0] = 0
-        acy_z500_objects = watershed_3d_overlap_scipy_parallel(
+        acy_z500_objects = watershed_3d_overlap_dask_array(
                 z500_Anomaly,
                 z500_high_anom,
                 z500_high_anom,
@@ -3022,7 +3028,7 @@ def mcs_tb_tracking(
         tb_masked = tb_masked * -1
         # tb_masked = tb_masked + np.nanmin(tb_masked)
         # tb_masked[C_objects == 0] = 0
-        C_objects = watershed_3d_overlap_scipy_parallel(
+        C_objects = watershed_3d_overlap_dask_array(
                 tb * -1,
                 Cthreshold * -1,
                 Cthreshold * -1, #CL_MaxT * -1,
@@ -3161,7 +3167,7 @@ def cloud_tracking(
     tb_masked = tb_masked * -1
     # tb_masked = tb_masked + np.nanmin(tb_masked)
     # tb_masked[C_objects == 0] = 0
-    cloud_objects = watershed_3d_overlap_scipy_parallel(
+    cloud_objects = watershed_3d_overlap_dask_array(
             tb * -1,
             tb_threshold * -1,
             tb_overshoot * -1, #CL_MaxT * -1,
@@ -3733,7 +3739,7 @@ def track_tropwaves(pr,
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = np.copy(amplitude)
             wave_amp[rgiObjectsUD == 0] = 0
-            wave_objects = watershed_3d_overlap_scipy_parallel(
+            wave_objects = watershed_3d_overlap_dask_array(
                     wave_amp,
                     threshold,
                     threshold,
@@ -3943,7 +3949,7 @@ def track_tropwaves_tb(tb,
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = amplitude
             #wave_amp[rgiObjectsUD == 0] = 0
-            wave_objects = watershed_3d_overlap_scipy_parallel(
+            wave_objects = watershed_3d_overlap_dask_array(
                     wave_amp *-1,
                     np.abs(threshold),
                     np.abs(threshold),
@@ -4258,10 +4264,53 @@ class SectionTimer:
     def __exit__(self, *args):
         self.results_dict[self.name] = time.perf_counter() - self.start
 
-
 from skimage.feature import peak_local_max
 from skimage.segmentation import watershed
 from scipy.ndimage import gaussian_filter
+def _watershed_region(data, image, max_treshold, min_dist):
+
+    """Helper function to watershed a single region"""
+    coords_list = []
+
+    # find peaks in each time slice and add time as an additional coordinate
+    for t in range(data.shape[0]):
+        coords_t = peak_local_max(data[t], 
+                                min_distance = min_dist,
+                                threshold_abs = max_treshold,
+                                labels = image[t],
+                                exclude_border=True
+                               )
+
+        coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
+        coords_list.append(coords_with_time)
+
+    # Combine all coordinates into a single array
+    if len(coords_list) == 1:
+        return data
+    elif len(coords_list) > 0:
+        coords = np.vstack(coords_list)
+    else:
+        coords = np.empty((0, 3), dtype=int)
+    # print("Total number of markers: ", len(coords))
+
+    mask = np.zeros(data.shape, dtype=bool)
+    mask[tuple(coords.T)] = True
+
+    # label peaks over time to ensure temporal consistency
+    labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
+    markers = np.zeros(data.shape, dtype=int)
+    markers[tuple(coords.T)] = labels
+
+
+    # define connectivity for 3D watershedding and perform watershedding
+    conection = np.ones((3, 3, 3))
+    return watershed(image = np.array(data)*-1,  # watershedding field with maxima transformed to minima
+                    markers = markers, # maximum points in 3D matrix
+                    connectivity = conection, # connectivity
+                    offset = (np.ones((3)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
+                    mask = image, # binary mask for areas to watershed on
+                    compactness = 0) # high values --> more regular shaped watersheds
+
 # from memory_profiler import profile
 # # @profile__sections
 # @profile_
@@ -4330,554 +4379,10 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
             watershed_results = np.array(watershed_results[:, :, extension_size:-extension_size])
         watershed_results = ConnectLon_on_timestep(watershed_results.astype("int"))
 
-    return watershed_results
-
-def watershed_3d_overlap_scipy(data, # 3D matrix with data for watershedding [np.array]
-                         object_threshold, # float to create binary object mast [float]
-                         max_treshold, # value for identifying max. points for spreading [float]
-                         min_dist, # minimum distance (in grid cells) between maximum points [int]
-                         dT, # time interval in hours [int]
-                         mintime = 24, # minimum time an object has to exist in dT [int]
-                         connectLon = 0,  # do we have to track features over the date line?
-                         extend_size_ratio = 0.25): # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
-    
-    
-    if connectLon == 1:
-        axis = 2
-        extension_size = int(data.shape[2] * extend_size_ratio)
-        data = np.concatenate(
-                [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=axis
-            )
-    
-    # Create binary mask for watershedding, all data that needs to be segmented is True
-    image = data >= object_threshold
-    
-    coords_list = []
-
-    # find peaks in each time slice and add time as an additional coordinate
-    for t in range(data.shape[0]):
-        coords_t = peak_local_max(data[t], 
-                                min_distance = min_dist,
-                                threshold_abs = max_treshold,
-                                labels = image[t],
-                                exclude_border=True
-                               )
-
-        coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
-        coords_list.append(coords_with_time)
-
-    # Combine all coordinates into a single array
-    if len(coords_list) > 0:
-        coords = np.vstack(coords_list)
-    else:
-        coords = np.empty((0, 3), dtype=int)
-
-    mask = np.zeros(data.shape, dtype=bool)
-    mask[tuple(coords.T)] = True
-
-    # label peaks over time to ensure temporal consistency
-    labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
-    # markers = np.zeros(data.shape, dtype=int)
-    # fill the markers array with all -1
-    print("Total number of markers: ", len(coords))
-    markers = np.full(data.shape, -1, dtype=np.int32)
-    markers[image] = 0  # Set non-object areas to 0
-    markers[tuple(coords.T)] = labels
-
-    # # Convert data to uint16 for watershed_ift
-    # # First normalize to 0-65535 range, then convert to uint16
-    # data_normalized = np.array(data)  # invert so maxima become minima
-    # data_min = np.nanmin(data_normalized)
-    # data_max = np.nanmax(data_normalized)
-    #     # Avoid division by zero
-    # if data_max - data_min > 0:
-    #     data_uint16 = ((data_normalized - data_min) / (data_max - data_min) * 65535).astype(np.uint16)
-    # else:
-    #     data_uint16 = np.zeros_like(data_normalized, dtype=np.uint16)
-
-    # # define connectivity for 3D watershedding and perform watershedding
-    # conection = np.ones((3, 3, 3))
-    # watershed_results = scipy.ndimage.watershed_ift(
-    #                 input = data_uint16,  # now using uint16 data
-    #                 markers = markers,  # markers should be int32
-    #                 structure = conection.astype(np.int8), # structure should be int8
-    #                 )
-    data_to_watershed = data[image]  # Only process object pixels
-    data_min = np.nanmin(data_to_watershed)
-    data_max = np.nanmax(data_to_watershed)
-    
-    # Initialize with zeros instead of -1 (faster)
-    markers = np.zeros(data.shape, dtype=np.int32)
-    
-    # OPTIMIZATION 2: Use view instead of full conversion
-    if data_max - data_min > 0:
-        # Create uint16 array only for the processing
-        scale = 65535.0 / (data_max - data_min)
-        data_uint16 = ((data - data_min) * scale).astype(np.uint16)
-    else:
-        data_uint16 = np.zeros_like(data, dtype=np.uint16)
-    
-    # Background as very high values (cheaper than negative markers)
-    data_uint16[~image] = 65535
-    markers[tuple(coords.T)] = labels
-    
-    conection = np.ones((3, 3, 3), dtype=np.int8)
-    watershed_results = scipy.ndimage.watershed_ift(
-        input=data_uint16,
-        markers=markers,
-        structure=conection
-    )
-
-    # correct objects on date line if needed
-    if connectLon == 1:
-        if extension_size != 0:
-            watershed_results = np.array(watershed_results[:, :, extension_size:-extension_size])
-        watershed_results = ConnectLon_on_timestep(watershed_results.astype("int"))
 
     return watershed_results
 
-def _watershed_region(data_region, image_region, max_treshold, min_dist):
-    """Helper function to watershed a single region"""
-    coords_list = []
-    
-    for t in range(data_region.shape[0]):
-        coords_t = peak_local_max(data_region[t], 
-                                min_distance=min_dist,
-                                threshold_abs=max_treshold,
-                                labels=image_region[t],
-                                exclude_border=True)
-        if len(coords_t) > 0:
-            coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
-            coords_list.append(coords_with_time)
-    
-    if not coords_list:
-        return np.zeros(data_region.shape, dtype=int)
-    
-    coords = np.vstack(coords_list)
-    labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
-    
-    data_min = np.nanmin(data_region[image_region])
-    data_max = np.nanmax(data_region[image_region])
-    
-    markers = np.zeros(data_region.shape, dtype=np.int32)
-    
-    if data_max > data_min:
-        scale = 65535.0 / (data_max - data_min)
-        data_uint16 = ((data_region - data_min) * scale).astype(np.uint16)
-    else:
-        data_uint16 = np.zeros_like(data_region, dtype=np.uint16)
-    
-    data_uint16[~image_region] = 65535
-    markers[tuple(coords.T)] = labels
-    
-    return scipy.ndimage.watershed_ift(
-        input=data_uint16,
-        markers=markers,
-        structure=np.ones((3, 3, 3), dtype=np.int8)
-    )
 
-def watershed_3d_overlap_scipy_parallel(data, object_threshold, max_treshold, 
-                                       min_dist, dT, mintime=24, 
-                                       connectLon=0, extend_size_ratio=0.25):
-    """
-    Process disconnected object groups separately for better performance
-    """
-    
-    if connectLon == 1:
-        axis = 2
-        extension_size = int(data.shape[2] * extend_size_ratio)
-        data = np.concatenate(
-                [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=axis
-            )
-    
-    image = data >= object_threshold
-    
-    # Find connected components in 3D
-    labeled_regions, num_regions = ndimage.label(image, structure=np.ones((3,3,3)))
-    
-    if num_regions == 0:
-        return np.zeros_like(data, dtype=int)
-    
-    print(f"Found {num_regions} disconnected object regions")
-    
-    watershed_results = np.zeros(data.shape, dtype=int)
-    next_label = 1
-    
-    # Process each disconnected region separately
-    region_slices = ndimage.find_objects(labeled_regions)
-    
-    for region_id, region_slice in enumerate(tqdm(region_slices), 1):
-        if region_slice is None:
-            continue
-            
-        # Add buffer around region
-        buffer = min_dist
-        t_slice = slice(max(0, region_slice[0].start), 
-                       min(data.shape[0], region_slice[0].stop))
-        y_slice = slice(max(0, region_slice[1].start - buffer), 
-                       min(data.shape[1], region_slice[1].stop + buffer))
-        x_slice = slice(max(0, region_slice[2].start - buffer), 
-                       min(data.shape[2], region_slice[2].stop + buffer))
-        
-        data_region = data[t_slice, y_slice, x_slice]
-        image_region = (labeled_regions[t_slice, y_slice, x_slice] == region_id)
-        
-        # Run watershed on this region only
-        result_region = _watershed_region(data_region, image_region, 
-                                         max_treshold, min_dist)
-        
-        # Renumber labels and place back
-        if result_region.max() > 0:
-            result_region[result_region > 0] += next_label - 1
-            watershed_results[t_slice, y_slice, x_slice][image_region] = \
-                result_region[image_region]
-            next_label = watershed_results.max() + 1
-    
-    if connectLon == 1:
-        if extension_size != 0:
-            watershed_results = watershed_results[:, :, extension_size:-extension_size]
-        watershed_results = ConnectLon_on_timestep(watershed_results.astype("int"))
-    
-    return watershed_results
-
-# This function performs watershedding on 2D anomaly fields and
-# succeeds an older version of this function (watershed_2d_overlap_temp_discontin).
-# This function uses spatially reduced watersheds from the previous time step as seed for the
-# current time step, which improves temporal consistency of features.
-def watershed_2d_overlap_slow(data, # 3D matrix with data for watershedding [np.array]
-                         object_threshold, # float to create binary object mast [float]
-                         max_treshold, # value for identifying max. points for spreading [float]
-                         min_dist, # minimum distance (in grid cells) between maximum points [int]
-                         dT, # time interval in hours [int]
-                         mintime = 24, # minimum time an object has to exist in dT [int]
-                         connectLon = 0,  # do we have to track features over the date line?
-                         extend_size_ratio = 0.25, # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
-                         erosion_disk = 3.5): 
-
-    from scipy import ndimage as ndi
-    from skimage.feature import peak_local_max
-    from skimage.segmentation import watershed
-    from scipy.ndimage import gaussian_filter
-    from Tracking_Functions import clean_up_objects
-    from Tracking_Functions import ConnectLon_on_timestep
-    
-    if connectLon == 1:
-        axis = 1
-        extension_size = int(data.shape[1] * extend_size_ratio)
-        data = np.concatenate(
-                [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=2
-            )
-    data_2d_watershed = np.copy(data); data_2d_watershed[:] = np.nan
-    for tt in tqdm(range(data.shape[0])):
-        image = data[tt,:] >= object_threshold
-        data_t0 = data[tt,:,:]
-        # if connectLon == 1:
-        #     # prepare to identify features accross date line
-        #     image = np.concatenate(
-        #         [image[-extension_size:, :], image, image[:extension_size, :]], axis=axis
-        #     )
-        #     data_t0 = np.concatenate(
-        #         [data_t0[-extension_size:, :], data_t0, data_t0[:extension_size, :]], axis=axis
-        #     )
-        
-        ## smooth small scale "noise"
-        # tt1 = np.max([0,tt-1])
-        # tt2 = np.min([data.shape[0],tt+2])
-        # image = (gaussian_filter(data[tt1:tt2,:,:], sigma=(0.5,0.5,0.5)) >= object_threshold)[1,:]
-        # get maximum precipitation over three time steps to make fields more coherant
-        coords = peak_local_max(data_t0, 
-                                min_distance = min_dist,
-                                threshold_abs = max_treshold,
-                                labels = image
-                               )
-    
-        mask = np.zeros(data_t0.shape, dtype=bool)
-        mask[tuple(coords.T)] = True
-        markers, _ = ndi.label(mask)
-    
-        if tt != 0:
-            # allow markers to change a bit from time to time and 
-            # introduce new markers if they have strong enough max/min and
-            # are far enough away from existing objects
-            from skimage.segmentation import find_boundaries
-            from skimage.morphology import erosion, square, disk, rectangle
-            boundaries = find_boundaries(data_2d_watershed[tt-1,:,:].astype("int"), mode='outer')
-            # Set boundaries to zero in the markers
-            separated_markers = np.copy(data_2d_watershed[tt-1,:,:].astype("int"))
-            separated_markers[boundaries] = 0
-            from skimage.morphology import erosion
-            separated_markers = erosion(separated_markers, disk(erosion_disk)) #3.5
-            separated_markers[data_2d_watershed[tt,:,:] == 0] = 0
-            
-            # add unique new markers if they are not too close to old objects
-            from skimage.morphology import dilation, square, disk
-            dilated_matrix = dilation(data_2d_watershed[tt-1,:,:].astype("int"), disk(2.5))
-            markers_updated = (markers + np.max(separated_markers)).astype("int")
-            markers_updated[markers_updated == np.max(separated_markers)] = 0
-            markers_add = (markers_updated != 0) & (dilated_matrix == 0)
-            
-            separated_markers[markers_add] = markers_updated[markers_add]
-            markers = separated_markers
-            # break up elements that are no longer connected
-            markers, _ = ndi.label(markers)
-    
-            # make sure that spatially separate objects have unique labels
-            # markers, _ = ndi.label(mask)
-        data_2d_watershed[tt,:,:] = watershed(image = np.array(data[tt,:])*-1,  # watershedding field with maxima transformed to minima
-                        markers = markers, # maximum points in 3D matrix
-                        connectivity = np.ones((3, 3)), # connectivity
-                        offset = (np.ones((2)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
-                        mask = image, # binary mask for areas to watershed on
-                        compactness = 0) # high values --> more regular shaped watersheds
-    
-    if connectLon == 1:
-        # Crop to the original size
-        # start = extension_size
-        # end = start + image.shape[axis]
-        if extension_size != 0:
-            data_2d_watershed = np.array(data_2d_watershed[:, :, extension_size:-extension_size])
-        data_2d_watershed = ConnectLon_on_timestep(data_2d_watershed.astype("int"))
-        
-        # # Merge labels across boundaries
-        # if axis == 1:  # Periodicity along horizontal axis
-        #     left_extension = labels[:, start - extension_size:start]
-        #     right_extension = labels[:, end:end + extension_size]
-        #     left_edge = cropped_labels[:, 0]
-        #     right_edge = cropped_labels[:, -1]
-            
-        #     # Build a mapping of labels to merge
-        #     label_mapping = {}
-        #     for x in range(image.shape[0]):
-        #         left_label = left_extension[x, -1]
-        #         right_label = right_extension[x, 0]
-        #         if left_label > 0 and right_label > 0 and left_label != right_label:
-        #             label_mapping[right_label] = left_label
-            
-        #     # Replace labels according to the mapping
-        #     for old_label, new_label in label_mapping.items():
-        #         cropped_labels[cropped_labels == old_label] = new_label
-
-    ### CONNECT OBJECTS IN 3D BASED ON MAX OVERLAP    
-    labels = np.array(data_2d_watershed).astype('int')
-    # clean matrix to populate objects with
-    objects_watershed = np.copy(labels); objects_watershed[:] = 0
-    ob_max = np.max(labels[0,:]) + 1
-    for tt in tqdm(range(objects_watershed.shape[0])):
-        # initialize the elements at tt=0
-        if tt == 0:
-            objects_watershed[tt,:] = labels[tt,:].copy()
-        else:
-            # objects at tt=0
-            obj_t1 = np.unique(labels[tt,:])[1:]
-    
-            # get the size of the t0 objects
-            t0_elements, t0_area = np.unique(objects_watershed[tt-1,:], return_counts=True)
-            # remove zeros
-            t0_elements = t0_elements[1:]
-            t0_area = t0_area[1:]
-    
-            # find object locations in t0 and remove None slizes
-            ob_loc_t0 = ndimage.find_objects(objects_watershed[tt-1,:])
-            valid = np.array([ob_loc_t0[ob] != None for ob in range(len(ob_loc_t0))])
-            try:
-                ob_loc_t0 = [ob_loc_t0[kk] for kk in range(len(valid)) if valid[kk] == True]
-            except:
-                stop()
-                continue
-    
-            # find object locations in t1 and remove None slizes
-            try:
-                ob_loc_t1 = ndimage.find_objects(labels[tt,:])
-            except:
-                stop()
-                continue
-            # valid = np.array([ob_loc_t1[ob] != None for ob in range(len(ob_loc_t1))])
-            # ob_loc_t1 = np.array(ob_loc_t1)[valid]
-    
-            # sort the elements according to size
-            sort = np.argsort(t0_area)[::-1]
-            t0_elements = t0_elements[sort]
-            t0_area = t0_area[sort]
-            ob_loc_t0 = np.array(ob_loc_t0)[sort]
-    
-            # loop over all objects in t = -1 from big to small
-            for ob in range(len(t0_elements)):
-                ob_act = np.copy(objects_watershed[tt-1, \
-                                                   ob_loc_t0[ob][0], \
-                                                   ob_loc_t0[ob][1]])
-                
-                ob_act[ob_act != t0_elements[ob]] = 0
-                # overlaping elements
-                ob_act_t1 = np.copy(labels[tt, \
-                                           ob_loc_t0[ob][0], \
-                                           ob_loc_t0[ob][1]])
-                ob_t1_overlap = np.unique(ob_act_t1[ob_act == t0_elements[ob]])
-                ob_t1_overlap = ob_t1_overlap[ob_t1_overlap != 0]
-
-                # if (t0_elements[ob] == 5565) & (tt == 32):
-                #     stop()
-                
-                if len(ob_t1_overlap) == 0:
-                    # This object does not continue
-                    continue
-                # the t0 object is connected to the one with the biggest overlap
-                area_overlap = [np.sum((ob_act >0) & (ob_act_t1 == ob_t1_overlap[ii])) for ii in range(len(ob_t1_overlap))]
-                ob_continue = ob_t1_overlap[np.argmax(area_overlap)]
-    
-                ob_area = labels[tt, \
-                              ob_loc_t1[ob_continue-1][0], \
-                              ob_loc_t1[ob_continue-1][1]] == ob_continue
-                # check if this element has already been connected with a larger object
-                if np.isin(ob_continue, obj_t1) == False:
-                    # This object ends here
-                    continue
-    
-                objects_watershed[tt, \
-                               ob_loc_t1[ob_continue-1][0], \
-                               ob_loc_t1[ob_continue-1][1]][ob_area] = t0_elements[ob]
-                # remove the continuing object from the t1 list
-                obj_t1 = np.delete(obj_t1, np.where(obj_t1 == ob_continue))
-    
-    
-            # Any object that is left in the t1 list will be treated as a new initiation
-            for ob in range(len(obj_t1)):
-                ob_loc_t0 = ndimage.find_objects(labels[tt,:] == obj_t1[ob])
-                ob_new = objects_watershed[tt,:][ob_loc_t0[0]]
-                ob_new[labels[tt,:][ob_loc_t0[0]] == obj_t1[ob]] = ob_max
-                objects_watershed[tt,:][ob_loc_t0[0]] = ob_new
-                ob_max += 1
-       
-        objects, _ = clean_up_objects(objects_watershed,
-                            min_tsteps=int(mintime/dT),
-                            dT = dT)
-    return objects
-
-                       
-
-# This function performs watershedding on 2D anomaly fields and
-# connects the resulting objects in 3D by searching for maximum overlaps
-def watershed_2d_overlap_temp_discontin(data, # 3D matrix with data for watershedding [np.array]
-                         object_threshold, # float to created binary object mast [float]
-                         max_treshold, # value for identifying max. points for spreading [float]
-                         min_dist, # minimum distance (in grid cells) between maximum points [int]
-                         dT, # time interval in hours [int]
-                         mintime = 24): # minimum time an object has to exist in dT [int]
-                         
-
-    from scipy import ndimage as ndi
-    from skimage.feature import peak_local_max
-    from skimage.segmentation import watershed
-    
-    data_2d_watershed = np.copy(data); data_2d_watershed[:] = np.nan
-    for tt in tqdm(range(data.shape[0])):
-        image = data[tt,:,:] >= object_threshold
-        coords = peak_local_max(np.array(data[tt,:,:]), 
-                                min_distance = min_dist,
-                                threshold_abs = max_treshold,
-                                labels = image
-                               )
-        mask = np.zeros(data[tt,:,:].shape, dtype=bool)
-        mask[tuple(coords.T)] = True
-        markers, _ = ndi.label(mask)
-        data_2d_watershed[tt,:,:] = watershed(image = np.array(data[tt,:])*-1,  # watershedding field with maxima transformed to minima
-                           markers = markers, # maximum points in 3D matrix
-                           connectivity = np.ones((3, 3)), # connectivity
-                           offset = (np.ones((2)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
-                           mask = image, # binary mask for areas to watershed on
-                           compactness = 0) # high values --> more regular shaped watersheds
-    
-    ### CONNECT OBJECTS IN 3D BASED ON MAX OVERLAP
-    from Tracking_Functions import clean_up_objects
-    from Tracking_Functions import ConnectLon_on_timestep
-    
-    labels = data_2d_watershed.astype('int')
-    # clean matrix to pupulate objects with
-    objects_watershed = np.copy(labels); objects_watershed[:] = 0
-    ob_max = np.max(labels[0,:]) + 1
-    for tt in tqdm(range(objects_watershed.shape[0])):
-        # initialize the elements at tt=0
-        if tt == 0:
-            objects_watershed[tt,:] = labels[tt,:]
-        else:
-            # objects at tt=0
-            obj_t1 = np.unique(labels[tt,:])[1:]
-
-            # get the size of the t0 objects
-            t0_elements, t0_area = np.unique(objects_watershed[tt-1,:], return_counts=True)
-            # remove zeros
-            t0_elements = t0_elements[1:]
-            t0_area = t0_area[1:]
-    
-            # find object locations in t0 and remove None slizes
-            ob_loc_t0 = ndimage.find_objects(objects_watershed[tt-1,:])
-            valid = np.array([ob_loc_t0[ob] != None for ob in range(len(ob_loc_t0))])
-            try:
-                ob_loc_t0 = [ob_loc_t0[kk] for kk in range(len(valid)) if valid[kk] == True]
-            except:
-                stop()
-                continue
-    
-            # find object locations in t1 and remove None slizes
-            try:
-                ob_loc_t1 = ndimage.find_objects(labels[tt,:])
-            except:
-                stop()
-                continue
-            # valid = np.array([ob_loc_t1[ob] != None for ob in range(len(ob_loc_t1))])
-            # ob_loc_t1 = np.array(ob_loc_t1)[valid]
-    
-            # sort the elements according to size
-            sort = np.argsort(t0_area)[::-1]
-            t0_elements = t0_elements[sort]
-            t0_area = t0_area[sort]
-            ob_loc_t0 = np.array(ob_loc_t0)[sort]
-    
-            # loop over all objects in t = -1 from big to small
-            for ob in range(len(t0_elements)):
-    
-                ob_act = np.copy(objects_watershed[tt-1, \
-                                                   ob_loc_t0[ob][0], \
-                                                   ob_loc_t0[ob][1]])
-                ob_act[ob_act != t0_elements[ob]] = 0
-                # overlaping elements
-                ob_act_t1 = np.copy(labels[tt, \
-                                           ob_loc_t0[ob][0], \
-                                           ob_loc_t0[ob][1]])
-                ob_t1_overlap = np.unique(ob_act_t1[ob_act == t0_elements[ob]])[1:]
-                if len(ob_t1_overlap) == 0:
-                    # this object does not continue
-                    continue
-                # the t0 object is connected to the one with the biggest overlap
-                area_overlap = [np.sum((ob_act >0) & (ob_act_t1 == ob_t1_overlap[ii])) for ii in range(len(ob_t1_overlap))]
-                ob_continue = ob_t1_overlap[np.argmax(area_overlap)]
-    
-                ob_area = labels[tt, \
-                              ob_loc_t1[ob_continue-1][0], \
-                              ob_loc_t1[ob_continue-1][1]] == ob_continue
-                # check if this element has already been connected with a larger object
-                if np.isin(ob_continue, obj_t1) == False:
-                    # this object ends here
-                    continue
-    
-                objects_watershed[tt, \
-                               ob_loc_t1[ob_continue-1][0], \
-                               ob_loc_t1[ob_continue-1][1]][ob_area] = t0_elements[ob]
-                # remove the continuning object from the t1 list
-                obj_t1 = np.delete(obj_t1, np.where(obj_t1 == ob_continue))
-    
-    
-            # any object that is left in the t1 list will be treated as a new initiation
-            for ob in range(len(obj_t1)):
-                ob_loc_t0 = ndimage.find_objects(labels[tt,:] == obj_t1[ob])
-                ob_new = objects_watershed[tt,:][ob_loc_t0[0]]
-                ob_new[labels[tt,:][ob_loc_t0[0]] == obj_t1[ob]] = ob_max
-                objects_watershed[tt,:][ob_loc_t0[0]] = ob_new
-                ob_max += 1
-    
-    objects, _ = clean_up_objects(objects_watershed,
-                        min_tsteps=int(mintime/dT),
-                         dT = dT)
-    return objects
 
 
 
