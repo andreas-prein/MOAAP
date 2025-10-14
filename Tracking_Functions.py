@@ -2406,7 +2406,7 @@ def ar_850hpa_tracking(
                                 dT)
     elif breakup == 'watershed':
         min_dist=int((4000 * 10**3)/Gridspacing)
-        MS_objects = watershed_3d_overlap_dask_array(
+        MS_objects = watershed_3d_overlap(
                 VapTrans,
                 MinMSthreshold,
                 MinMSthreshold*1.05,
@@ -2449,7 +2449,7 @@ def ar_ivt_tracking(IVT,
                                         dT)
             elif breakup == 'watershed':
                 min_dist=int((4000 * 10**3)/Gridspacing)
-                IVT_objects = watershed_3d_overlap_dask_array(
+                IVT_objects = watershed_3d_overlap(
                         IVT,
                         IVTtrheshold,
                         IVTtrheshold*1.05,
@@ -2619,7 +2619,7 @@ def cy_acy_psl_tracking(
         low_pres_an[low_pres_an < -999999999] = 0
         low_pres_an[low_pres_an > 999999999] = 0
 
-        CY_objects = watershed_3d_overlap_dask_array(
+        CY_objects = watershed_3d_overlap(
                 low_pres_an * -1,
                 MaxPresAnCY * -1,
                 MaxPresAnCY * -1,
@@ -2662,7 +2662,7 @@ def cy_acy_psl_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(slp_Anomaly)
         high_pres_an[ACY_objects == 0] = 0
-        ACY_objects = watershed_3d_overlap_dask_array(
+        ACY_objects = watershed_3d_overlap(
                                             high_pres_an,
                                             MinPresAnACY,
                                             MinPresAnACY,
@@ -2728,7 +2728,7 @@ def cy_acy_z500_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         low_pres_an = np.copy(z500_Anomaly)
         low_pres_an[cy_z500_objects == 0] = 0
-        cy_z500_objects = watershed_3d_overlap_dask_array(
+        cy_z500_objects = watershed_3d_overlap(
                 z500_Anomaly * -1,
                 z500_low_anom*-1,
                 z500_low_anom*-1,
@@ -2760,7 +2760,7 @@ def cy_acy_z500_tracking(
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(z500_Anomaly)
         high_pres_an[acy_z500_objects == 0] = 0
-        acy_z500_objects = watershed_3d_overlap_dask_array(
+        acy_z500_objects = watershed_3d_overlap(
                 z500_Anomaly,
                 z500_high_anom,
                 z500_high_anom,
@@ -3028,7 +3028,7 @@ def mcs_tb_tracking(
         tb_masked = tb_masked * -1
         # tb_masked = tb_masked + np.nanmin(tb_masked)
         # tb_masked[C_objects == 0] = 0
-        C_objects = watershed_3d_overlap_dask_array(
+        C_objects = watershed_3d_overlap(
                 tb * -1,
                 Cthreshold * -1,
                 Cthreshold * -1, #CL_MaxT * -1,
@@ -3167,7 +3167,7 @@ def cloud_tracking(
     tb_masked = tb_masked * -1
     # tb_masked = tb_masked + np.nanmin(tb_masked)
     # tb_masked[C_objects == 0] = 0
-    cloud_objects = watershed_3d_overlap_dask_array(
+    cloud_objects = watershed_3d_overlap(
             tb * -1,
             tb_threshold * -1,
             tb_overshoot * -1, #CL_MaxT * -1,
@@ -3739,7 +3739,7 @@ def track_tropwaves(pr,
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = np.copy(amplitude)
             wave_amp[rgiObjectsUD == 0] = 0
-            wave_objects = watershed_3d_overlap_dask_array(
+            wave_objects = watershed_3d_overlap(
                     wave_amp,
                     threshold,
                     threshold,
@@ -3949,7 +3949,7 @@ def track_tropwaves_tb(tb,
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = amplitude
             #wave_amp[rgiObjectsUD == 0] = 0
-            wave_objects = watershed_3d_overlap_dask_array(
+            wave_objects = watershed_3d_overlap(
                     wave_amp *-1,
                     np.abs(threshold),
                     np.abs(threshold),
