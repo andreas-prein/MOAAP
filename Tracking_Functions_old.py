@@ -1,3 +1,17 @@
+import Tracking_Functions
+import numpy as np
+import time
+import skimage
+from skimage.feature import peak_local_max
+from skimage.segmentation import watershed
+from scipy.ndimage import gaussian_filter
+import dask
+import dask_image.ndmeasure
+'''
+try to parallelize with processPoolExecutor, using first labelling and later distribute the work over the different workers
+unfortunately the taks were to small to be efficiently executed by e.g. 7 workers, i.e. many of them just were idle and had long wait 
+times for the next task. Runtime is around 1 min.
+'''
 def watershed_3d_overlap_parallel_old(data, # 3D matrix with data for watershedding [np.array]
                                 object_threshold, # float to create binary object mast [float]
                                 max_treshold, # value for identifying max. points for spreading [float]
@@ -93,7 +107,10 @@ def watershed_3d_overlap_parallel_old(data, # 3D matrix with data for watershedd
     
     return watershed_results
 
-
+'''
+attempt to parallelize this calculation with dask, unfortunately is the overhead for e.g. 10000 objects to distribute just too high, leading to a runtime 
+of around 4 min for the original dataset for mcs and cloud tracking, whereas the current implementation takes around 15 s for everything. 
+'''
 def watershed_3d_overlap_dask_array(data, # 3D matrix with data for watershedding
                                    object_threshold,
                                    max_treshold,
@@ -220,6 +237,10 @@ def watershed_3d_overlap_dask_array(data, # 3D matrix with data for watersheddin
         client.close()
         cluster.close()
 
+'''
+similar to the original function, but with reducing the max and min extensions of the data by cutting data where there are no MCS,...
+No speedup, but this may change depending on what is measured.
+'''
 def watershed_3d_overlap_reduce(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to create binary object mast [float]
                          max_treshold, # value for identifying max. points for spreading [float]
@@ -314,6 +335,15 @@ def watershed_3d_overlap_reduce(data, # 3D matrix with data for watershedding [n
 
 
     return watershed_results
+
+'''
+unfortunately scipy's watershed_ift does not ignore background and hence watersheds over the entire domain,
+which is for a common problem ca. 30 times more data then the MCS objects. This means, that this function is not faster
+no matter how one would parallelize or optimize it. Time consumption with scipy was around 30s for everything.
+The watershed function per se is fast, but just watersheds too much (also the unnecessary background).
+The idea of reducing the data volume to the edge of all MCS objects available is implemented here aswell, but
+due to time consumption with applying max/min and slicing the data, the time saving is near 0.
+'''
 
 def watershed_3d_overlap_scipy(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to create binary object mast [float]
