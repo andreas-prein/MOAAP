@@ -13,7 +13,8 @@ from scipy.optimize import linear_sum_assignment
 import pandas as pd
 import argparse
 from Tracking_Functions import watershed_2d_overlap, watershed_3d_overlap, watershed_3d_overlap_parallel
-
+from memory_profiler import memory_usage
+import psutil
 
 def generate_synthetic_data(n_time=48, n_lat=200, n_lon=200, n_cells=30, speed=3.0, seed=42):
     """
@@ -35,7 +36,7 @@ def generate_synthetic_data(n_time=48, n_lat=200, n_lon=200, n_cells=30, speed=3
     np.random.seed(seed)
     
     # Initialize background field
-    data = np.full((n_time, n_lat, n_lon), 300.0)
+    data = np.full((n_time, n_lat, n_lon), 300.0, dtype=np.float32)
     
     # Precompute grid for distance calculations
     yy, xx = np.ogrid[:n_lat, :n_lon]
@@ -125,10 +126,19 @@ def benchmark_algorithm(func, data, name, tb_threshold=241, dT=1, repetitions=3,
     print(f"\n{'='*50}")
     print(f"Benchmarking: {name}")
     print(f"{'='*50}")
-    
+    # Get baseline memory
+    process = psutil.Process()
+    baseline_memory = process.memory_info().rss / 1024 / 1024  # MB
+   
     start_time = time.time()
     
-    for _ in range(repetitions - 2):
+    mem_usage = memory_usage((
+        func,
+        (data * -1, tb_threshold * -1, -235, 8, dT),
+        dict(mintime=0, connectLon=0, extend_size_ratio=0.10, **kwargs)
+    ), interval=0.1, timeout=None, max_usage=True)
+    
+    for _ in range(repetitions - 1):
         func(
             data * -1,
             tb_threshold * -1,
@@ -153,12 +163,14 @@ def benchmark_algorithm(func, data, name, tb_threshold=241, dT=1, repetitions=3,
     )
     
     elapsed_time = time.time() - start_time
+    peak_memory = mem_usage - baseline_memory
     
     n_objects = len(np.unique(result)) - 1  # Exclude background (0)
     print(f"Objects found: {n_objects}")
     print(f"Time elapsed: {elapsed_time:.2f} seconds")
-    
-    return result, elapsed_time
+    print(f"Peak memory usage: {peak_memory:.2f} MB")
+
+    return result, elapsed_time, peak_memory
 
 
 def find_label_mapping(result1, result2):
@@ -338,33 +350,8 @@ def main():
     results = {}
     times = {}
 
-    
-    # 2D watershed
-    result_2d, time_2d = benchmark_algorithm(
-        watershed_2d_overlap,
-        data,
-        "watershed_2d_overlap",
-        tb_threshold,
-        dT,
-        repetitions=args.repetitions
-    )
-    results['2d'] = result_2d
-    times['2d'] = time_2d
-    
-    # 3D watershed
-    result_3d, time_3d = benchmark_algorithm(
-        watershed_3d_overlap,
-        data,
-        "watershed_3d_overlap",
-        tb_threshold,
-        dT,
-        repetitions=args.repetitions
-    )
-    results['3d'] = result_3d
-    times['3d'] = time_3d
-    
     # 3D parallel watershed
-    result_3d_par, time_3d_par = benchmark_algorithm(
+    result_3d_par, time_3d_par, memory_3d_par = benchmark_algorithm(
         watershed_3d_overlap_parallel,
         data,
         "watershed_3d_overlap_parallel",
@@ -376,6 +363,31 @@ def main():
     )
     results['3d_parallel'] = result_3d_par
     times['3d_parallel'] = time_3d_par
+    
+    # 2D watershed
+    result_2d, time_2d, memory_2d = benchmark_algorithm(
+        watershed_2d_overlap,
+        data,
+        "watershed_2d_overlap",
+        tb_threshold,
+        dT,
+        repetitions=args.repetitions
+    )
+    results['2d'] = result_2d
+    times['2d'] = time_2d
+    
+    # 3D watershed
+    result_3d, time_3d, memory_3d = benchmark_algorithm(
+        watershed_3d_overlap,
+        data,
+        "watershed_3d_overlap",
+        tb_threshold,
+        dT,
+        repetitions=args.repetitions
+    )
+    results['3d'] = result_3d
+    times['3d'] = time_3d
+    
     
     # Compare results
     # comp_2d_3d = compare_results(result_2d, result_3d, '2D', '3D')
@@ -393,6 +405,10 @@ def main():
     print(f"\nSpeedup vs 2D:")
     print(f"  3D:           {times['2d']/times['3d']:.2f}x")
     print(f"  3D Parallel:  {times['2d']/times['3d_parallel']:.2f}x")
+    print(f"\nPeak Memory Usage:")
+    print(f"  2D:           {memory_2d:.2f} MB")
+    print(f"  3D:           {memory_3d:.2f} MB")
+    print(f"  3D Parallel:  {memory_3d_par:.2f} MB")
     
     print("\nComparison Results:")
     # print(f"  2D vs 3D overlap:          {comp_2d_3d['overlap_score']:.4f}")
