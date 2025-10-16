@@ -4402,7 +4402,7 @@ def watershed_3d_overlap_parallel(
     connectLon=0,
     extend_size_ratio=0.25,
     n_chunks_lat=1,
-    n_chunks_lon=2,
+    n_chunks_lon=1,
     overlap_cells=None
 ):
     """
