@@ -15,6 +15,7 @@ import argparse
 from Tracking_Functions import watershed_2d_overlap, watershed_3d_overlap, watershed_3d_overlap_parallel
 from memory_profiler import memory_usage
 import psutil
+import os
 
 def generate_synthetic_data(n_time=48, n_lat=200, n_lon=200, n_cells=30, speed=3.0, seed=42):
     """
@@ -96,6 +97,76 @@ def generate_synthetic_data(n_time=48, n_lat=200, n_lon=200, n_cells=30, speed=3
     print(f"Generated data shape: {data.shape}")
     return data
 
+def generate_data_filename(n_time=48, n_lat=200, n_lon=200, n_cells=30, speed=3.0, seed=42):
+    """
+    Generate a unique filename based on data generation parameters.
+    
+    Parameters:
+    -----------
+    Same as generate_synthetic_data
+    
+    Returns:
+    --------
+    filename : str
+        Filename for the cached data
+    """
+    param_str = f"t{n_time}_lat{n_lat}_lon{n_lon}_cells{n_cells}_speed{speed:.1f}_seed{seed}"
+    return f"synthetic_data_{param_str}.npy"
+
+
+def load_or_generate_data(n_time=48, n_lat=200, n_lon=200, n_cells=30, speed=3.0, seed=42, cache_dir='data_cache'):
+    """
+    Load cached data if available, otherwise generate and save it.
+    
+    Parameters:
+    -----------
+    n_time : int
+        Number of time steps
+    n_lat, n_lon : int
+        Spatial dimensions
+    n_cells : int
+        Number of synthetic cells
+    speed : float
+        Movement speed multiplier
+    seed : int
+        Random seed for reproducibility
+    cache_dir : str
+        Directory to store cached data files
+    
+    Returns:
+    --------
+    data : np.ndarray
+        Generated or loaded data
+    """
+    # Create cache directory if it doesn't exist
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    # Generate filename
+    filename = generate_data_filename(n_time, n_lat, n_lon, n_cells, speed, seed)
+    filepath = os.path.join(cache_dir, filename)
+    
+    # Check if cached data exists
+    if os.path.exists(filepath):
+        print(f"Loading cached data from: {filepath}")
+        try:
+            data = np.load(filepath)
+            print(f"Loaded data shape: {data.shape}")
+            return data
+        except Exception as e:
+            print(f"Warning: Failed to load cached data ({e}). Regenerating...")
+    
+    # Generate new data
+    print(f"Generating new synthetic data...")
+    data = generate_synthetic_data(n_time, n_lat, n_lon, n_cells, speed, seed)
+    
+    # Save to cache
+    try:
+        np.save(filepath, data)
+        print(f"Saved data to cache: {filepath}")
+    except Exception as e:
+        print(f"Warning: Failed to save data to cache ({e})")
+    
+    return data
 
 def benchmark_algorithm(func, data, name, tb_threshold=241, dT=1, repetitions=3, **kwargs):
     """
@@ -113,6 +184,8 @@ def benchmark_algorithm(func, data, name, tb_threshold=241, dT=1, repetitions=3,
         Temperature threshold
     dT : float
         Temperature increment
+    repetitions : int
+        Number of repetitions
     **kwargs : dict
         Additional arguments for the function
     
@@ -121,25 +194,70 @@ def benchmark_algorithm(func, data, name, tb_threshold=241, dT=1, repetitions=3,
     result : np.ndarray
         Labeled output
     elapsed_time : float
-        Execution time in seconds
+        Execution time in seconds (total for all repetitions)
+    peak_memory_mb : float
+        Peak memory usage in MB (for single execution)
     """
     print(f"\n{'='*50}")
     print(f"Benchmarking: {name}")
     print(f"{'='*50}")
+    
     # Get baseline memory
     process = psutil.Process()
     baseline_memory = process.memory_info().rss / 1024 / 1024  # MB
-   
-    start_time = time.time()
     
-    mem_usage = memory_usage((
-        func,
-        (data * -1, tb_threshold * -1, -235, 8, dT),
-        dict(mintime=0, connectLon=0, extend_size_ratio=0.10, **kwargs)
-    ), interval=0.1, timeout=None, max_usage=True)
+    # Track if this is parallel
+    is_parallel = "parallel" in name.lower()
     
-    for _ in range(repetitions - 1):
-        func(
+    # Measure memory for ONE execution only
+    if is_parallel:
+        import threading
+        import gc
+        
+        # Force garbage collection before measurement
+        gc.collect()
+        
+        # Use USS (Unique Set Size) instead of RSS - this excludes shared memory
+        baseline_uss = process.memory_full_info().uss / 1024 / 1024
+        peak_memory = [baseline_uss]
+        stop_monitoring = threading.Event()
+        
+        def monitor_memory():
+            """Monitor unique memory (USS) including all child processes"""
+            while not stop_monitoring.is_set():
+                try:
+                    # Get USS of main process (excludes shared pages)
+                    main_mem = process.memory_full_info().uss / 1024 / 1024
+                    
+                    # Add USS from all child processes
+                    children = process.children(recursive=True)
+                    child_mem = sum(child.memory_full_info().uss / 1024 / 1024 
+                                  for child in children)
+                    
+                    total_mem = main_mem + child_mem
+                    if total_mem > peak_memory[0]:
+                        peak_memory[0] = total_mem
+                except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
+                    # Fallback to RSS if USS not available
+                    try:
+                        main_mem = process.memory_info().rss / 1024 / 1024
+                        children = process.children(recursive=True)
+                        child_mem = sum(child.memory_info().rss / 1024 / 1024 
+                                      for child in children)
+                        # For RSS, divide by number of processes to approximate unique memory
+                        n_processes = 1 + len(children)
+                        total_mem = (main_mem + child_mem) / n_processes
+                        if total_mem > peak_memory[0]:
+                            peak_memory[0] = total_mem
+                    except:
+                        pass
+                time.sleep(0.05)  # Sample more frequently
+        
+        # Start monitoring for ONE execution
+        monitor_thread = threading.Thread(target=monitor_memory, daemon=True)
+        monitor_thread.start()
+        
+        result = func(
             data * -1,
             tb_threshold * -1,
             -235,
@@ -150,27 +268,47 @@ def benchmark_algorithm(func, data, name, tb_threshold=241, dT=1, repetitions=3,
             extend_size_ratio=0.10,
             **kwargs
         )
-    result = func(
-        data * -1,
-        tb_threshold * -1,
-        -235,
-        8,
-        dT,
-        mintime=0,
-        connectLon=0,
-        extend_size_ratio=0.10,
-        **kwargs
-    )
+        
+        stop_monitoring.set()
+        monitor_thread.join(timeout=1)
+        peak_memory_mb = peak_memory[0] - baseline_uss
+        
+    else:
+        # For non-parallel, use memory_profiler for ONE execution
+        mem_usage = memory_usage((
+            func,
+            (data * -1, tb_threshold * -1, -235, 8, dT),
+            dict(mintime=0, connectLon=0, extend_size_ratio=0.10, **kwargs)
+        ), interval=0.1, timeout=None, max_usage=True, multiprocess=False)
+        
+        peak_memory_mb = mem_usage - baseline_memory
+    
+    # Now time ALL repetitions
+    start_time = time.time()
+    
+    for _ in range(repetitions):
+        result = func(
+            data * -1,
+            tb_threshold * -1,
+            -235,
+            8,
+            dT,
+            mintime=0,
+            connectLon=0,
+            extend_size_ratio=0.10,
+            **kwargs
+        )
     
     elapsed_time = time.time() - start_time
-    peak_memory = mem_usage - baseline_memory
     
     n_objects = len(np.unique(result)) - 1  # Exclude background (0)
     print(f"Objects found: {n_objects}")
-    print(f"Time elapsed: {elapsed_time:.2f} seconds")
-    print(f"Peak memory usage: {peak_memory:.2f} MB")
+    print(f"Time elapsed: {elapsed_time:.2f} seconds (total for {repetitions} repetitions)")
+    print(f"Average time per run: {elapsed_time/repetitions:.2f} seconds")
+    print(f"Peak memory usage: {peak_memory_mb:.2f} MB (single execution)")
+    print(f"Memory tracking: {'USS (unique pages)' if is_parallel else 'RSS (resident set)'}")
 
-    return result, elapsed_time, peak_memory
+    return result, elapsed_time, peak_memory_mb
 
 
 def find_label_mapping(result1, result2):
@@ -343,11 +481,12 @@ def sweep_parallel_configurations(data, tb_threshold, dT, repetitions=3, max_chu
     
     # Generate configurations to test
     configs = []
-    for n_lat in range(1, max_chunks + 1):
-        for n_lon in range(1, max_chunks + 1):
+    for n_lat in [1, 2, 3, 4, 8, 16]:
+        for n_lon in [1, 2, 3, 4, 8, 16]:
             if n_lat * n_lon <= max_chunks:
                 configs.append((n_lat, n_lon))
     
+    configs.remove((1, 1))  # Exclude single chunk (no parallelism)
     print(f"Testing {len(configs)} configurations...")
     print(f"Configurations: {configs}\n")
     
@@ -490,9 +629,9 @@ def plot_sweep_results(results_df, save_path='sweep_results.png'):
 def main():
     """Main benchmark routine."""
     
-    n_cores = psutil.cpu_count(logical=False)
+    n_cores = psutil.cpu_count(logical=True)
     parser = argparse.ArgumentParser(description='Benchmark watershed algorithms')
-    parser.add_argument('-r', '--repetitions', type=int, default=3,
+    parser.add_argument('-r', '--repetitions', type=int, default=5,
                         help='Number of repetitions per algorithm (default: 3)')
     parser.add_argument('-n','--n-cells', type=int, default=50,
                         help='Number of synthetic cells (default: 50)')
@@ -511,7 +650,7 @@ def main():
     print("WATERSHED ALGORITHM BENCHMARK")
     print("="*70)
     
-    data = generate_synthetic_data(
+    data = load_or_generate_data(
         n_time=72,
         n_lat=args.lat,
         n_lon=args.lon,
@@ -531,12 +670,12 @@ def main():
             max_chunks=args.max_chunks
         )
         
-        # Save results to CSV
-        sweep_results.to_csv('sweep_results.csv', index=False)
-        print("\nSaved sweep results to sweep_results.csv")
+        # # Save results to CSV
+        # sweep_results.to_csv('sweep_results.csv', index=False)
+        # print("\nSaved sweep results to sweep_results.csv")
         
         # Plot results
-        plot_sweep_results(sweep_results, save_path='sweep_results.png')
+        # plot_sweep_results(sweep_results, save_path='sweep_results.png')
         
         # Use best configuration for comparison
         if best_config is not None:
@@ -547,6 +686,8 @@ def main():
             n_chunks_lat, n_chunks_lon = 3, 2
     else:
         n_chunks_lat, n_chunks_lon = 3, 2
+    
+    
     # Run benchmarks
     results = {}
     times = {}
@@ -566,6 +707,7 @@ def main():
     results['3d_parallel'] = result_3d_par
     times['3d_parallel'] = time_3d_par
     memory_usage['3d_parallel'] = memory_3d_par
+
     
     # 2D watershed
     result_2d, time_2d, memory_2d = benchmark_algorithm(
@@ -594,33 +736,55 @@ def main():
     memory_usage['3d'] = memory_3d
     
     
+    # Save top 10 configurations if sweep was performed
+    if args.sweep and best_config is not None:
+        top10 = sweep_results.nsmallest(10, 'time_seconds')[['n_chunks_lat', 'n_chunks_lon', 'time_seconds', 'memory_mb']]
+
+        # Include the 1x1 configuration (serial 3D)
+        serial_3d_time = times['3d']  # Time for the 3D serial algorithm
+        serial_3d_memory = memory_usage['3d']  # Memory for the 3D serial algorithm
+        serial_3d_df = pd.DataFrame([{
+            'n_chunks_lat': 1,
+            'n_chunks_lon': 1,
+            'time_seconds': serial_3d_time,
+            'memory_mb': serial_3d_memory
+        }])
+        
+        # Concatenate using pd.concat instead of append
+        top10 = pd.concat([top10, serial_3d_df], ignore_index=True)
+
+        config_content = "Data dimensions ,{},{},{}\n".format(data.shape[0], data.shape[1], data.shape[2])
+        # config_content += "n_chunks_lat,n_chunks_lon,time_seconds,memory_mb\n"
+        config_content += top10.to_csv(index=False) + "\n\n"
+        
+        with open('top10_configurations.csv', 'a') as f:
+            f.write(config_content)
+        print("\nSaved top 10 configurations to top10_configurations.csv")
+
     # Compare results
     # comp_2d_3d = compare_results(result_2d, result_3d, '2D', '3D')
     # comp_2d_3dpar = compare_results(result_2d, result_3d_par, '2D', '3D Parallel')
     # comp_3d_3dpar = compare_results(result_3d, result_3d_par, '3D', '3D Parallel')
     
     # Summary
-    print("\n" + "="*70)
-    print("SUMMARY")
-    print("="*70)
-    print("\nTiming Results:")
-    print(f"  2D:           {times['2d']:.2f}s")
-    print(f"  3D:           {times['3d']:.2f}s")
-    print(f"  3D Parallel:  {times['3d_parallel']:.2f}s")
-    print(f"\nSpeedup vs 2D:")
-    print(f"  3D:           {times['2d']/times['3d']:.2f}x")
-    print(f"  3D Parallel:  {times['2d']/times['3d_parallel']:.2f}x")
-    print(f"\nPeak Memory Usage:")
-    print(f"  2D:           {memory_2d:.2f} MB")
-    print(f"  3D:           {memory_3d:.2f} MB")
-    print(f"  3D Parallel:  {memory_3d_par:.2f} MB")
+    summary_content = "\n" + "="*70 + "\n"
+    summary_content += f"Data dimensions: {data.shape}\n"
+    summary_content += f"Optimal chunks (3D Parallel): {n_chunks_lat} x {n_chunks_lon}\n"
+    summary_content += "\nTiming Results:\n"
+    summary_content += f"  2D:           {times['2d']:.2f}s\n"
+    summary_content += f"  3D:           {times['3d']:.2f}s\n"
+    summary_content += f"  3D Parallel:  {times['3d_parallel']:.2f}s\n"
+    summary_content += f"\nPeak Memory Usage:\n"
+    summary_content += f"  2D:           {memory_2d:.2f} MB\n"
+    summary_content += f"  3D:           {memory_3d:.2f} MB\n"
+    summary_content += f"  3D Parallel:  {memory_3d_par:.2f} MB\n"
     
-    print("\nComparison Results:")
-    # print(f"  2D vs 3D overlap:          {comp_2d_3d['overlap_score']:.4f}")
-    # print(f"  2D vs 3D Parallel overlap: {comp_2d_3dpar['overlap_score']:.4f}")
-    # print(f"  3D vs 3D Parallel overlap: {comp_3d_3dpar['overlap_score']:.4f}")
-    
-    plot_comparison_slice(results, data, time_idx=15)
+    # Write summary to file
+    with open('benchmark_summary.txt', 'a') as f:
+        f.write(summary_content)
+    print("\nSaved summary to benchmark_summary.txt")
+
+    # plot_comparison_slice(results, data, time_idx=15)
     return results, times, data
     
 

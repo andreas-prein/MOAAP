@@ -1,0 +1,72 @@
+
+======================================================================
+SUMMARY
+======================================================================
+Data dimensions: (72, 800, 800)
+Optimal chunks (3D Parallel): 3 x 2
+
+Timing Results:
+  2D:           31.81s
+  3D:           6.25s
+  3D Parallel:  7.80s
+
+Peak Memory Usage:
+  2D:           1441.67 MB
+  3D:           1729.00 MB
+  3D Parallel:  1155.29 MB
+
+======================================================================
+Data dimensions: (72, 800, 800)
+Optimal chunks (3D Parallel): 4 x 2
+
+Timing Results:
+  2D:           29.95s
+  3D:           5.98s
+  3D Parallel:  7.66s
+
+Peak Memory Usage:
+  2D:           1055.93 MB
+  3D:           1713.89 MB
+  3D Parallel:  1271.18 MB
+
+======================================================================
+Data dimensions: (72, 800, 800)
+Optimal chunks (3D Parallel): 3 x 2
+
+Timing Results:
+  2D:           30.32s
+  3D:           6.26s
+  3D Parallel:  7.51s
+
+Peak Memory Usage:
+  2D:           1111.80 MB
+  3D:           1728.99 MB
+  3D Parallel:  1220.81 MB
+
+======================================================================
+Data dimensions: (72, 200, 200)
+Optimal chunks (3D Parallel): 2 x 2
+
+Timing Results:
+  2D:           0.82s
+  3D:           0.36s
+  3D Parallel:  0.45s
+
+Peak Memory Usage:
+  2D:           56.04 MB
+  3D:           68.03 MB
+  3D Parallel:  54.84 MB
+
+======================================================================
+Data dimensions: (72, 300, 300)
+Optimal chunks (3D Parallel): 2 x 2
+
+Timing Results:
+  2D:           1.59s
+  3D:           0.54s
+  3D Parallel:  0.65s
+
+Peak Memory Usage:
+  2D:           143.18 MB
+  3D:           285.53 MB
+  3D Parallel:  112.51 MB

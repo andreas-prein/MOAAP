@@ -1,0 +1,9 @@
+Data dimensions: (72, 800, 800)
+
+Top 5 configurations by speed:
+ n_chunks_lat  n_chunks_lon  time_seconds   memory_mb
+            3             2      7.126879 1230.644531
+            2             3      7.437829 1041.300781
+            2             4      7.621443 1220.460938
+            1             4      7.623170 1141.058594
+            2             2      7.672957 1172.636719
