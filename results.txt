@@ -229,3 +229,61 @@ Peak Memory Usage:
 
 Comparison Results:
 Saved comparison plot to benchmark_comparison.png
+
+======================================================================
+WATERSHED ALGORITHM BENCHMARK
+======================================================================
+Generating 100 synthetic cells...
+Generated data shape: (72, 3000, 3000)
+
+==================================================
+Benchmarking: watershed_3d_overlap_parallel
+==================================================
+    Processing 6 chunks in parallel...
+    Merging chunk results...
+    Final number of objects:  102
+    Processing 6 chunks in parallel...
+    Merging chunk results...
+    Final number of objects:  102
+Objects found: 102
+Time elapsed: 55.41 seconds
+Peak memory usage: 17312.98 MB
+
+==================================================
+Benchmarking: watershed_2d_overlap
+==================================================
+100%|██████████████████████████████████████████████████| 72/72 [01:25<00:00,  1.18s/it]
+100%|██████████████████████████████████████████████████| 71/71 [00:29<00:00,  2.42it/s]
+100%|██████████████████████████████████████████████████| 72/72 [01:25<00:00,  1.18s/it]
+100%|██████████████████████████████████████████████████| 71/71 [00:29<00:00,  2.42it/s]
+Objects found: 396
+Time elapsed: 239.79 seconds
+Peak memory usage: 20076.57 MB
+
+==================================================
+Benchmarking: watershed_3d_overlap
+==================================================
+Objects found: 102
+Time elapsed: 36.81 seconds
+Peak memory usage: 27484.18 MB
+
+======================================================================
+SUMMARY
+======================================================================
+
+Timing Results:
+  2D:           239.79s
+  3D:           36.81s
+  3D Parallel:  55.41s
+
+Speedup vs 2D:
+  3D:           6.51x
+  3D Parallel:  4.33x
+
+Peak Memory Usage:
+  2D:           20076.57 MB
+  3D:           27484.18 MB
+  3D Parallel:  17312.98 MB
+
+Comparison Results:
+Saved comparison plot to benchmark_comparison.png

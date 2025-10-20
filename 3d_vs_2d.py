@@ -313,10 +313,184 @@ def plot_comparison_slice(results, data, time_idx=15, save_path='benchmark_compa
     print(f"Saved comparison plot to {save_path}")
     plt.close()
 
+def sweep_parallel_configurations(data, tb_threshold, dT, repetitions=3, max_chunks=6):
+    """
+    Sweep through different chunking configurations to find optimal settings.
+    
+    Parameters:
+    -----------
+    data : np.ndarray
+        Input data
+    tb_threshold : float
+        Temperature threshold
+    dT : float
+        Temperature increment
+    repetitions : int
+        Number of repetitions per configuration
+    max_chunks : int
+        Maximum number of total chunks
+    
+    Returns:
+    --------
+    results_df : pd.DataFrame
+        DataFrame with timing and memory results for each configuration
+    best_config : dict
+        Best configuration found
+    """
+    print("\n" + "="*70)
+    print("PARAMETER SWEEP: 3D PARALLEL CHUNKING")
+    print("="*70)
+    
+    # Generate configurations to test
+    configs = []
+    for n_lat in range(1, max_chunks + 1):
+        for n_lon in range(1, max_chunks + 1):
+            if n_lat * n_lon <= max_chunks:
+                configs.append((n_lat, n_lon))
+    
+    print(f"Testing {len(configs)} configurations...")
+    print(f"Configurations: {configs}\n")
+    
+    results = []
+    
+    for n_lat, n_lon in configs:
+        print(f"\nTesting configuration: lat_chunks={n_lat}, lon_chunks={n_lon}")
+        print("-" * 50)
+        
+        try:
+            result, elapsed_time, peak_memory = benchmark_algorithm(
+                watershed_3d_overlap_parallel,
+                data,
+                f"3D Parallel ({n_lat}x{n_lon})",
+                tb_threshold,
+                dT,
+                n_chunks_lat=n_lat,
+                n_chunks_lon=n_lon,
+                repetitions=repetitions
+            )
+            
+            n_objects = len(np.unique(result)) - 1
+            
+            results.append({
+                'n_chunks_lat': n_lat,
+                'n_chunks_lon': n_lon,
+                'total_chunks': n_lat * n_lon,
+                'time_seconds': elapsed_time,
+                'memory_mb': peak_memory,
+                'n_objects': n_objects,
+                'status': 'success'
+            })
+            
+        except Exception as e:
+            print(f"ERROR: Configuration failed - {str(e)}")
+            results.append({
+                'n_chunks_lat': n_lat,
+                'n_chunks_lon': n_lon,
+                'total_chunks': n_lat * n_lon,
+                'time_seconds': np.nan,
+                'memory_mb': np.nan,
+                'n_objects': np.nan,
+                'status': f'failed: {str(e)}'
+            })
+    
+    # Create results DataFrame
+    results_df = pd.DataFrame(results)
+    
+    # Find best configuration (minimum time among successful runs)
+    successful = results_df[results_df['status'] == 'success']
+    if len(successful) > 0:
+        best_idx = successful['time_seconds'].idxmin()
+        best_config = successful.loc[best_idx].to_dict()
+        
+        print("\n" + "="*70)
+        print("SWEEP RESULTS")
+        print("="*70)
+        print(f"\nBest configuration:")
+        print(f"  Chunks (lat x lon): {int(best_config['n_chunks_lat'])} x {int(best_config['n_chunks_lon'])}")
+        print(f"  Total chunks:       {int(best_config['total_chunks'])}")
+        print(f"  Time:               {best_config['time_seconds']:.2f}s")
+        print(f"  Memory:             {best_config['memory_mb']:.2f} MB")
+        print(f"  Objects found:      {int(best_config['n_objects'])}")
+        
+        # Show top 5 configurations
+        print("\nTop 5 configurations by speed:")
+        top5 = successful.nsmallest(5, 'time_seconds')[['n_chunks_lat', 'n_chunks_lon', 'time_seconds', 'memory_mb']]
+        print(top5.to_string(index=False))
+    else:
+        print("\nERROR: All configurations failed!")
+        best_config = None
+    
+    return results_df, best_config
+
+def plot_sweep_results(results_df, save_path='sweep_results.png'):
+    """
+    Plot heatmaps of timing and memory results from parameter sweep.
+    
+    Parameters:
+    -----------
+    results_df : pd.DataFrame
+        Results from sweep_parallel_configurations
+    save_path : str
+        Path to save the figure
+    """
+    # Filter successful runs
+    successful = results_df[results_df['status'] == 'success'].copy()
+    
+    if len(successful) == 0:
+        print("No successful runs to plot")
+        return
+    
+    # Create pivot tables for heatmaps
+    time_pivot = successful.pivot(index='n_chunks_lat', columns='n_chunks_lon', values='time_seconds')
+    memory_pivot = successful.pivot(index='n_chunks_lat', columns='n_chunks_lon', values='memory_mb')
+    
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Time heatmap
+    im1 = axes[0].imshow(time_pivot, cmap='RdYlGn_r', aspect='auto')
+    axes[0].set_xlabel('Longitude Chunks')
+    axes[0].set_ylabel('Latitude Chunks')
+    axes[0].set_title('Execution Time (seconds)')
+    axes[0].set_xticks(range(len(time_pivot.columns)))
+    axes[0].set_yticks(range(len(time_pivot.index)))
+    axes[0].set_xticklabels(time_pivot.columns)
+    axes[0].set_yticklabels(time_pivot.index)
+    
+    # Annotate with values
+    for i in range(len(time_pivot.index)):
+        for j in range(len(time_pivot.columns)):
+            text = axes[0].text(j, i, f'{time_pivot.iloc[i, j]:.1f}',
+                               ha="center", va="center", color="black", fontsize=9)
+    
+    plt.colorbar(im1, ax=axes[0])
+    
+    # Memory heatmap
+    im2 = axes[1].imshow(memory_pivot, cmap='YlOrRd', aspect='auto')
+    axes[1].set_xlabel('Longitude Chunks')
+    axes[1].set_ylabel('Latitude Chunks')
+    axes[1].set_title('Peak Memory Usage (MB)')
+    axes[1].set_xticks(range(len(memory_pivot.columns)))
+    axes[1].set_yticks(range(len(memory_pivot.index)))
+    axes[1].set_xticklabels(memory_pivot.columns)
+    axes[1].set_yticklabels(memory_pivot.index)
+    
+    # Annotate with values
+    for i in range(len(memory_pivot.index)):
+        for j in range(len(memory_pivot.columns)):
+            text = axes[1].text(j, i, f'{memory_pivot.iloc[i, j]:.0f}',
+                               ha="center", va="center", color="black", fontsize=9)
+    
+    plt.colorbar(im2, ax=axes[1])
+    
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"\nSaved sweep results plot to {save_path}")
+    plt.close()
 
 def main():
     """Main benchmark routine."""
     
+    n_cores = psutil.cpu_count(logical=False)
     parser = argparse.ArgumentParser(description='Benchmark watershed algorithms')
     parser.add_argument('-r', '--repetitions', type=int, default=3,
                         help='Number of repetitions per algorithm (default: 3)')
@@ -326,6 +500,10 @@ def main():
                         help='Latitude dimension (default: 400)')
     parser.add_argument('--lon', type=int, default=400,
                         help='Longitude dimension (default: 400)')
+    parser.add_argument('--max-chunks', type=int, default=n_cores,
+                        help=f'Maximum chunks per dimension in sweep (default: {n_cores})')
+    parser.add_argument('--sweep', action='store_true',
+                        help='Perform parameter sweep for 3D parallel configuration', default=False)
     args = parser.parse_args()
 
     # Generate test data
@@ -346,9 +524,33 @@ def main():
     tb_threshold = 241
     dT = 1
     
+    if args.sweep:
+        sweep_results, best_config = sweep_parallel_configurations(
+            data, tb_threshold, dT, 
+            repetitions=args.repetitions,
+            max_chunks=args.max_chunks
+        )
+        
+        # Save results to CSV
+        sweep_results.to_csv('sweep_results.csv', index=False)
+        print("\nSaved sweep results to sweep_results.csv")
+        
+        # Plot results
+        plot_sweep_results(sweep_results, save_path='sweep_results.png')
+        
+        # Use best configuration for comparison
+        if best_config is not None:
+            n_chunks_lat = int(best_config['n_chunks_lat'])
+            n_chunks_lon = int(best_config['n_chunks_lon'])
+        else:
+            print("Using default configuration (3x2)")
+            n_chunks_lat, n_chunks_lon = 3, 2
+    else:
+        n_chunks_lat, n_chunks_lon = 3, 2
     # Run benchmarks
     results = {}
     times = {}
+    memory_usage = {}
 
     # 3D parallel watershed
     result_3d_par, time_3d_par, memory_3d_par = benchmark_algorithm(
@@ -357,12 +559,13 @@ def main():
         "watershed_3d_overlap_parallel",
         tb_threshold,
         dT,
-        n_chunks_lat=3,
-        n_chunks_lon=2,
+        n_chunks_lat=n_chunks_lat,
+        n_chunks_lon=n_chunks_lon,
         repetitions=args.repetitions
     )
     results['3d_parallel'] = result_3d_par
     times['3d_parallel'] = time_3d_par
+    memory_usage['3d_parallel'] = memory_3d_par
     
     # 2D watershed
     result_2d, time_2d, memory_2d = benchmark_algorithm(
@@ -375,6 +578,7 @@ def main():
     )
     results['2d'] = result_2d
     times['2d'] = time_2d
+    memory_usage['2d'] = memory_2d
     
     # 3D watershed
     result_3d, time_3d, memory_3d = benchmark_algorithm(
@@ -387,6 +591,7 @@ def main():
     )
     results['3d'] = result_3d
     times['3d'] = time_3d
+    memory_usage['3d'] = memory_3d
     
     
     # Compare results
