@@ -125,7 +125,8 @@ def haversine(lon1, lat1, lon2, lat2):
 #     # haversine formula
 #     dlon = lon2 - lon1
 #     dlat = lat2 - lat1
-#     a = np.sin(dlat / 2) ** 2 + \
+#     a = np.sin(dlat / 2) ** 2 + I am running a few minutes late; my previous meeting is running over.
+
 #     np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
 #     c = 2 * np.arcsin(np.sqrt(a))
 #     # Radius of earth in kilometers is 6371
@@ -200,12 +201,12 @@ def remove_small_short_objects(objects_id,
 ###########################################################
 def calc_object_characteristics(
     var_objects,  # feature object file
-    var_data,  # original file used for feature detection
-    filename_out,  # output file name and locaiton
-    times,  # timesteps of the data
-    Lat,  # 2D latidudes
-    Lon,  # 2D Longitudes
-    grid_spacing,       # average grid spacing
+    var_data,     # original file used for feature detection
+    filename_out, # output file name and locaiton
+    times,        # timesteps of the data
+    Lat,          # 2D latidudes
+    Lon,          # 2D Longitudes
+    grid_spacing, # average grid spacing
     grid_cell_area,
     min_tsteps=1,       # minimum lifetime in data timesteps
     split_merge = None  # dict containing information of splitting and merging of objects
@@ -231,8 +232,7 @@ def calc_object_characteristics(
             lon_idx_slice  = object_indices[iobj][2]
 
             if len(object_slice) >= min_tsteps:
-
-                data_slice[object_slice!=(iobj + 1)] = np.nan
+                data_slice[object_slice != (iobj + 1)] = np.nan
                 grid_cell_area_slice = np.tile(grid_cell_area[lat_idx_slice, lon_idx_slice], (len(data_slice), 1, 1))
                 grid_cell_area_slice[object_slice != (iobj + 1)] = np.nan
                 lat_slice = Lat[lat_idx_slice, lon_idx_slice]
@@ -613,7 +613,7 @@ def ReadERA5(TIME,      # Time period to read (this program will read hourly dat
     # Z=np.roll(Zfull,iRoll, axis=1)
     # Z = Z[iNorth:iSouth,iWest:iEeast]
 
-    DataAll = np.zeros((len(TIME),Lon.shape[0],Lon.shape[1])); DataAll[:]=np.nan
+    DataAll = np.zeros((len(TIME),Lon.shape[0],Lon.shape[1]), dtype=np.float32); DataAll[:]=np.nan
     tt=0
     
     for mm in range(len(TimeDD)):
@@ -695,7 +695,7 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
 
     print(var)
     # read in the coordinates
-    ncid=Dataset("/glade/campaign/collections/rda/data/ds633.0/e5.oper.invariant/197901/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc", mode='r')
+    ncid=Dataset("/glade/campaign/mmm/c3we/prein/ERA5/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc", mode='r')
     Lat=np.squeeze(ncid.variables['latitude'][:])
     Lon=np.squeeze(ncid.variables['longitude'][:])
     # Zfull=np.squeeze(ncid.variables['Z'][:])
@@ -722,7 +722,7 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
     # Z=np.roll(Zfull,iRoll, axis=1)
     # Z = Z[iNorth:iSouth,iWest:iEeast]
 
-    DataAll = np.zeros((len(TIME),Lon.shape[0],Lon.shape[1])); DataAll[:]=np.nan
+    DataAll = np.zeros((len(TIME),Lon.shape[0],Lon.shape[1]), dtype=np.float32); DataAll[:]=np.nan
     tt=0
     
     for mm in tqdm(range(len(TimeMM))):
@@ -730,7 +730,6 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
         YYYY = TimeMM[mm].year
         MM = TimeMM[mm].month
         DD = monthrange(YYYY, MM)[1]
-        
         TimeFile = TimeDD=pd.date_range(datetime.datetime(YYYY, MM, 1,0), end=datetime.datetime(YYYY, MM, DD,23), freq='h')
         TT = np.isin(TimeFile,TIME)
         
@@ -797,21 +796,47 @@ def ConnectLon_on_timestep(object_indices):
         iEDGE = np.sum(EDGE > 0, axis=1) == 2
         OBJ_Left = EDGE[iEDGE, 0]
         OBJ_Right = EDGE[iEDGE, 1]
+
+        OBJ_joint_list = []
+        for ii in range(len(OBJ_Left)):
+            if OBJ_Left[ii] is not None and OBJ_Right[ii] is not None:
+                try:
+                    joint_val = OBJ_Left[ii].astype(str) + "_" + OBJ_Right[ii].astype(str)
+                    OBJ_joint_list.append(joint_val)
+                except Exception:
+                    # Skip the pair if an error occurs during conversion or concatenation
+                    continue
+        OBJ_joint = np.array(OBJ_joint_list)
+        """
         OBJ_joint = np.array(
             [
                 OBJ_Left[ii].astype(str) + "_" + OBJ_Right[ii].astype(str)
                 for ii,_ in enumerate(OBJ_Left)
             ]
         )
-        NotSame = OBJ_Left != OBJ_Right
-        OBJ_joint = OBJ_joint[NotSame]
+        """
+        NotSame = OBJ_Left != OBJ_Right        
+        try:
+            OBJ_joint = OBJ_joint[NotSame]
+        except:
+            continue
         OBJ_unique = np.unique(OBJ_joint)
+        # if len(OBJ_unique) >1:
+        #     stop()
         # set the eastern object to the number of the western object in all timesteps
         for obj,_ in enumerate(OBJ_unique):
-            ObE = int(OBJ_unique[obj].split("_")[1])
-            ObW = int(OBJ_unique[obj].split("_")[0])
+            """
+            ObE = int(OBJ_unique[obj].split("_")[1].split()[0])
+            ObW = int(OBJ_unique[obj].split("_")[0].split()[0])
+            """
+            try:
+                ObE = int(OBJ_unique[obj].split("_")[1])
+                ObW = int(OBJ_unique[obj].split("_")[0])
+            except:
+                continue
             object_indices[tt,object_indices[tt,:] == ObE] = ObW
     return object_indices
+
 
 
 ### Break up long living objects by extracting the biggest object at each time
@@ -1019,6 +1044,52 @@ def timer(start,end):
     hours, rem = divmod(end-start, 3600)
     minutes, seconds = divmod(rem, 60)
     print("        "+"{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
+
+
+import numpy as np
+
+def interpolate_temporal(arr):
+    """
+    Fill missing (np.nan) values along axis-0 (time) by linear interpolation.
+
+    Parameters
+    ----------
+    arr : ndarray, shape (ntime, nlat, nlon)
+        Input brightness‐temperature (or any) data, with np.nan marking missing.
+    Returns
+    -------
+    result : ndarray, shape (ntime, nlat, nlon), dtype float64
+        Same as `arr` but with NaNs replaced via 1D linear interpolation in time.
+        If an entire time series is NaN, it remains NaN.  Leading/trailing NaNs
+        become constant at the first/last valid value.
+    """
+    arr = arr.astype(np.float64)            # ensure float
+    nt, ny, nx = arr.shape
+    result = arr.copy()                     # initialize output
+
+    t = np.arange(nt)
+    for j in range(ny):
+        for i in range(nx):
+            ts = arr[:, j, i]
+            mask = np.isnan(ts)
+            if not mask.any():
+                # no missing: skip
+                continue
+
+            valid = ~mask
+            if valid.sum() == 0:
+                # all missing: leave as NaN
+                continue
+
+            # np.interp: for out‐of‐bounds it uses the first/last valid y
+            result[mask, j, i] = np.interp(
+                t[mask],   # times to fill
+                t[valid],  # times with valid data
+                ts[valid]  # corresponding values
+            )
+
+    return result
+
 
 
 # this function removes nan values by interpolating temporally
@@ -1557,6 +1628,22 @@ def DistanceCoord(Lo1,La1,Lo2,La2):
     return distance
 
 
+def calculate_Tb_est(OLR):
+    # compute Tf, a, b, c exactly as you had
+    Tf = (OLR / 5.6693e-8) ** 0.25
+    a = -0.000917
+    b = 1.13333
+    c = 10.50007 - Tf
+
+    disc = b**2 - 4*a*c
+    if np.any(disc < 0):
+        bad = np.where(disc < 0)
+        raise ValueError(f"Negative discriminant at indices {bad}")
+
+    Tb_est = (-b + np.sqrt(disc)) / (2*a)
+    return Tb_est
+    
+
 import cartopy.io.shapereader as shpreader
 import shapely.geometry as sgeom
 from shapely.ops import unary_union
@@ -2056,7 +2143,8 @@ def MCStracking(
     return grMCSs, MCS_objects
 
 
-
+#from memory_profiler import profile
+#@profile
 def clean_up_objects(DATA,
                      dT,
                      min_tsteps = 0,
@@ -2071,8 +2159,7 @@ def clean_up_objects(DATA,
     AVmax = 1.5
 
     id_translate = np.zeros((len(object_indices),2))
-    objectsTMP = np.copy(DATA)
-    objectsTMP[:] = 0
+    objectsTMP = np.zeros_like(DATA)
     ii = 1
     for obj in range(len(object_indices)):
         if object_indices[obj] != None:
@@ -2216,9 +2303,15 @@ def jetstream_tracking(
                                     int(MinTimeJS/dT),
                                     dT)
     elif breakup == 'watershed':
-        jet_objects = watersheding(jet,
-                       int(5000000/Gridspacing),  # at least six grid cells appart 
-                       js_min_anomaly)
+        jet_objects = watershed_2d_overlap(uv200,
+                                    js_min_anomaly,
+                                    js_min_anomaly * 1.05,
+                                    int(3000 * 10**3/Gridspacing), # this setting sets the size of jet objects
+                                    dT,
+                                    mintime = MinTimeJS,
+                                    connectLon = connectLon,
+                                    extend_size_ratio = 0.25
+                                    )
         object_split = None
 
 
@@ -2227,9 +2320,9 @@ def jetstream_tracking(
 #                                 dT = dT,
 #                                 obj_splitmerge = object_split)
     
-    if connectLon == 1:
-        print('        connect cyclones objects over date line')
-        jet_objects = ConnectLon_on_timestep(jet_objects)
+    # if connectLon == 1:
+    #     print('        connect cyclones objects over date line')
+    #     jet_objects = ConnectLon_on_timestep(jet_objects)
 
     return jet_objects, object_split
 
@@ -2243,13 +2336,15 @@ def ar_850hpa_tracking(
                     MinAreaMS,
                     Area,
                     dT,
-                    connectLon
+                    connectLon,
+                    Gridspacing,
+                    breakup = "watershed"
                 ):
     
     '''
-    function to track moisture streams and ARS according to 850 hPa moisture flux
+    function to track moisture streams and ARs according to the 850 hPa moisture flux
     '''
-
+    
     potARs = (VapTrans > MinMSthreshold)
     rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
     rgiObjectsAR, nr_objectsUD = ndimage.label(potARs, structure=rgiObj_Struct)
@@ -2287,15 +2382,28 @@ def ar_850hpa_tracking(
                                   dT,
                                   min_tsteps=0)
 
-    print('        break up long living MS objects that have many elements')
-    MS_objects, object_split = BreakupObjects(MS_objects,
+    print('        break up long living MS objects with '+breakup)
+    if breakup == 'breakup':
+        MS_objects, object_split = BreakupObjects(MS_objects,
                                 int(MinTimeMS/dT),
                                 dT)
+    elif breakup == 'watershed':
+        min_dist=int((4000 * 10**3)/Gridspacing)
+        MS_objects = watershed_2d_overlap(
+                VapTrans,
+                MinMSthreshold,
+                MinMSthreshold*1.05,
+                min_dist,
+                dT,
+                mintime = MinTimeMS,
+                connectLon = connectLon,
+                extend_size_ratio = 0.25
+                )
 
-    if connectLon == 1:
-        print('        connect MS objects over date line')
-        MS_objects = ConnectLon_on_timestep(MS_objects)
-
+    # if connectLon == 1:
+    #     print('        connect MS objects over date line')
+    #     MS_objects = ConnectLon_on_timestep(MS_objects)
+    
     return MS_objects
 
 
@@ -2304,7 +2412,9 @@ def ar_ivt_tracking(IVT,
                     IVTtrheshold,
                     MinTimeIVT,
                     dT,
-                    connectLon):
+                    Gridspacing,
+                    connectLon,
+                    breakup = "watershed"):
             
             potIVTs = (IVT > IVTtrheshold)
             rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
@@ -2315,14 +2425,27 @@ def ar_ivt_tracking(IVT,
                                            dT,
                                     min_tsteps=int(MinTimeIVT/dT))
 
-            print('        break up long living IVT objects that have many elements')
-            IVT_objects, object_split = BreakupObjects(IVT_objects,
+            print('        break up long living IVT objects with '+breakup)
+            if breakup == 'breakup':
+                IVT_objects, object_split = BreakupObjects(IVT_objects,
                                          int(MinTimeIVT/dT),
                                         dT)
+            elif breakup == 'watershed':
+                min_dist=int((4000 * 10**3)/Gridspacing)
+                IVT_objects = watershed_2d_overlap(
+                        IVT,
+                        IVTtrheshold,
+                        IVTtrheshold*1.05,
+                        min_dist,
+                        dT,
+                        mintime = MinTimeIVT,
+                        connectLon = connectLon,
+                        extend_size_ratio = 0.25
+                        )
 
-            if connectLon == 1:
-                print('        connect IVT objects over date line')
-                IVT_objects = ConnectLon_on_timestep(IVT_objects)
+            # if connectLon == 1:
+            #     print('        connect IVT objects over date line')
+            #     IVT_objects = ConnectLon_on_timestep(IVT_objects)
 
             return IVT_objects
         
@@ -2433,7 +2556,7 @@ def cy_acy_psl_tracking(
                     dT,
                     Gridspacing,
                     connectLon,
-                    breakup = 'breakup',
+                    breakup = 'watershed',
                     ):
 
     import numpy as np
@@ -2469,9 +2592,11 @@ def cy_acy_psl_tracking(
         CY_objects, object_split = BreakupObjects(CY_objects,
                                 int(MinTimeCY/dT),
                                 dT)
+        if connectLon == 1:
+            print('            connect cyclones objects over date line')
+            CY_objects = ConnectLon_on_timestep(CY_objects)
     elif breakup == 'watershed':
-        threshold=1
-        min_dist=int((1000 * 10**3)/Gridspacing)
+        min_dist=int((1600 * 10**3)/Gridspacing)
         low_pres_an = np.copy(slp_Anomaly)
         low_pres_an[CY_objects == 0] = 0
         low_pres_an[low_pres_an < -999999999] = 0
@@ -2484,6 +2609,8 @@ def cy_acy_psl_tracking(
                 min_dist,
                 dT,
                 mintime = MinTimeCY,
+                connectLon = connectLon,
+                extend_size_ratio = 0.15
                 )
         
         
@@ -2493,9 +2620,7 @@ def cy_acy_psl_tracking(
         #                            threshold,
         #                             smooth_t,
         #                            smooth_xy)
-    if connectLon == 1:
-        print('            connect cyclones objects over date line')
-        CY_objects = ConnectLon_on_timestep(CY_objects)
+    
         
     
     
@@ -2513,6 +2638,9 @@ def cy_acy_psl_tracking(
         ACY_objects, object_split = BreakupObjects(ACY_objects,
                                     int(MinTimeCY/dT),
                                     dT)
+        if connectLon == 1:
+            # connect objects over date line
+            ACY_objects = ConnectLon_on_timestep(ACY_objects)
     elif breakup == 'watershed':
         min_dist=int((1000 * 10**3)/Gridspacing)
         high_pres_an = np.copy(slp_Anomaly)
@@ -2524,10 +2652,9 @@ def cy_acy_psl_tracking(
                                             min_dist,
                                             dT,
                                             mintime = MinTimeCY,
+                                            connectLon = connectLon,
+                                            extend_size_ratio = 0.15
                                             )
-    if connectLon == 1:
-        # connect objects over date line
-        ACY_objects = ConnectLon_on_timestep(ACY_objects)
 
     return CY_objects, ACY_objects
 
@@ -2585,7 +2712,7 @@ def cy_acy_z500_tracking(
         low_pres_an = np.copy(z500_Anomaly)
         low_pres_an[cy_z500_objects == 0] = 0
         cy_z500_objects = watershed_2d_overlap(
-                z_low * -1,
+                z500_Anomaly * -1,
                 z500_low_anom*-1,
                 z500_low_anom*-1,
                 min_dist,
@@ -2617,7 +2744,7 @@ def cy_acy_z500_tracking(
         high_pres_an = np.copy(z500_Anomaly)
         high_pres_an[acy_z500_objects == 0] = 0
         acy_z500_objects = watershed_2d_overlap(
-                high_pres_an,
+                z500_Anomaly,
                 z500_high_anom,
                 z500_high_anom,
                 min_dist,
@@ -2804,7 +2931,8 @@ def col_identification(cy_z500_objects,
 
 
 
-
+#from memory_profiler import profile
+#@profile
 def mcs_tb_tracking(
                     tb,
                     pr,
@@ -2874,7 +3002,7 @@ def mcs_tb_tracking(
                                     dT)
     elif breakup == 'watershed':
         # C_objects = watersheding(C_objects,
-        #                6,  # at least six grid cells appart 
+        #                6,  # at least six grid cells apart 
         #                1)
         threshold=1
         min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
@@ -2890,12 +3018,13 @@ def mcs_tb_tracking(
                 min_dist,
                 dT,
                 mintime = MinTimeC,
+                connectLon = connectLon,
+                extend_size_ratio = 0.10
                 )
         
-    
-    if connectLon == 1:
-        print('        connect cloud objects over date line')
-        C_objects = ConnectLon_on_timestep(C_objects)
+    # if connectLon == 1:
+    #     print('        connect cloud objects over date line')
+    #     C_objects = ConnectLon_on_timestep(C_objects)
 
     # check if precipitation object is from an MCS
     object_indices = ndimage.find_objects(C_objects)
@@ -2969,14 +3098,158 @@ def mcs_tb_tracking(
             continue
 
     MCS_objects_Tb, _ = clean_up_objects(MCS_objects_Tb,
-                                       dT,
-                                       min_tsteps=int(MCS_minTime/dT))  
+                                           dT,
+                                           min_tsteps=int(MCS_minTime/dT))
 
     return MCS_objects_Tb, C_objects
 
 
+#from memory_profiler import profile
+#@profile
+def cloud_tracking(
+    tb,
+    pr,
+    # MCS_obj,
+    connectLon,
+    Gridspacing,
+    dT,
+    tb_threshold = 241,
+    tb_overshoot = 235,
+    erosion_disk = 1.5,
+    min_dist = 8
+    ):
+    
+    """
+    Tracks clouds from hourly or sub-hourly brightness temperature data.
+    Calculates cloud statistics, including their precipitation (pr) properties if pr is provided.
 
-def tc_tracking(CY_objects,
+    Args:
+        tb (float): brightness temperature of dimension [time,lat,lon]
+        connectLon (bol): 1 means that clouds should be connected accross date line
+        Gridspacing (float): average horizontal grid spacing in [m]
+        tb_threshold (float, optional): tb threshold to define cloud mask. Default is "241".
+        cloud_overshoot (float, optional): tb threshold to find local minima for watershedding. Default is "235".
+        erosion_disk (float, optional): reduction of next timestep mask for temporal connection of features. Larger values result in more erosion and can remove smaller clouds. The default is "0.15".
+        min_dist (int, optional): minimum distance in grid cells between two tb minima (overshoots). The default is "8".
+
+    Returns:
+        float: The product of `a` and `b`.
+    """
+
+    CL_Area = min_dist * Gridspacing
+    breakup = 'watershed'
+    
+    print('        track  clouds')
+    Cmask = (tb <= tb_threshold)
+    
+    print('        break up long living cloud shield objects with wathershedding')
+    
+    min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
+    tb_masked = np.copy(tb)
+    # we have to make minima (cold cloud tops) to maxima
+    tb_masked = tb_masked * -1
+    # tb_masked = tb_masked + np.nanmin(tb_masked)
+    # tb_masked[C_objects == 0] = 0
+    cloud_objects = watershed_2d_overlap(
+            tb * -1,
+            tb_threshold * -1,
+            tb_overshoot * -1, #CL_MaxT * -1,
+            min_dist,
+            dT,
+            mintime = 0,
+            connectLon = connectLon,
+            extend_size_ratio = 0.10,
+            erosion_disk = erosion_disk
+            )
+
+    print("        make sure that each object has at least one grid cell with more than min_pr threshold of precipitation")
+    min_pr = 2 * dT # minimum precipitation in [mm/h]
+    object_indices = ndimage.find_objects(cloud_objects)
+    for iobj,_ in tqdm(enumerate(object_indices)):
+        if object_indices[iobj] is None:
+            continue
+        pr_object_slice= cloud_objects[object_indices[iobj]]
+        pr_object_act = np.where(pr_object_slice==iobj+1,True,False)
+            
+        pr_slice =  pr[object_indices[iobj]]
+        pr_act = np.copy(pr_slice)
+        pr_act[~pr_object_act] = np.nan
+        if np.nanmax(pr_act) < min_pr:
+            cloud_objects[object_indices[iobj]][cloud_objects[object_indices[iobj]] == iobj+1] = 0
+
+    return pr_objects
+
+
+def pr_tracking(
+    pr,
+    # MCS_obj,
+    connectLon,
+    Gridspacing,
+    dT,
+    pr_threshold = 5.5, # mm/h
+    pr_max = 13.7, # mm/h
+    mintime = 1, # hours
+    erosion_disk = 1.5,
+    min_dist = 8
+    ):
+    
+    """
+    Tracks prs from hourly or sub-hourly brightness temperature data.
+    Calculates pr statistics, including their precipitation (pr) properties if pr is provided.
+
+    Args:
+        tb (float): brightness temperature of dimension [time,lat,lon]
+        connectLon (bol): 1 means that prs should be connected accross date line
+        Gridspacing (float): average horizontal grid spacing in [m]
+        tb_threshold (float, optional): tb threshold to define pr mask. Default is "241".
+        pr_overshoot (float, optional): pr threshold to find local minima for watershedding. Default is "235".
+        erosion_disk (float, optional): reduction of next timestep mask for temporal connection of features. Larger values result in more erosion and can remove smaller prs. The default is "0.15".
+        min_dist (int, optional): minimum distance in grid cells between two pr minima (overshoots). The default is "8".
+
+    Returns:
+        float: The product of `a` and `b`.
+    """
+
+    CL_Area = min_dist * Gridspacing
+    breakup = 'watershed'
+    
+    print('        track  pr')
+    Cmask = (pr <= pr_threshold * dT)
+    
+    print('        break up long living pr objects with wathershedding')
+    
+    min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
+
+    pr_objects = watershed_2d_overlap(
+            pr,
+            pr_threshold * dT,
+            pr_max * dT,
+            min_dist,
+            dT,
+            mintime = mintime,
+            connectLon = 0, # connectLon,
+            extend_size_ratio = 0.05,
+            erosion_disk = erosion_disk
+            )
+
+    print("        make sure that each object has at least one grid cell with more than min_pr threshold of precipitation")
+    min_pr = pr_max * dT # pr_max --> minimum precipitation in [mm/h]
+    object_indices = ndimage.find_objects(pr_objects)
+    for iobj,_ in tqdm(enumerate(object_indices)):
+        if object_indices[iobj] is None:
+            continue
+        pr_object_slice= pr_objects[object_indices[iobj]]
+        pr_object_act = np.where(pr_object_slice==iobj+1,True,False)
+            
+        pr_slice =  pr[object_indices[iobj]]
+        pr_act = np.copy(pr_slice)
+        pr_act[~pr_object_act] = np.nan
+        if np.nanmax(pr_act) < min_pr:
+            pr_objects[object_indices[iobj]][pr_objects[object_indices[iobj]] == iobj+1] = 0
+
+    return pr_objects
+
+def tc_tracking_old(CY_objects,
                 t850,
                 slp,
                 tb,
@@ -2995,7 +3268,8 @@ def tc_tracking(CY_objects,
     for ii in range(len(Objects)):
         if Objects[ii] == None:
             continue
-        ObjACT = CY_objects[Objects[ii]] == ii+1
+        ObjACT = np.copy(CY_objects[Objects[ii]])
+        ObjACT = ObjACT == ii+1
         if ObjACT.shape[0] < 2*8:
             continue
         T_ACT = np.copy(t850[Objects[ii]])
@@ -3093,6 +3367,175 @@ def tc_tracking(CY_objects,
 
 
 
+def tc_tracking(CY_objects,
+                slp,
+                t850,
+                tb,
+                uv850,
+                uv200,
+                Lon,
+                Lat,
+                TC_lat_genesis,
+                TC_t_core,
+               ):
+
+    from scipy import ndimage
+    
+    TC_Tracks = {}
+    TC_obj = np.copy(CY_objects); TC_obj[:]=0
+    Objects = ndimage.find_objects(CY_objects.astype(int))
+    _,_,grid_cell_area,grid_spacing = calc_grid_distance_area(Lon,Lat)
+    grid_cell_area[grid_cell_area < 0] = 0
+
+    for ii in tqdm(range(len(Objects))):
+        if Objects[ii] == None:
+            continue
+        if Objects[ii][0].stop - Objects[ii][0].start > 5000:
+            # some cycloens life too long
+            continue
+        ObjACT = CY_objects[Objects[ii]] == ii+1
+        if ObjACT.shape[0] < 2*8:
+            continue
+    
+        slp_ACT = np.copy(slp[:,:,:][Objects[ii]])/100.
+        t850_ACT = np.copy(t850[:,:,:][Objects[ii]])
+        tb_ACT = np.copy(tb[:,:,:][Objects[ii]])
+        uv850_ACT = np.copy(uv850[:,:,:][Objects[ii]])
+        uv200_ACT = np.copy(uv200[:,:,:][Objects[ii]])
+        LonObj = Lon[Objects[ii][1],Objects[ii][2]]
+        LatObj = Lat[Objects[ii][1],Objects[ii][2]]
+        slp_ACT[ObjACT == 0] = 999999999.
+        slp_min = np.array([
+                            np.nanmin(slp_ACT[tt][ObjACT[tt]]) if np.any(ObjACT[tt]) else np.nan
+                            for tt in range(ObjACT.shape[0])
+                        ])
+    
+        Track_ACT = np.array([np.argwhere(slp_ACT[tt,:,:] == np.nanmin(slp_ACT[tt,:,:]))[0] for tt in range(ObjACT.shape[0])])
+        LatLonTrackAct = np.array([(LatObj[Track_ACT[tt][0],Track_ACT[tt][1]],LonObj[Track_ACT[tt][0],Track_ACT[tt][1]]) for tt in range(ObjACT.shape[0])])
+        if np.min(np.abs(LatLonTrackAct[:,0])) > TC_lat_genesis:
+            # cyclone does not originate in the tropics
+            ObjACT[:] = 0
+            continue
+        else:
+    
+            # Check if the cyclone core is warm enough
+            t850_core = np.zeros((ObjACT.shape[0])); t850_core[:] = np.nan
+            tb_core = np.copy(t850_core)
+            uv850_core = np.copy(t850_core)
+            uv200_core = np.copy(t850_core)
+            for tt in range(ObjACT.shape[0]):
+                if slp_min[tt] < -99999:
+                    continue
+                    
+                # sample T850 in core
+                ## could be potentially sped up by just selecting the temp. at the center of the storm
+                tc_disctance = haversine(LonObj, LatObj, LatLonTrackAct[tt,1], LatLonTrackAct[tt,0])
+                t850_core[tt] = np.mean(t850_ACT[tt,:,:][tc_disctance < grid_spacing/1000 * 3])
+                tb_core[tt] = np.nanmean(tb_ACT[tt,:,:][tc_disctance < grid_spacing/1000 * 3])
+                uv850_core[tt] = np.nanmax(uv850_ACT[tt,:,:][tc_disctance < 150])
+                uv200_core[tt] = np.nanmax(uv200_ACT[tt,:,:][tc_disctance < 150])
+    
+            lat_act = LatLonTrackAct[:,0]
+            lon_act = LatLonTrackAct[:,1]
+        
+            if np.min(np.abs(lat_act[0])) > TC_lat_genesis:
+                continue
+
+            # Check if core is warm enough
+            t_test = (t850_core >= TC_t_core) # & (slp_min <= 1002)
+
+            # check if there is a cold cloud shield over the TC
+            anvil_test = (tb_core <= 241) # & (slp_min <= 1002)
+
+            # check if the cyclone has strong enough wind speed
+            speed_test = (uv850_core > 15)
+
+            # check if cyclone has strong low level winds compared to outflow
+            rmax_test = (uv850_core/uv200_core) > 1
+
+            tc_sel_act = (t_test) & (anvil_test) & (speed_test) & (rmax_test)
+
+            if np.sum(tc_sel_act) == 0:
+                continue
+            
+            # check if TC genesis occurs in low latitudes and over the ocean
+            if np.abs(lat_act[tc_sel_act][0]) > TC_lat_genesis:
+                continue
+        
+            if is_land(lon_act[tc_sel_act][0], lat_act[tc_sel_act][0]) == True:
+                continue
+            
+            # fill up gaps in tc detection if they are shorter than 12 hours
+            tc_sel_act = fill_small_gaps(tc_sel_act, gap_threshold = 12)
+
+            # check if TC re-genesis occurrence is below TC_lat_genesis and not over land
+            from scipy import ndimage
+            labeled_array, num_features = ndimage.label(tc_sel_act)
+            slices = ndimage.find_objects(labeled_array)
+            for tt, slice_tuple in enumerate(slices):
+                # For 1D, slice_tuple is a tuple with one slice object.
+                block = tc_sel_act[slice_tuple]
+            
+                start_index = slice_tuple[0].start
+                stop_index = slice_tuple[0].stop
+                if (np.abs(lat_act[start_index]) > TC_lat_genesis) or (is_land(lon_act[start_index], lat_act[start_index]) == True):
+                    tc_sel_act[start_index:stop_index] = 0
+
+        LatLonTrackAct[tc_sel_act == 0,:] = np.nan
+        ObjACT[tc_sel_act == 0,:] = 0
+
+        ObjACT = ObjACT.astype("int")
+        ObjACT[ObjACT != 0] = ii + 1
+
+        TC_obj[Objects[ii]] = ObjACT
+        TC_Tracks[str(ii+1)] = LatLonTrackAct
+    
+    return TC_obj, TC_Tracks
+    
+
+# Loop over all cyclones and identiy TCs
+def fill_small_gaps(data, gap_threshold=12):
+    """
+    Replace gaps (sequences of zeros) with ones if the gap length is
+    less than the specified gap_threshold. Only gaps that are flanked
+    by ones are filled.
+
+    Parameters:
+    -----------
+    data : list or np.ndarray
+        Time series of zeros and ones.
+    gap_threshold : int, optional
+        Maximum number of zeros allowed in a gap to be filled with ones.
+        (Default value is 12)
+
+    Returns:
+    --------
+    np.ndarray
+        The modified time series with small gaps filled.
+    """
+    # Ensure the input is a numpy array.
+    data_arr = np.array(data) if not isinstance(data, np.ndarray) else data.copy()
+    
+    # Get the indices of the ones.
+    ones_indices = np.where(data_arr == 1)[0]
+    
+    # If less than two ones are found, no gap exists.
+    if len(ones_indices) < 2:
+        return data_arr
+    
+    # Loop over pairs of consecutive one indices.
+    for i in range(len(ones_indices) - 1):
+        start = ones_indices[i]
+        end = ones_indices[i + 1]
+        gap_length = end - start - 1
+        
+        # If the gap is positive and smaller than the gap_threshold, fill with ones.
+        if 0 < gap_length < gap_threshold:
+            data_arr[start + 1:end] = 1
+    
+    return data_arr
+
+
 def mcs_pr_tracking(pr,
                     tb,
                     C_objects,
@@ -3147,8 +3590,8 @@ def mcs_pr_tracking(pr,
     # ii = 1
     # for ob in range(len(rgiAreaObj)):
     #     try:
-    #         AreaTest = np.max(np.convolve(np.array(rgiAreaObj[ob]) >= MinAreaPR*1000**2, np.ones(int(MinTimePR/dT)), mode='valid'))
-    #         if (AreaTest == int(MinTimePR/dT)) & (len(rgiAreaObj[ob]) >= int(MinTimePR/dT)):
+    #         AreaTest = np.max(np.convolve(np.array(rgiAreaObj[ob]) >= MinAreaPR*1000**2, np.ones(int(params["MinTimePR"]/dT)), mode='valid'))
+    #         if (AreaTest == int(params["MinTimePR"]/dT)) & (len(rgiAreaObj[ob]) >= int(params["MinTimePR"]/dT)):
     #             PR_objects[rgiObjectsPR == (ob+1)] = ii
     #             ii = ii + 1
     #     except:
@@ -3296,11 +3739,11 @@ def track_tropwaves(pr,
     
     # pad the precipitation to avoid boundary effects
     pad_size = int(pr_eq.shape[0] * 0.2)
-    padding = np.zeros((pad_size, pr_eq.shape[1], pr_eq.shape[2])); padding[:] = np.nan
+    padding = np.zeros((pad_size, pr_eq.shape[1], pr_eq.shape[2]), dtype=np.float32); padding[:] = np.nan
     pr_eq = np.append(padding, pr_eq, axis=0)
     pr_eq = np.append(pr_eq, padding, axis=0)
      
-    pr_eq = interpolate_numba(np.array(pr_eq))
+    pr_eq = interpolate_temporal(np.array(pr_eq))
     tropical_waves = KFfilter(pr_eq,
                      int(24/dT))
 
@@ -3383,6 +3826,215 @@ def track_tropwaves(pr,
 
     return mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects
 
+def tukey_latitude_mask(lat_matrix: np.ndarray,
+                        lat_start: float,
+                        lat_stop: float) -> np.ndarray:
+    """
+    Build a latitude-dependent Tukey taper mask.
+
+    Parameters
+    ----------
+    lat_matrix : np.ndarray
+        2D array of center-point latitudes (degrees), shape (ny, nx).
+    lat_start : float
+        Latitude (in degrees) where the taper begins (|lat|<=lat_start => weight=1).
+    lat_stop : float
+        Latitude (in degrees) where the taper ends (|lat|>=lat_stop => weight=0).
+
+    Returns
+    -------
+    mask : np.ndarray
+        2D taper mask of same shape as lat_matrix, with values in [0,1].
+    """
+    if lat_stop <= lat_start:
+        raise ValueError("`lat_stop` must be larger than `lat_start`.")
+
+    abs_lat = np.abs(lat_matrix)
+    mask = np.zeros_like(lat_matrix, dtype=float)
+
+    # Inner region (full weight)
+    inner = abs_lat <= lat_start
+    mask[inner] = 1.0
+
+    # Transition region (raised cosine)
+    transition = (abs_lat > lat_start) & (abs_lat < lat_stop)
+    frac = (abs_lat[transition] - lat_start) / (lat_stop - lat_start)
+    mask[transition] = 0.5 * (1 + np.cos(np.pi * frac))
+
+    # Outside region remains zero
+    return mask
+
+import numpy as np
+
+def temporal_tukey_window(nt, alpha=0.1):
+    """
+    nt    : number of time steps
+    alpha : fraction of the window length to taper (e.g. 0.1 → 10% on each end)
+    """
+    # nt points from 0 to 1
+    n = np.arange(nt)
+    w = np.ones(nt)
+    edge = int(alpha * (nt - 1) / 2)
+
+    # build the half‐cosine edges
+    ramp = 0.5 * (1 + np.cos(np.pi * (n[:edge] / edge)))
+    w[:edge]      = ramp[::-1]  # left taper
+    w[-edge:]     = ramp       # right taper
+    return w
+
+
+
+def track_tropwaves_tb(tb,
+                   Lat,
+                   connectLon,
+                   dT,
+                   Gridspacing,
+                   er_th = -0.5,  # threshold for Rossby Waves
+                   mrg_th = -3, # threshold for mixed Rossby Gravity Waves
+                   igw_th = -5,  # threshold for inertia gravity waves
+                   kel_th = -5,  # threshold for Kelvin waves
+                   eig0_th = -4, # threshold for n>=1 Inertio Gravirt Wave
+                   breakup = 'watershed',
+                   ):
+    """ Identifies and tracks four types of tropical waves from
+        Hourly brightness temperature data:
+        Mixed Rossby Gravity Waves
+        n>=0 Eastward Inertial Gravity Wave
+        Kelvin Waves
+        and n>=1 Inertio Gravirt Wave
+    """
+
+    from Tracking_Functions import interpolate_numba
+    from Tracking_Functions import KFfilter
+    from Tracking_Functions import clean_up_objects
+    from Tracking_Functions import BreakupObjects
+    from Tracking_Functions import ConnectLon_on_timestep
+    import gc
+
+    tb = np.asarray(tb, dtype=np.float32)   # very first line in the function
+
+    ew_mintime = 32
+    
+    # use Turkey (hals cos) function to tamper region
+    lat_mask = tukey_latitude_mask(Lat, lat_start=17.0, lat_stop=25.0)
+    tb_eq = tb.copy()
+    tb_eq[tb_eq > 350] = np.nan
+    tb_eq[tb_eq < 150] = np.nan
+    # compute anomalies
+    tb_eq = tb_eq - np.nanmean(tb_eq, axis=(1,2), keepdims=True)
+    tb_eq = tb_eq * lat_mask[None,:]
+    tb_eq[np.isnan(tb_eq)] = 0
+
+    """
+    valid = (tb_eq >= 150) & (tb_eq <= 350)                   # bool view
+    # mean over valid points only, without building a big masked array:
+    sum_ = np.sum(np.where(valid, tb_eq, 0.0), axis=(1,2), keepdims=True, dtype=np.float32)
+    cnt_ = np.sum(valid,                    axis=(1,2), keepdims=True, dtype=np.int32)
+    mean_ = sum_ / np.maximum(cnt_, 1)
+    
+    tb_eq -= mean_.astype(np.float32, copy=False)             # center
+    tb_eq *= valid.astype(np.float32)                         # zero outside valid, no NaNs
+    
+    # 3) apply & renormalize
+    w2 = np.mean(lat_mask**2)
+    tb_eq = (lat_mask * tb_eq) / np.sqrt(w2)
+    """
+
+    """
+    tb_eq = tb.copy()
+    tb_eq[:,np.abs(Lat[:,0]) > 20] = 0
+    """
+    
+    # pad the Tb to avoid boundary effects
+    # temporal turkey tapping:
+    nt = tb_eq.shape[0]
+    win = temporal_tukey_window(nt, alpha=0.2)
+    tb_eq = tb_eq * win[:, None, None]
+    pad_size = int(tb_eq.shape[0] * 0.2)
+    tb_eq = np.pad(tb_eq, ((pad_size,pad_size),(0,0),(0,0)), mode='reflect')
+     
+    tb_eq = interpolate_temporal(tb_eq)
+    tropical_waves = KFfilter(tb_eq,
+                     int(24/dT))
+
+    wave_names = ['ER','MRG','IGW','Kelvin','Eig0']
+
+    print('        track tropical waves')
+    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
+    for wa in range(5):
+        print('            work on ' + wave_names[wa])
+        if wa == 0:
+            amplitude = KFfilter.erfilter(tropical_waves, fmin=None, fmax=None, kmin=-10, kmax=-1, hmin=0, hmax=90, n=1) # had to set hmin from 8 to 0
+            wave = amplitude[pad_size:-pad_size] < er_th
+            threshold = er_th
+        if wa == 1:
+            amplitude = KFfilter.mrgfilter(tropical_waves)
+            wave = amplitude[pad_size:-pad_size] < mrg_th
+            threshold = mrg_th
+        elif wa == 2:
+            amplitude = KFfilter.igfilter(tropical_waves)
+            wave = amplitude[pad_size:-pad_size] < igw_th
+            threshold = igw_th
+        elif wa == 3:
+            amplitude = KFfilter.kelvinfilter(tropical_waves)
+            wave = amplitude[pad_size:-pad_size] < kel_th
+            threshold = kel_th
+        elif wa == 4:
+            amplitude = KFfilter.eig0filter(tropical_waves)
+            wave = amplitude[pad_size:-pad_size] < eig0_th
+            threshold = eig0_th
+
+        amplitude = amplitude[pad_size:-pad_size]
+        rgiObjectsUD, nr_objectsUD = ndimage.label(wave, structure=rgiObj_Struct)
+        print('                '+str(nr_objectsUD)+' object found')
+
+        wave_objects, _ = clean_up_objects(rgiObjectsUD,
+                              dT,
+                              min_tsteps=int(ew_mintime/dT))
+
+        if breakup == 'breakup':
+            print('                break up long tropical waves that have many elements')
+            wave_objects, object_split = BreakupObjects(wave_objects,
+                                    int(ew_mintime/dT),
+                                    dT)
+        elif breakup == 'watershed':
+            # threshold=0.1
+            min_dist=int((1000 * 10**3)/Gridspacing)
+            wave_amp = amplitude
+            #wave_amp[rgiObjectsUD == 0] = 0
+            wave_objects = watershed_2d_overlap(
+                    wave_amp *-1,
+                    np.abs(threshold),
+                    np.abs(threshold),
+                    min_dist,
+                    dT,
+                    mintime = ew_mintime,
+                    )
+            
+        if connectLon == 1:
+            print('                connect waves objects over date line')
+            wave_objects = ConnectLon_on_timestep(wave_objects)
+
+        wave_objects, _ = clean_up_objects(wave_objects,
+                          dT,
+                          min_tsteps=int(ew_mintime/dT))
+
+        if wa == 0:
+            er_objects = wave_objects.copy()
+        if wa == 1:
+            mrg_objects = wave_objects.copy()
+        if wa == 2:
+            igw_objects = wave_objects.copy()
+        if wa == 3:
+            kelvin_objects = wave_objects.copy()
+        if wa == 4:
+            eig0_objects = wave_objects.copy()
+
+        del wave
+        del wave_objects
+        del rgiObjectsUD
+        gc.collect()
+    return mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects
 
 # Watersheding can be used as an alternative to the breakup function
 # and helps to seperate long-lived/large clusters of objects into sub elements
@@ -3430,10 +4082,477 @@ def watersheding(field_with_max,  # 2D or 3D matrix with labeled objects [np.arr
     return labels
 
 
+def connect_3d_objects(labels, min_tsteps, dT):
+    """
+    labels : np.ndarray, shape (T,H,W), int watershed labels per time-slice
+    returns objects_watershed of same shape, with labels tracked over time.
+    """
+    T, H, W = labels.shape
+    objects_watershed = np.zeros_like(labels, dtype=int)
+    objects_watershed[0] = labels[0]
+    next_id = labels.max() + 1
+
+    for t in tqdm(range(1, T)):
+        prev = objects_watershed[t-1]
+        curr = labels[t]
+
+        # build overlap counts
+        M = curr.max() + 1
+        mask = prev > 0
+        p = prev[mask].ravel()
+        c = curr[mask].ravel()
+
+        pair_idx = p * M + c
+        counts = np.bincount(pair_idx, minlength=(prev.max()+1)*M)
+
+        nz = np.nonzero(counts)[0]
+        p_lbls = nz // M
+        c_lbls = nz % M
+        overlaps = counts[nz]
+
+        # greedy best‐overlap assignment
+        order = np.argsort(-overlaps)
+        p_lbls = p_lbls[order]
+        c_lbls = c_lbls[order]
+        mapping = {}
+        used_curr = set()
+        for p_lbl, c_lbl in zip(p_lbls, c_lbls):
+            if p_lbl == 0 or c_lbl == 0:
+                continue
+            if p_lbl not in mapping and c_lbl not in used_curr:
+                mapping[p_lbl] = c_lbl
+                used_curr.add(c_lbl)
+
+        # build the new t‐slice
+        new_slice = np.zeros((H, W), dtype=int)
+        # 1) continuing objects
+        for p_lbl, c_lbl in mapping.items():
+            new_slice[curr == c_lbl] = p_lbl
+
+        # 2) brand‐new objects
+        all_curr = np.unique(curr)
+        for c_lbl in all_curr:
+            if c_lbl == 0 or c_lbl in used_curr:
+                continue
+            new_slice[curr == c_lbl] = next_id
+            next_id += 1
+
+        objects_watershed[t] = new_slice
+
+    # finally do your cleanup
+    objects_watershed, _ = clean_up_objects(objects_watershed,
+                                         min_tsteps=min_tsteps,
+                                         dT=dT)
+    return objects_watershed
+
+
+import numpy as np
+from tqdm import tqdm
+
+def connect_3d_objects_memory_lean(labels, min_tsteps, dT, out_dtype=np.int32):
+    """
+    Memory-optimized version:
+      - Per-slice relabel compression (contiguous ids) -> small overlap table
+      - Avoids gigantic bincount over prev.max()*M
+      - Uses int32 by default
+    """
+    labels = np.asarray(labels)
+    T, H, W = labels.shape
+
+    # Use smaller dtype; copies only if needed
+    out = np.empty_like(labels, dtype=out_dtype)
+    out[0] = labels[0].astype(out_dtype, copy=False)
+
+    next_id = int(out[0].max()) + 1
+
+    for t in tqdm(range(1, T)):
+        prev = out[t-1]
+        curr = labels[t]
+
+        # Only pixels that could overlap count toward the contingency table
+        mask = (prev > 0) & (curr > 0)
+
+        new_slice = np.zeros((H, W), dtype=out_dtype)
+
+        if np.any(mask):
+            p = prev[mask]
+            c = curr[mask]
+
+            # Compress p and c to contiguous [0..P-1], [0..M-1] to keep table small
+            p_ids, p_comp = np.unique(p, return_inverse=True)   # len = #unique prev labels in overlap
+            c_ids, c_comp = np.unique(c, return_inverse=True)   # len = #unique curr labels in overlap
+            P = p_ids.size
+            M = c_ids.size
+
+            # Contingency table of overlaps: shape (P, M), int32 to save memory
+            table = np.zeros((P, M), dtype=np.int32)
+            np.add.at(table, (p_comp, c_comp), 1)
+
+            # Non-zero pairs, sorted by decreasing overlap; stable tiebreak by (prev_id, curr_id)
+            pi, ci = np.nonzero(table)
+            ov = table[pi, ci]
+            order = np.argsort(-ov, kind="stable")  # preserve (pi,ci) order on ties
+            pi = pi[order]; ci = ci[order]
+
+            mapping = {}
+            used_curr_idx = set()
+            for pp, cc in zip(pi, ci):
+                if pp in mapping or cc in used_curr_idx:
+                    continue
+                mapping[pp] = cc
+                used_curr_idx.add(cc)
+
+            # 1) continuing objects (vectorized by label, but without giant maps)
+            if mapping:
+                # map compressed curr ids -> global prev ids
+                for pp, cc in mapping.items():
+                    pid = int(p_ids[pp])        # global previous label id to keep
+                    cid = int(c_ids[cc])        # global current label id (in 'curr')
+                    new_slice[curr == cid] = pid
+
+            # 2) brand-new objects (curr labels not used above OR not overlapping prev at all)
+            curr_all = np.unique(curr)
+            used_curr_labels = set(int(c_ids[idx]) for idx in used_curr_idx)  # only those that overlapped
+            for cid in curr_all:
+                if cid == 0 or cid in used_curr_labels:
+                    continue
+                new_slice[curr == cid] = next_id
+                next_id += 1
+
+        else:
+            # No overlap at all: every non-zero curr label becomes a new object
+            for cid in np.unique(curr):
+                if cid == 0:
+                    continue
+                new_slice[curr == cid] = next_id
+                next_id += 1
+
+        out[t] = new_slice
+
+    # Final cleanup unchanged
+    out, _ = clean_up_objects(out, min_tsteps=min_tsteps, dT=dT)
+    return out
+
+
+
+#from memory_profiler import profile
+#@profile
+# This function performs watershedding on 2D anomaly fields and
+# succeeds an older version of this function (watershed_2d_overlap_temp_discontin).
+# This function uses spatially reduced watersheds from the previous time step as seed for the
+# current time step, which improves temporal consistency of features.
+def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array]
+                         object_threshold, # float to create binary object mast [float]
+                         max_treshold, # value for identifying max. points for spreading [float]
+                         min_dist, # minimum distance (in grid cells) between maximum points [int]
+                         dT, # time interval in hours [int]
+                         mintime = 24, # minimum time an object has to exist in dT [int]
+                         connectLon = 0,  # do we have to track features over the date line?
+                         extend_size_ratio = 0.25, # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
+                         erosion_disk = 3.5): 
+
+    from scipy import ndimage as ndi
+    from skimage.feature import peak_local_max
+    from skimage.segmentation import watershed
+    from scipy.ndimage import gaussian_filter
+    from Tracking_Functions import clean_up_objects
+    from Tracking_Functions import ConnectLon_on_timestep
+    
+    if connectLon == 1:
+        axis = 1
+        extension_size = int(data.shape[1] * extend_size_ratio)
+        data = np.concatenate(
+                [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=2
+            )
+    data_2d_watershed = np.copy(data); data_2d_watershed[:] = np.nan
+    for tt in tqdm(range(data.shape[0])):
+        image = data[tt,:] >= object_threshold
+        data_t0 = data[tt,:,:]
+
+        # get maximum precipitation over three time steps to make fields more coherant
+        coords = peak_local_max(data_t0, 
+                                min_distance = min_dist,
+                                threshold_abs = max_treshold,
+                                labels = image
+                               )
+    
+        mask = np.zeros(data_t0.shape, dtype=bool)
+        mask[tuple(coords.T)] = True
+        markers, _ = ndi.label(mask)
+    
+        if tt != 0:
+            # allow markers to change a bit from time to time and 
+            # introduce new markers if they have strong enough max/min and
+            # are far enough away from existing objects
+            from skimage.segmentation import find_boundaries
+            from skimage.morphology import erosion, square, disk, rectangle
+            boundaries = find_boundaries(data_2d_watershed[tt-1,:,:].astype("int"), mode='outer')
+            # Set boundaries to zero in the markers
+            separated_markers = np.copy(data_2d_watershed[tt-1,:,:].astype("int"))
+            separated_markers[boundaries] = 0
+            from skimage.morphology import erosion
+            separated_markers = erosion(separated_markers, disk(erosion_disk)) #3.5
+            separated_markers[data_2d_watershed[tt,:,:] == 0] = 0
+            
+            # add unique new markers if they are not too close to old objects
+            from skimage.morphology import dilation, square, disk
+            dilated_matrix = dilation(data_2d_watershed[tt-1,:,:].astype("int"), disk(2.5))
+            markers_updated = (markers + np.max(separated_markers)).astype("int")
+            markers_updated[markers_updated == np.max(separated_markers)] = 0
+            markers_add = (markers_updated != 0) & (dilated_matrix == 0)
+            
+            separated_markers[markers_add] = markers_updated[markers_add]
+            markers = separated_markers
+            # break up elements that are no longer connected
+            markers, _ = ndi.label(markers)
+    
+            # make sure that spatially separate objects have unique labels
+            # markers, _ = ndi.label(mask)
+        data_2d_watershed[tt,:,:] = watershed(image = np.array(data[tt,:])*-1,  # watershedding field with maxima transformed to minima
+                        markers = markers, # maximum points in 3D matrix
+                        connectivity = np.ones((3, 3)), # connectivity
+                        offset = (np.ones((2)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
+                        mask = image, # binary mask for areas to watershed on
+                        compactness = 0) # high values --> more regular shaped watersheds
+    
+    if connectLon == 1:
+        # Crop to the original size
+        # start = extension_size
+        # end = start + image.shape[axis]
+        if extension_size != 0:
+            data_2d_watershed = np.array(data_2d_watershed[:, :, extension_size:-extension_size])
+        data_2d_watershed = ConnectLon_on_timestep(data_2d_watershed.astype("int"))
+
+    ### CONNECT OBJECTS IN 3D BASED ON MAX OVERLAP
+    data_2d_watershed = np.array(data_2d_watershed).astype('int')
+    """
+    objects = connect_3d_objects(data_2d_watershed, 
+                                 int(mintime/dT), 
+                                 dT)
+    """
+    objects = connect_3d_objects_memory_lean(data_2d_watershed, 
+                                 int(mintime/dT), 
+                                 dT)
+    return objects
+
+
+# This function performs watershedding on 2D anomaly fields and
+# succeeds an older version of this function (watershed_2d_overlap_temp_discontin).
+# This function uses spatially reduced watersheds from the previous time step as seed for the
+# current time step, which improves temporal consistency of features.
+def watershed_2d_overlap_slow(data, # 3D matrix with data for watershedding [np.array]
+                         object_threshold, # float to create binary object mast [float]
+                         max_treshold, # value for identifying max. points for spreading [float]
+                         min_dist, # minimum distance (in grid cells) between maximum points [int]
+                         dT, # time interval in hours [int]
+                         mintime = 24, # minimum time an object has to exist in dT [int]
+                         connectLon = 0,  # do we have to track features over the date line?
+                         extend_size_ratio = 0.25, # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
+                         erosion_disk = 3.5): 
+
+    from scipy import ndimage as ndi
+    from skimage.feature import peak_local_max
+    from skimage.segmentation import watershed
+    from scipy.ndimage import gaussian_filter
+    from Tracking_Functions import clean_up_objects
+    from Tracking_Functions import ConnectLon_on_timestep
+    
+    if connectLon == 1:
+        axis = 1
+        extension_size = int(data.shape[1] * extend_size_ratio)
+        data = np.concatenate(
+                [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=2
+            )
+    data_2d_watershed = np.copy(data); data_2d_watershed[:] = np.nan
+    for tt in tqdm(range(data.shape[0])):
+        image = data[tt,:] >= object_threshold
+        data_t0 = data[tt,:,:]
+        # if connectLon == 1:
+        #     # prepare to identify features accross date line
+        #     image = np.concatenate(
+        #         [image[-extension_size:, :], image, image[:extension_size, :]], axis=axis
+        #     )
+        #     data_t0 = np.concatenate(
+        #         [data_t0[-extension_size:, :], data_t0, data_t0[:extension_size, :]], axis=axis
+        #     )
+        
+        ## smooth small scale "noise"
+        # tt1 = np.max([0,tt-1])
+        # tt2 = np.min([data.shape[0],tt+2])
+        # image = (gaussian_filter(data[tt1:tt2,:,:], sigma=(0.5,0.5,0.5)) >= object_threshold)[1,:]
+        # get maximum precipitation over three time steps to make fields more coherant
+        coords = peak_local_max(data_t0, 
+                                min_distance = min_dist,
+                                threshold_abs = max_treshold,
+                                labels = image
+                               )
+    
+        mask = np.zeros(data_t0.shape, dtype=bool)
+        mask[tuple(coords.T)] = True
+        markers, _ = ndi.label(mask)
+    
+        if tt != 0:
+            # allow markers to change a bit from time to time and 
+            # introduce new markers if they have strong enough max/min and
+            # are far enough away from existing objects
+            from skimage.segmentation import find_boundaries
+            from skimage.morphology import erosion, square, disk, rectangle
+            boundaries = find_boundaries(data_2d_watershed[tt-1,:,:].astype("int"), mode='outer')
+            # Set boundaries to zero in the markers
+            separated_markers = np.copy(data_2d_watershed[tt-1,:,:].astype("int"))
+            separated_markers[boundaries] = 0
+            from skimage.morphology import erosion
+            separated_markers = erosion(separated_markers, disk(erosion_disk)) #3.5
+            separated_markers[data_2d_watershed[tt,:,:] == 0] = 0
+            
+            # add unique new markers if they are not too close to old objects
+            from skimage.morphology import dilation, square, disk
+            dilated_matrix = dilation(data_2d_watershed[tt-1,:,:].astype("int"), disk(2.5))
+            markers_updated = (markers + np.max(separated_markers)).astype("int")
+            markers_updated[markers_updated == np.max(separated_markers)] = 0
+            markers_add = (markers_updated != 0) & (dilated_matrix == 0)
+            
+            separated_markers[markers_add] = markers_updated[markers_add]
+            markers = separated_markers
+            # break up elements that are no longer connected
+            markers, _ = ndi.label(markers)
+    
+            # make sure that spatially separate objects have unique labels
+            # markers, _ = ndi.label(mask)
+        data_2d_watershed[tt,:,:] = watershed(image = np.array(data[tt,:])*-1,  # watershedding field with maxima transformed to minima
+                        markers = markers, # maximum points in 3D matrix
+                        connectivity = np.ones((3, 3)), # connectivity
+                        offset = (np.ones((2)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
+                        mask = image, # binary mask for areas to watershed on
+                        compactness = 0) # high values --> more regular shaped watersheds
+    
+    if connectLon == 1:
+        # Crop to the original size
+        # start = extension_size
+        # end = start + image.shape[axis]
+        if extension_size != 0:
+            data_2d_watershed = np.array(data_2d_watershed[:, :, extension_size:-extension_size])
+        data_2d_watershed = ConnectLon_on_timestep(data_2d_watershed.astype("int"))
+        
+        # # Merge labels across boundaries
+        # if axis == 1:  # Periodicity along horizontal axis
+        #     left_extension = labels[:, start - extension_size:start]
+        #     right_extension = labels[:, end:end + extension_size]
+        #     left_edge = cropped_labels[:, 0]
+        #     right_edge = cropped_labels[:, -1]
+            
+        #     # Build a mapping of labels to merge
+        #     label_mapping = {}
+        #     for x in range(image.shape[0]):
+        #         left_label = left_extension[x, -1]
+        #         right_label = right_extension[x, 0]
+        #         if left_label > 0 and right_label > 0 and left_label != right_label:
+        #             label_mapping[right_label] = left_label
+            
+        #     # Replace labels according to the mapping
+        #     for old_label, new_label in label_mapping.items():
+        #         cropped_labels[cropped_labels == old_label] = new_label
+
+    ### CONNECT OBJECTS IN 3D BASED ON MAX OVERLAP    
+    labels = np.array(data_2d_watershed).astype('int')
+    # clean matrix to populate objects with
+    objects_watershed = np.copy(labels); objects_watershed[:] = 0
+    ob_max = np.max(labels[0,:]) + 1
+    for tt in tqdm(range(objects_watershed.shape[0])):
+        # initialize the elements at tt=0
+        if tt == 0:
+            objects_watershed[tt,:] = labels[tt,:].copy()
+        else:
+            # objects at tt=0
+            obj_t1 = np.unique(labels[tt,:])[1:]
+    
+            # get the size of the t0 objects
+            t0_elements, t0_area = np.unique(objects_watershed[tt-1,:], return_counts=True)
+            # remove zeros
+            t0_elements = t0_elements[1:]
+            t0_area = t0_area[1:]
+    
+            # find object locations in t0 and remove None slizes
+            ob_loc_t0 = ndimage.find_objects(objects_watershed[tt-1,:])
+            valid = np.array([ob_loc_t0[ob] != None for ob in range(len(ob_loc_t0))])
+            try:
+                ob_loc_t0 = [ob_loc_t0[kk] for kk in range(len(valid)) if valid[kk] == True]
+            except:
+                stop()
+                continue
+    
+            # find object locations in t1 and remove None slizes
+            try:
+                ob_loc_t1 = ndimage.find_objects(labels[tt,:])
+            except:
+                stop()
+                continue
+            # valid = np.array([ob_loc_t1[ob] != None for ob in range(len(ob_loc_t1))])
+            # ob_loc_t1 = np.array(ob_loc_t1)[valid]
+    
+            # sort the elements according to size
+            sort = np.argsort(t0_area)[::-1]
+            t0_elements = t0_elements[sort]
+            t0_area = t0_area[sort]
+            ob_loc_t0 = np.array(ob_loc_t0)[sort]
+    
+            # loop over all objects in t = -1 from big to small
+            for ob in range(len(t0_elements)):
+                ob_act = np.copy(objects_watershed[tt-1, \
+                                                   ob_loc_t0[ob][0], \
+                                                   ob_loc_t0[ob][1]])
+                
+                ob_act[ob_act != t0_elements[ob]] = 0
+                # overlaping elements
+                ob_act_t1 = np.copy(labels[tt, \
+                                           ob_loc_t0[ob][0], \
+                                           ob_loc_t0[ob][1]])
+                ob_t1_overlap = np.unique(ob_act_t1[ob_act == t0_elements[ob]])
+                ob_t1_overlap = ob_t1_overlap[ob_t1_overlap != 0]
+
+                # if (t0_elements[ob] == 5565) & (tt == 32):
+                #     stop()
+                
+                if len(ob_t1_overlap) == 0:
+                    # This object does not continue
+                    continue
+                # the t0 object is connected to the one with the biggest overlap
+                area_overlap = [np.sum((ob_act >0) & (ob_act_t1 == ob_t1_overlap[ii])) for ii in range(len(ob_t1_overlap))]
+                ob_continue = ob_t1_overlap[np.argmax(area_overlap)]
+    
+                ob_area = labels[tt, \
+                              ob_loc_t1[ob_continue-1][0], \
+                              ob_loc_t1[ob_continue-1][1]] == ob_continue
+                # check if this element has already been connected with a larger object
+                if np.isin(ob_continue, obj_t1) == False:
+                    # This object ends here
+                    continue
+    
+                objects_watershed[tt, \
+                               ob_loc_t1[ob_continue-1][0], \
+                               ob_loc_t1[ob_continue-1][1]][ob_area] = t0_elements[ob]
+                # remove the continuing object from the t1 list
+                obj_t1 = np.delete(obj_t1, np.where(obj_t1 == ob_continue))
+    
+    
+            # Any object that is left in the t1 list will be treated as a new initiation
+            for ob in range(len(obj_t1)):
+                ob_loc_t0 = ndimage.find_objects(labels[tt,:] == obj_t1[ob])
+                ob_new = objects_watershed[tt,:][ob_loc_t0[0]]
+                ob_new[labels[tt,:][ob_loc_t0[0]] == obj_t1[ob]] = ob_max
+                objects_watershed[tt,:][ob_loc_t0[0]] = ob_new
+                ob_max += 1
+       
+        objects, _ = clean_up_objects(objects_watershed,
+                            min_tsteps=int(mintime * dT),
+                            dT = dT)
+    return objects
+
+                       
+
 # This function performs watershedding on 2D anomaly fields and
 # connects the resulting objects in 3D by searching for maximum overlaps
-
-def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array]
+def watershed_2d_overlap_temp_discontin(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to created binary object mast [float]
                          max_treshold, # value for identifying max. points for spreading [float]
                          min_dist, # minimum distance (in grid cells) between maximum points [int]
@@ -3558,8 +4677,106 @@ def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array
 
 
 
+MOAAP_DEFAULTS = {
+    # 850 hPa winds & thermodynamics
+    "v850": None,        # 850 hPa zonal wind speed [m/s]
+    "u850": None,        # 850 hPa meridional wind speed [m/s]
+    "t850": None,        # 850 hPa air temperature [K]
+    "q850": None,        # 850 hPa mixing ratio [g/kg]
 
+    
+    "v200": None,        # 200 hPa zonal wind speed [m/s]
+    "u200": None,        # 200 hPa meridional wind speed [m/s]
+    
+    "z500": None,        # 500 hPa gepotential height [gpm]
 
+    "ivte": None,        # eastward integrated moisture transport [kg s-2 m-1]
+    "ivtn": None,        # nothward integrated moisture transport [kg s-2 m-1]
+    
+    # surface fields
+    "slp": None,         # sea level pressure [Pa]
+    "pr": None,          # surface precipitation [mm per time step]
+    "tb": None,          # brightness temperature [K]
+
+    # IO & metadata
+    "DataName": "",     # common grid name [str]
+    "OutputFolder": "", # output directory path [str]
+
+    # precipitation objects
+    "SmoothSigmaP": 0,   # Gaussian sigma for precipitation smoothing [pixels]
+    "Pthreshold": 2,     # precipitation threshold [mm/h]
+    "MinTimePR": 4,      # minimum precipitation feature lifetime [h]
+    "MinAreaPR": 5000,   # minimum precipitation feature area [km^2]
+
+    # moisture streams
+    "MinTimeMS": 9,            # minimum moisture stream lifetime [h]
+    "MinAreaMS": 100000,       # minimum moisture stream area [km^2]
+    "MinMSthreshold": 0.11,    # moisture stream threshold [g·m/g·s]
+
+    # cyclone tracking
+    "MinTimeCY": 12,        # minimum cyclone lifetime [h]
+    "MaxPresAnCY": -8,      # cyclone pressure anomaly threshold [hPa]
+    "breakup_cy": "watershed", # cyclone breakup method [str]
+
+    # anticyclone tracking
+    "MinTimeACY": 12,       # minimum anticyclone lifetime [h]
+    "MinPresAnACY": 6,      # anticyclone pressure anomaly threshold [hPa]
+
+    # frontal zones
+    "MinAreaFR": 50000,     # minimum frontal zone area [km^2]
+    "front_treshold": 1,    # frontal masking threshold [unitless]
+
+    # cloud tracking
+    "SmoothSigmaC": 0,      # Gaussian sigma for cloud smoothing [pixels]
+    "Cthreshold": 241,      # cloud brightness temp threshold [K]
+    "MinTimeC": 4,          # minimum cloud shield lifetime [h]
+    "MinAreaC": 40000,      # minimum cloud shield area [km^2]
+    "cloud_overshoot":235,  # overshoot threshold for cloud objects [K]
+
+    # atmospheric rivers (AR)
+    "IVTtrheshold": 500,    # IVT threshold for AR detection [kg m^-1 s^-1]
+    "MinTimeIVT": 12,       # minimum AR lifetime [h]
+    "breakup_ivt": "watershed", # AR breakup method [str]
+    "AR_MinLen": 2000,      # minimum AR length [km]
+    "AR_Lat": 20,           # AR centroid latitude threshold [°N]
+    "AR_width_lenght_ratio": 2, # AR length/width ratio [unitless]
+
+    # tropical cyclone detection
+    "TC_Pmin": 995,         # TC minimum pressure [hPa]
+    "TC_lat_genesis": 35,   # TC genesis latitude limit [°]
+    "TC_deltaT_core": 0,    # TC core temperature anomaly threshold [K]
+    "TC_T850min": 285,      # TC core temperature at 850 hPa [K]
+    "TC_minBT": 241,        # TC cloud-top brightness temp threshold [K]
+
+    # mesoscale convective systems (MCS)
+    "MCS_Minsize": 5000,    # MCS minimum precipitation area [km^2]
+    "MCS_minPR": 15,        # MCS precipitation threshold [mm/h]
+    "CL_MaxT": 215,         # MCS max cloud brightness temp [K]
+    "CL_Area": 40000,       # MCS minimum cloud area [km^2]
+    "MCS_minTime": 4,       # MCS minimum lifetime [h]
+
+    # jet streams
+    "js_min_anomaly": 37,    # jet stream anomaly threshold [m/s]
+    "MinTimeJS": 24,        # minimum jet lifetime [h]
+    "breakup_jet": "watershed", # jet breakup method [str]
+
+    # tropical waves
+    "tropwave_minTime": 48, # minimum tropical wave lifetime [h]
+    "breakup_mcs": "watershed", # MCS breakup method [str]
+
+    # 500 hPa cyclones/anticyclones
+    "z500_low_anom": -80,    # 500 hPa cyclone anomaly threshold [m]
+    "z500_high_anom": 70,    # 500 hPa anticyclone anomaly threshold [m]
+    "breakup_zcy": "watershed", # 500 hPa cyclone CA breakup method [str]
+
+    # equatorial waves
+    "er_th": -0.5,           # equatorial Rossby wave threshold [unitless]
+    "mrg_th": -3,          # mixed Rossby-gravity wave threshold [unitless]
+    "igw_th": -5,          # inertia-gravity wave threshold [unitless]
+    "kel_th": -5,          # Kelvin wave threshold [unitless]
+    "eig0_th": -4,         # n>=1 inertia-gravity wave threshold [unitless]
+    "breakup_tw": "watershed", # equatorial wave breakup method [str]
+}
 
 
 
@@ -3570,82 +4787,212 @@ def moaap(
     Time,                          # datetime vector of data
     dT,                            # integer - temporal frequency of data [hour]
     Mask,                          # mask with dimensions [lat,lon] defining analysis region
-    v850 = None, # 850 hPa zonal wind speed [m/s]
-    u850 = None, # 850 hPa meridional wind speed [m/s]
-    t850 = None, # 850 hPa air temperature [K]
-    q850 = None, # 850 hPa mixing ratio [g/kg]
-    slp = None,  # sea level pressure [Pa]
-    ivte = None, # zonal integrated vapor transport [kg m-1 s-1]
-    ivtn = None, # meridional integrated vapor transport [kg m-1 s-1]
-    z500 = None, # geopotential height [gpm]
-    v200 = None, # 200 hPa zonal wind speed [m/s]
-    u200 = None, # 200 hPa meridional wind speed [m/s]
-    pr   = None, # accumulated surface precipitation [mm/time]
-    tb   = None, # brightness temperature [K]
-    DataName = '',                 # name of the common grid
-    OutputFolder='',               # string containing the output directory path. Default is local directory
-    # minimum precip. obj.
-    SmoothSigmaP = 0,              # Gaussion std for precipitation smoothing
-    Pthreshold = 2,                # precipitation threshold [mm/h]
-    MinTimePR = 4,                 # minimum lifetime of precip. features in hours
-    MinAreaPR = 5000,              # minimum area of precipitation features [km2]
-    # minimum Moisture Stream 
-    MinTimeMS = 9,                 # minimum lifetime for moisture stream [hours]
-    MinAreaMS = 100000,            # mimimum area of moisture stream [km2]
-    MinMSthreshold = 0.13,         # treshold for moisture stream [g*m/g*s]
-    # cyclone tracking
-    MinTimeCY = 12,                # minimum livetime of cyclones [hours]
-    MaxPresAnCY = -8,              # preshure thershold for cyclone anomaly [hPa
-    breakup_cy = 'breakup',        # ****
-    # anty cyclone tracking
-    MinTimeACY = 12,               # minimum livetime of anticyclone [hours]
-    MinPresAnACY = 6,              # preshure thershold for anti cyclone anomaly [hPa]
-    # Frontal zones
-    MinAreaFR = 50000,             # mimimum size of frontal zones [km2]
-    front_treshold = 1,            # threshold for masking frontal zones
-    # Cloud tracking setup
-    SmoothSigmaC = 0,              # standard deviation of Gaussian filter for cloud tracking
-    Cthreshold = 241,              # brightness temperature threshold for cloud tracking [K]
-    MinTimeC = 4,                  # mimimum livetime of ice cloud shields [hours]
-    MinAreaC = 40000,              # mimimum area of ice cloud shields [km2]
-    # AR tracking
-    IVTtrheshold = 500,            # Integrated water vapor transport threshold for AR detection [kg m-1 s-1]
-    MinTimeIVT = 9,                # minimum livetime of ARs [hours]
-    AR_MinLen = 2000,              # mimimum length of an AR [km]
-    AR_Lat = 20,                   # AR centroids have to be poeward of this latitude
-    AR_width_lenght_ratio = 2,     # mimimum length to width ratio of AR
-    # TC detection
-    TC_Pmin = 995,                 # mimimum pressure for TC detection [hPa]
-    TC_lat_genesis = 35,           # maximum latitude for TC genesis [absolute degree latitude]
-    TC_lat_max = 60,               # maximum latitude for TC existance [absolute degree latitude]
-    TC_deltaT_core = 0,            # minimum degrees difference between TC core and surrounding [K]
-    TC_T850min = 285,              # minimum temperature of TC core at 850hPa [K]
-    TC_minBT = 241,                # minimum average cloud top brightness temperature [K]
-    # MCs detection
-    MCS_Minsize = 5000,            # minimum size of precipitation area [km2] 
-    MCS_minPR = 15,                # minimum precipitation threshold [mm/h]
-    CL_MaxT = 215,                 # minimum brightness temperature in ice shield [K]
-    CL_Area = 40000,               # minimum cloud area size [km2]
-    MCS_minTime = 4,               # minimum lifetime of MCS [hours]
-    js_min_anomaly = 24,           # jet minimal anomaly [m/s]
-    MinTimeJS = 24,                # minimum lifetime of jets [h]
-    tropwave_minTime = 48,          # minimum lifetime of tropical waves [h]
-    breakup_mcs = 'watershed',      # ****
-    # 500 hPa cyclones and anticyclones
-    z500_low_anom = -80,           # minimum anomaly for 500 hpa geopotential height cyclones [m]
-    z500_high_anom = 70,           # minimum anomaly for 500 hpa geopotential height anticyclones [m]
-    breakup_zcy = 'breakup',       # ****
-    # equatorial wave thresholds
-    er_th = 0.05,                  # threshold for Rossby Waves
-    mrg_th = 0.05,                 # threshold for mixed Rossby Gravity Waves
-    igw_th = 0.2,                  # threshold for inertia gravity waves
-    kel_th = 0.1,                  # threshold for Kelvin waves
-    eig0_th = 0.1,                 # threshold for n>=1 Inertio Gravirt Wave
-    breakup_tw = 'watershed',      # ****
-    ):
+    *, 
+    config_file=None, 
+    **kw):
     
+    """
+    Parameters
+    ----------
+    Lon : array_like
+        2D array of longitude grid centers.
+    Lat : array_like
+        2D array of latitude grid centers.
+    Time : array_like of datetime
+        1D vector of datetimes for each time step.
+    dT : int
+        Temporal frequency of the data in hours.
+    Mask : array_like
+        2D mask defining the analysis region.
+
+    Keyword Arguments
+    -----------------
+    v850 : array_like or None, default=None
+        850 hPa zonal wind speed (m/s).
+    u850 : array_like or None, default=None
+        850 hPa meridional wind speed (m/s).
+    t850 : array_like or None, default=None
+        850 hPa air temperature (K).
+    q850 : array_like or None, default=None
+        850 hPa mixing ratio (g/kg).
+    slp : array_like or None, default=None
+        Sea level pressure (Pa).
+    ivte : array_like or None, default=None
+        Zonal integrated vapor transport (kg m⁻¹ s⁻¹).
+    ivtn : array_like or None, default=None
+        Meridional integrated vapor transport (kg m⁻¹ s⁻¹).
+    z500 : array_like or None, default=None
+        Geopotential height at 500 hPa (gpm).
+    v200 : array_like or None, default=None
+        200 hPa zonal wind speed (m/s).
+    u200 : array_like or None, default=None
+        200 hPa meridional wind speed (m/s).
+    pr : array_like or None, default=None
+        Accumulated surface precipitation (mm per time step).
+    tb : array_like or None, default=None
+        Brightness temperature (K).
+    DataName : str, default=''
+        Name of the common grid.
+    OutputFolder : str, default=''
+        Path to the output directory.
+
+    # — Precipitation objects —
+    SmoothSigmaP : float, default=0
+        Gaussian σ for precipitation smoothing.
+    Pthreshold : float, default=2
+        Precipitation threshold (mm h⁻¹).
+    MinTimePR : int, default=4
+        Minimum lifetime of precipitation features (h).
+    MinAreaPR : float, default=5000
+        Minimum area of precipitation features (km²).
+
+    # — Moisture streams —
+    MinTimeMS : int, default=9
+        Minimum lifetime of moisture stream features (h).
+    MinAreaMS : float, default=100000
+        Minimum area of moisture stream features (km²).
+    MinMSthreshold : float, default=0.11
+        Detection threshold for moisture streams (g·m/g·s).
+
+    # — Cyclones & anticyclones —
+    MinTimeCY : int, default=12
+        Minimum lifetime of cyclones (h).
+    MaxPresAnCY : float, default=-8
+        Pressure anomaly threshold for cyclones (hPa).
+    breakup_cy : str, default='watershed'
+        Method for cyclone breakup.
+    MinTimeACY : int, default=12
+        Minimum lifetime of anticyclones (h).
+    MinPresAnACY : float, default=6
+        Pressure anomaly threshold for anticyclones (hPa).
+
+    # — Frontal zones —
+    MinAreaFR : float, default=50000
+        Minimum area of frontal zones (km²).
+    front_treshold : float, default=1
+        Threshold for masking frontal zones.
+
+    # — Cloud tracking —
+    SmoothSigmaC : float, default=0
+        Gaussian σ for cloud‐shield smoothing.
+    Cthreshold : float, default=241
+        Brightness temperature threshold for ice‐cloud shields (K).
+    MinTimeC : int, default=4
+        Minimum lifetime of ice‐cloud shields (h).
+    MinAreaC : float, default=40000
+        Minimum area of ice‐cloud shields (km²).
+
+    # — Atmospheric rivers (AR) —
+    IVTtrheshold : float, default=500
+        Integrated vapor transport threshold for AR detection (kg m⁻¹ s⁻¹).
+    MinTimeIVT : int, default=12
+        Minimum lifetime of ARs (h).
+    breakup_ivt : str, default='watershed'
+        Method for AR breakup.
+    AR_MinLen : float, default=2000
+        Minimum length of an AR (km).
+    AR_Lat : float, default=20
+        Minimum centroid latitude for ARs (degrees N).
+    AR_width_lenght_ratio : float, default=2
+        Minimum length‐to‐width ratio for ARs.
+
+    # — Tropical cyclone detection —
+    TC_Pmin : float, default=995
+        Minimum central pressure for TC detection (hPa).
+    TC_lat_genesis : float, default=35
+        Maximum latitude for TC genesis (degrees).
+    TC_lat_max : float, default=60
+        Maximum latitude for TC existence (degrees).
+    TC_deltaT_core : float, default=0
+        Minimum core‐to‐environment temperature difference (K).
+    TC_T850min : float, default=285
+        Minimum core temperature at 850 hPa for TCs (K).
+
+    # — Mesoscale convective systems (MCS) —
+    MCS_Minsize : float, default=5000
+        Minimum precipitation area size for MCS (km²).
+    MCS_minPR : float, default=15
+        Precipitation threshold for MCS detection (mm h⁻¹).
+    CL_MaxT : float, default=215
+        Maximum brightness temperature in ice shield for MCS (K).
+    CL_Area : float, default=40000
+        Minimum cloud area for MCS detection (km²).
+    MCS_minTime : int, default=4
+        Minimum lifetime of MCS (h).
+
+    # — Jet streams & tropical waves —
+    js_min_anomaly : float, default=37
+        Minimum jet‐stream anomaly (m/s).
+    MinTimeJS : int, default=24
+        Minimum lifetime of jet streams (h).
+    breakup_jet : str, default='watershed'
+        Method for jet‐stream breakup.
+    tropwave_minTime : int, default=48
+        Minimum lifetime of tropical waves (h).
+    breakup_mcs : str, default='watershed'
+        Method for MCS breakup.
+
+    # — 500 hPa cyclones/anticyclones —
+    z500_low_anom : float, default=-80
+        Minimum anomaly for 500 hPa cyclones (m).
+    z500_high_anom : float, default=70
+        Minimum anomaly for 500 hPa anticyclones (m).
+    breakup_zcy : str, default='watershed'
+        Method for 500 hPa cyclone/anticyclone breakup.
+
+    # — Equatorial waves —
+    er_th : float, default=0.05
+        Threshold for equatorial Rossby waves.
+    mrg_th : float, default=0.05
+        Threshold for mixed Rossby‐gravity waves.
+    igw_th : float, default=0.20
+        Threshold for inertia–gravity waves.
+    kel_th : float, default=0.10
+        Threshold for Kelvin waves.
+    eig0_th : float, default=0.10
+        Threshold for n≥1 inertia–gravity waves.
+    breakup_tw : str, default='watershed'
+        Method for equatorial wave breakup.
+
+    Returns
+    -------
+    dict
+        A dictionary containing detected features grouped by type
+        (e.g., 'precip', 'moisture', 'cyclones', etc.).
+    """
     
-    # calculate grid spacing assuming regular lat/lon grid
+    params = MOAAP_DEFAULTS.copy()
+    # ... load/merge config_file if given ...
+    params.update(kw)
+    # check if the input variables are np.arrays
+    required_keys = [
+        "v850",  "u850",  "t850",  "q850",  "slp",
+        "ivte",  "ivtn",  "z500",  "v200",  "u200",
+        "pr",    "tb"
+    ]
+
+    for key in required_keys:
+        if key in params:
+            if type(params[key]) is not type(None):
+                if not isinstance(params[key], np.ndarray):
+                    # Display which variable is wrong, then stop
+                    raise TypeError(f"Parameter '{key}' must be a numpy.ndarray, got {type(params[key]).__name__}")
+
+    v850 = params["v850"]                   # 850 hPa zonal wind speed [m/s]
+    u850 = params["u850"]                   # 850 hPa meridional wind speed [m/s]
+    t850 = params["t850"]                   # 850 hPa air temperature [K]
+    q850 = params["q850"]                   # 850 hPa mixing ratio [g/kg]
+    slp =  params["slp"]                    # sea level pressure [Pa]
+    ivte = params["ivte"]                   # zonal integrated vapor transport [kg m-1 s-1]
+    ivtn = params["ivtn"]                   # meridional integrated vapor transport [kg m-1 s-1]
+    z500 = params["z500"]                   # geopotential height [gpm]
+    v200 = params["v200"]                   # 200 hPa zonal wind speed [m/s]
+    u200 = params["u200"]                   # 200 hPa meridional wind speed [m/s]
+    pr   = params["pr"]                     # accumulated surface precipitation [mm/time]
+    tb   = params["tb"]                     # brightness temperature [K]
+        
+
+    # calculate grid spacing assuming a regular lat/lon grid
     _,_,Area,Gridspacing = calc_grid_distance_area(Lon,Lat)
     Area[Area < 0] = 0
     
@@ -3661,7 +5008,7 @@ def moaap(
     
     StartDay = Time[0]
     SetupString = '_dt-'+str(dT)+'h_MOAAP-masks'
-    NCfile = OutputFolder + str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+DataName+'_ObjectMasks_'+SetupString+'.nc'
+    NCfile = params["OutputFolder"] + str(StartDay.year)+str(StartDay.month).zfill(2)+str(Time[0].day).zfill(2)+'_'+params["DataName"]+'_ObjectMasks_'+SetupString+'.nc'
     FrontMask = np.copy(Mask)
     try:
         FrontMask[np.abs(Lat) < 10] = 0
@@ -3709,6 +5056,10 @@ def moaap(
         mcs_tb_test = 'yes'
     else:
         mcs_tb_test = 'no'
+    if (pr is not None) & (tb is not None):
+        cloud_test = 'yes'
+    else:
+        cloud_test = 'no'
     if (q850 is not None) & (v850 is not None) & \
        (u850 is not None):
         ms_test = 'yes'
@@ -3718,6 +5069,22 @@ def moaap(
         ew_test = 'yes'
     else:
         ew_test = 'no'
+
+    """
+    jet_test =  'no'
+    slp_test = 'yes'
+    z500_test =  'no'
+    col_test = 'no' 
+    ar_test =  'no'
+    ms_test =  'no'
+    front_test =  'no'
+    tc_test = 'yes'
+    mcs_tb_test =  'no'
+    cloud_test =  'no'
+    ew_test =  'no'
+    """
+    pr_test = "yes"
+    ew_test =  'no'
     
     print(' ')
     print('The provided variables allow tracking the following phenomena')
@@ -3733,9 +5100,11 @@ def moaap(
     print('   Fronts      |   ' + front_test)
     print('   TCs         |   ' + tc_test)
     print('   MCSs        |   ' + mcs_tb_test)
+    print('   clouds      |   ' + cloud_test)
     print('   Equ. Waves  |   ' + ew_test)
     print('---------------------------')
     print(' ')
+
     
     import time
     
@@ -3795,59 +5164,59 @@ def moaap(
         uv200 = (u200 ** 2 + v200 ** 2) ** 0.5
 
         jet_objects, object_split = jetstream_tracking(uv200,
-                                      js_min_anomaly,
-                                      MinTimeJS,
+                                      params["js_min_anomaly"],
+                                      params["MinTimeJS"],
                                       dT,
                                       Gridspacing,
                                       connectLon,
-                                      breakup = 'breakup')
+                                      breakup = params["breakup_jet"])
         jet_objects_characteristics = calc_object_characteristics(jet_objects, # feature object file
                                      uv200,         # original file used for feature detection
-                                     OutputFolder+'jet_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     params["OutputFolder"]+'jet_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                                      Time,            # timesteps of the data
                                      Lat,             # 2D latidudes
                                      Lon,             # 2D Longitudes
                                      Gridspacing,
                                      Area,
-                                     min_tsteps=int(MinTimeJS/dT),
+                                     min_tsteps=int(params["MinTimeJS"]/dT),
                                      split_merge = object_split)
         
         end = time.perf_counter()
         timer(start, end)
         
-        
+    
     if ew_test == 'yes':
         print('======> track tropical waves')
         start = time.perf_counter()
-        mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects = track_tropwaves(
-                        pr,
+        mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects = track_tropwaves_tb(
+                        tb,
                         Lat,
                         connectLon,
                         dT,
                        Gridspacing,
-                       er_th = er_th,  # threshold for Rossby Waves
-                       mrg_th = mrg_th, # threshold for mixed Rossby Gravity Waves
-                       igw_th = igw_th,  # threshold for inertia gravity waves
-                       kel_th = kel_th,  # threshold for Kelvin waves
-                       eig0_th = eig0_th, # threshold for n>=1 Inertio Gravirt Wave
-                       breakup = breakup_tw
+                       er_th = params["er_th"],  # threshold for Rossby Waves
+                       mrg_th = params["mrg_th"], # threshold for mixed Rossby Gravity Waves
+                       igw_th = params["igw_th"],  # threshold for inertia gravity waves
+                       kel_th = params["kel_th"],  # threshold for Kelvin waves
+                       eig0_th = params["eig0_th"], # threshold for n>=1 Inertio Gravirt Wave
+                       breakup = params["breakup_tw"]
                         )
         end = time.perf_counter()
         timer(start, end)
-        
+
         gr_mrg = calc_object_characteristics(mrg_objects, # feature object file
                                  pr,         # original file used for feature detection
-                                 OutputFolder+'MRG_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+                                 params["OutputFolder"]+'MRG_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(tropwave_minTime/dT))      # minimum livetime in hours
+                                 min_tsteps=int(params["tropwave_minTime"]/dT))      # minimum livetime in hours
         
         gr_igw = calc_object_characteristics(igw_objects, # feature object file
                                  pr,         # original file used for feature detection
-                                 OutputFolder+'IGW_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+                                 params["OutputFolder"]+'IGW_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
@@ -3857,7 +5226,7 @@ def moaap(
         
         gr_kelvin = calc_object_characteristics(kelvin_objects, # feature object file
                                  pr,         # original file used for feature detection
-                                 OutputFolder+'Kelvin_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+                                 params["OutputFolder"]+'Kelvin_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
@@ -3867,7 +5236,7 @@ def moaap(
         
         gr_eig0 = calc_object_characteristics(eig0_objects, # feature object file
                                  pr,         # original file used for feature detection
-                                 OutputFolder+'Eig0_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+                                 params["OutputFolder"]+'Eig0_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
@@ -3877,7 +5246,7 @@ def moaap(
         
         gr_er = calc_object_characteristics(er_objects, # feature object file
                                  pr,         # original file used for feature detection
-                                 OutputFolder+'ER_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+                                 params["OutputFolder"]+'ER_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
@@ -3891,25 +5260,27 @@ def moaap(
         start = time.perf_counter()
         VapTrans = ((u850 * q850)**2 + 
                     (v850 * q850)**2)**(1/2)
-        
+
         MS_objects = ar_850hpa_tracking(
                                         VapTrans,
-                                        MinMSthreshold,
-                                        MinTimeMS,
-                                        MinAreaMS,
+                                        params["MinMSthreshold"],
+                                        params["MinTimeMS"],
+                                        params["MinAreaMS"],
                                         Area,
                                         dT,
-                                        connectLon)
+                                        connectLon,
+                                        Gridspacing,
+                                        breakup = params["breakup_ivt"])
         
         grMSs = calc_object_characteristics(MS_objects, # feature object file
                                  VapTrans,         # original file used for feature detection
-                                 OutputFolder+'MS850_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
+                                 params["OutputFolder"]+'MS850_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,        # output file name and locaiton
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(MinTimeMS/dT))      # minimum livetime in hours
+                                 min_tsteps=int(params["MinTimeMS"]/dT))      # minimum livetime in hours
         
         end = time.perf_counter()
         timer(start, end)
@@ -3921,32 +5292,34 @@ def moaap(
         IVT = (ivte ** 2 + ivtn ** 2) ** 0.5
 
         IVT_objects = ar_ivt_tracking(IVT,
-                                    IVTtrheshold,
-                                    MinTimeIVT,
+                                    params["IVTtrheshold"],
+                                    params["MinTimeIVT"],
                                     dT,
-                                    connectLon)
+                                    Gridspacing,
+                                    connectLon,
+                                    breakup = params["breakup_ivt"])
 
         grIVTs = calc_object_characteristics(IVT_objects, # feature object file
                                      IVT,         # original file used for feature detection
-                                     OutputFolder+'IVT_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     params["OutputFolder"]+'IVT_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                                      Time,            # timesteps of the data
                                      Lat,             # 2D latidudes
                                      Lon,             # 2D Longitudes
                                      Gridspacing,
                                      Area,
-                                     min_tsteps=int(MinTimeIVT/dT))      # minimum livetime in hours
+                                     min_tsteps=int(params["MinTimeIVT"]/dT))      # minimum livetime in hours
         
         print('        check if MSs quallify as ARs')
         AR_obj = ar_check(IVT_objects,
-                         AR_Lat,
-                         AR_width_lenght_ratio,
-                         AR_MinLen,
+                         params["AR_Lat"],
+                         params["AR_width_lenght_ratio"],
+                         params["AR_MinLen"],
                          Lon,
                          Lat)
     
         grACs = calc_object_characteristics(AR_obj, # feature object file
                          IVT,         # original file used for feature detection
-                         OutputFolder+'ARs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                         params["OutputFolder"]+'ARs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                          Time,            # timesteps of the data
                          Lat,             # 2D latidudes
                          Lon,             # 2D Longitudes
@@ -3986,13 +5359,12 @@ def moaap(
         
         
         FR_objects = frontal_identification(Frontal_Diagnostic,
-                              front_treshold,
-                              MinAreaFR,
+                              params["front_treshold"],
+                              params["MinAreaFR"],
                               Area)
         
         end = time.perf_counter()
         timer(start, end)
-        
         
     if slp_test == 'yes':
         print('======> track cyclones from PSL')
@@ -4000,73 +5372,72 @@ def moaap(
         
         CY_objects, ACY_objects= cy_acy_psl_tracking(
                                                     slp,
-                                                    MaxPresAnCY,
-                                                    MinTimeCY,
-                                                    MinPresAnACY,
-                                                    MinTimeACY,
+                                                    params["MaxPresAnCY"],
+                                                    params["MinTimeCY"],
+                                                    params["MinPresAnACY"],
+                                                    params["MinTimeACY"],
                                                     dT,
                                                     Gridspacing,
                                                     connectLon,
-                                                    breakup = breakup_cy,
+                                                    breakup = params["breakup_cy"],
                                                     )
 
         grCyclonesPT = calc_object_characteristics(CY_objects, # feature object file
                                          slp,         # original file used for feature detection
-                                         OutputFolder+'CY_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                         params["OutputFolder"]+'CY_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                                          Time,            # timesteps of the data
                                          Lat,             # 2D latidudes
                                          Lon,             # 2D Longitudes
                                          Gridspacing,
                                          Area,
-                                         min_tsteps=int(MinTimeCY/dT)) 
+                                         min_tsteps=int(params["MinTimeCY"]/dT)) 
 
         grACyclonesPT = calc_object_characteristics(ACY_objects, # feature object file
                                          slp,         # original file used for feature detection
-                                         OutputFolder+'ACY_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                         params["OutputFolder"]+'ACY_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                                          Time,            # timesteps of the data
                                          Lat,             # 2D latidudes
                                          Lon,             # 2D Longitudes
                                          Gridspacing,
                                          Area,
-                                         min_tsteps=int(MinTimeCY/dT)) 
+                                         min_tsteps=int(params["MinTimeCY"]/dT)) 
 
         end = time.perf_counter()
         timer(start, end)
-
 
     if z500_test == 'yes':
         print('======> track cyclones from Z500')
         start = time.perf_counter()
         cy_z500_objects, acy_z500_objects = cy_acy_z500_tracking(
                                             z500,
-                                            MinTimeCY,
+                                            params["MinTimeCY"],
                                             dT,
                                             Gridspacing,
                                             connectLon,
-                                            z500_low_anom = z500_low_anom,
-                                            z500_high_anom = z500_high_anom,
-                                            breakup = breakup_zcy,
+                                            z500_low_anom = params["z500_low_anom"],
+                                            z500_high_anom = params["z500_high_anom"],
+                                            breakup = params["breakup_zcy"],
                                             )
         
         cy_z500_objects_characteristics = calc_object_characteristics(cy_z500_objects, # feature object file
                                      z500,         # original file used for feature detection
-                                     OutputFolder+'CY-z500_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     params["OutputFolder"]+'CY-z500_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                                      Time,            # timesteps of the data
                                      Lat,             # 2D latidudes
                                      Lon,             # 2D Longitudes
                                      Gridspacing,
                                      Area,
-                                     min_tsteps=int(MinTimeCY/dT))
+                                     min_tsteps=int(params["MinTimeCY"]/dT))
         
         acy_z500_objects_characteristics = calc_object_characteristics(acy_z500_objects, # feature object file
                                  z500,         # original file used for feature detection
-                                 OutputFolder+'ACY-z500_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                 params["OutputFolder"]+'ACY-z500_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                                  Time,            # timesteps of the data
                                  Lat,             # 2D latidudes
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(MinTimeCY/dT)) 
+                                 min_tsteps=int(params["MinTimeCY"]/dT)) 
         
         if col_test == 'yes':
             print('    Check if cyclones qualify as Cut Off Low (COL)')
@@ -4074,7 +5445,7 @@ def moaap(
                                    z500,
                                    u200,
                                    Frontal_Diagnostic,
-                                   MinTimeC,
+                                   params["MinTimeC"],
                                    dx,
                                    dy,
                                    Lon,
@@ -4082,7 +5453,7 @@ def moaap(
 
             col_stats = calc_object_characteristics(col_obj, # feature object file
                              z500*9.81,            # original file used for feature detection
-                             OutputFolder+'COL_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                             params["OutputFolder"]+'COL_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                              Time,            # timesteps of the data
                              Lat,             # 2D latidudes
                              Lon,             # 2D Longitudes
@@ -4095,41 +5466,41 @@ def moaap(
 
 
     if mcs_tb_test == 'yes':
-        print("======> 'check if Tb objects quallify as MCS (or selected storm type)")
+        print("======> 'check if Tb objects qualify as MCS (or selected storm type)")
         start = time.perf_counter()
         MCS_objects_Tb, C_objects = mcs_tb_tracking(tb,
                             pr,
-                            SmoothSigmaC,
-                            Pthreshold,
-                            CL_Area,
-                            CL_MaxT,
-                            Cthreshold,
-                            MinAreaC,
-                            MinTimeC,
-                            MCS_minPR,
-                            MCS_minTime,
-                            MCS_Minsize,
+                            params["SmoothSigmaC"],
+                            params["Pthreshold"],
+                            params["CL_Area"],
+                            params["CL_MaxT"],
+                            params["Cthreshold"],
+                            params["MinAreaC"],
+                            params["MinTimeC"],
+                            params["MCS_minPR"],
+                            params["MCS_minTime"],
+                            params["MCS_Minsize"],
                             dT,
                             Area,
                             connectLon,
                             Gridspacing,                 
-                            breakup=breakup_mcs,
+                            breakup=params["breakup_mcs"],
                            )
         
         grCs = calc_object_characteristics(C_objects, # feature object file
                              tb,         # original file used for feature detection
-                             OutputFolder+'Clouds_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                             params["OutputFolder"]+'Clouds_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                              Time,            # timesteps of the data
                              Lat,             # 2D latidudes
                              Lon,             # 2D Longitudes
                              Gridspacing,
                              Area,
-                             min_tsteps=int(MinTimeC/dT))      # minimum livetime in hours
+                             min_tsteps=int(params["MinTimeC"]/dT))      # minimum livetime in hours
         
         grMCSs_Tb = calc_object_characteristics(
             MCS_objects_Tb,  # feature object file
             pr,  # original file used for feature detection
-            OutputFolder+'MCSs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+            params["OutputFolder"]+'MCSs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
             Time,            # timesteps of the data
             Lat,             # 2D latidudes
             Lon,             # 2D Longitudes
@@ -4139,56 +5510,72 @@ def moaap(
         end = time.perf_counter()
         timer(start, end)
 
-    # if (mcs_tb_test == 'yes') & (ar_test == 'yes'):
-    #     start = time.perf_counter()
-        
-    #     PR_objects = mcs_pr_tracking(pr,
-    #                         tb,
-    #                         C_objects,
-    #                         AR_obj,
-    #                         Area,
-    #                         Lon,
-    #                         Lat,
-    #                         SmoothSigmaP,
-    #                         Pthreshold,
-    #                         MinTimePR,
-    #                         MCS_minPR,
-    #                         MCS_Minsize,
-    #                         CL_Area,
-    #                         CL_MaxT,
-    #                         MCS_minTime,
-    #                         MinAreaPR,
-    #                         dT,
-    #                         connectLon)
-        
-    #     grPRs = calc_object_characteristics(
-    #                              PR_objects, # feature object file
-    #                              pr,         # original file used for feature detection
-    #                              OutputFolder+'PR_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
-    #                              Time,            # timesteps of the data
-    #                              Lat,             # 2D latidudes
-    #                              Lon,             # 2D Longitudes
-    #                              Gridspacing,
-    #                              Area,
-    #                              min_tsteps=int(MinTimePR/dT)) 
-        
-    #     # grMCSs = calc_object_characteristics(MCS_obj, # feature object file
-    #     #                      pr,         # original file used for feature detection
-    #     #                      OutputFolder+'MCSs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
-    #     #                      Time,            # timesteps of the data
-    #     #                      Lat,             # 2D latidudes
-    #     #                      Lon,             # 2D Longitudes
-    #     #                      Gridspacing,
-    #     #                      Area)
-        
-    #     end = time.perf_counter()
-    #     timer(start, end)
     
-    
+    if cloud_test == "yes":
+        print("======> 'track high clouds in Tb field by excluding MCS objects")
+        start = time.perf_counter()
+        tb_no_mcs = tb.copy()
+        tb_no_mcs[MCS_objects_Tb > 0] = 330 # remove MCSs from cloud field
+        
+        cloud_objects = cloud_tracking(
+                        tb_no_mcs,
+                        pr,
+                        connectLon,
+                        Gridspacing,
+                        dT,
+                        tb_threshold = params["Cthreshold"],
+                        tb_overshoot = params["cloud_overshoot"],
+                        erosion_disk = 1.5,
+                        min_dist = 8
+                        )
+
+        grclouds_Tb = calc_object_characteristics(
+            cloud_objects,  # feature object file
+            pr,  # original file used for feature detection
+            params["OutputFolder"]+'non-MCS-clouds_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+            Time,            # timesteps of the data
+            Lat,             # 2D latidudes
+            Lon,             # 2D Longitudes
+            Gridspacing,
+            Area)
+        
+        end = time.perf_counter()
+        timer(start, end)
+
+    if pr_test == "yes":
+        print('======> perform precipitation tracking')
+        start = time.perf_counter()
+        
+        pr_objects = pr_tracking(
+                        pr,
+                        connectLon,
+                        Gridspacing,
+                        dT,
+                        pr_threshold = 5.5, # mm/h
+                        pr_max = 13.7, # mm/h,
+                        mintime = 1, # hours
+                        erosion_disk = 1.5,
+                        min_dist = 8
+                        )
+
+        end = time.perf_counter()
+        timer(start, end)
     if tc_test == 'yes':
         print('======> Check if cyclones qualify as TCs')
         start = time.perf_counter()
-        
+
+        TC_obj, TC_Tracks = tc_tracking(CY_objects,
+                                        slp,
+                        t850,
+                        tb,
+                        np.sqrt(u850**2 + v850**2),
+                        np.sqrt(u200**2 + v200**2),
+                        Lon,
+                        Lat,
+                        params["TC_lat_genesis"],
+                        params["TC_T850min"]
+                       )
+        """
         TC_obj, TC_Tracks = tc_tracking(CY_objects,
                         t850,
                         slp,
@@ -4196,30 +5583,32 @@ def moaap(
                         C_objects,
                         Lon,
                         Lat,
-                        TC_lat_genesis,
-                        TC_deltaT_core,
-                        TC_T850min,
-                        TC_Pmin,
-                        TC_lat_max
+                        params["TC_lat_genesis"],
+                        params["TC_deltaT_core"],
+                        params["TC_T850min"],
+                        params["TC_Pmin"],
+                        params["TC_lat_max"],
                        )
+        """
+
         
         grTCs = calc_object_characteristics(TC_obj, # feature object file
                              slp*100.,         # original file used for feature detection
-                             OutputFolder+'TC_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                             params["OutputFolder"]+'TC_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                              Time,            # timesteps of the data
                              Lat,             # 2D latidudes
                              Lon,             # 2D Longitudes
                              Gridspacing,
                              Area,
-                             min_tsteps=int(MinTimeC/dT))      # minimum livetime in hours
+                             min_tsteps=int(params["MinTimeC"]/dT))      # minimum livetime in hours
         ### SAVE THE TC TRACKS TO PICKL FILE
-        a_file = open(OutputFolder+str(Time[0].year)+str(Time[0].month).zfill(2)+'_TCs_tracks.pkl', "wb")
+        a_file = open(params["OutputFolder"]+str(Time[0].year)+str(Time[0].month).zfill(2)+'_TCs_tracks.pkl', "wb")
         pickle.dump(TC_Tracks, a_file)
         a_file.close()
         
         end = time.perf_counter()
         timer(start, end)  
-    
+        
     
 
 
@@ -4244,7 +5633,9 @@ def moaap(
         # MCSs = dataset.createVariable('MCS_Objects', np.float32,('time','yc','xc'),zlib=True)
         MCSs_Tb = dataset.createVariable('MCS_Tb_Objects', np.float32,('time','yc','xc'),zlib=True)
         Cloud_real = dataset.createVariable('BT', np.float32,('time','yc','xc'),zlib=True)
-        Cloud_obj = dataset.createVariable('BT_Objects', np.float32,('time','yc','xc'),zlib=True)
+        # Cloud_obj = dataset.createVariable('BT_Objects', np.float32,('time','yc','xc'),zlib=True)
+    if cloud_test == "yes":
+        non_mcs_cloud_obj = dataset.createVariable('non_mcs_cloud_Objects', np.float32,('time','yc','xc'),zlib=True)
     if front_test == 'yes':
         FR_real = dataset.createVariable('FR', np.float32,('time','yc','xc'),zlib=True)
         FR_obj = dataset.createVariable('FR_Objects', np.float32,('time','yc','xc'),zlib=True)
@@ -4277,6 +5668,10 @@ def moaap(
         KELVIN = dataset.createVariable('Kelvin_Objects', np.float32,('time','yc','xc'),zlib=True)
         EIG = dataset.createVariable('EIG0_Objects', np.float32,('time','yc','xc'),zlib=True)
         ER = dataset.createVariable('ER_Objects', np.float32,('time','yc','xc'),zlib=True)
+    if pr_test == "yes":
+        PR = dataset.createVariable('PR_Objects', np.float32,('time','yc','xc'),zlib=True)
+        if mcs_tb_test == 'no':
+            PR_real = dataset.createVariable('PR', np.float32,('time','yc','xc'),zlib=True)
         
 
     times.calendar = "standard"
@@ -4313,9 +5708,13 @@ def moaap(
         Cloud_real.longname = "Tb"
         Cloud_real.unit = "K"
         
-        Cloud_obj.coordinates = "lon lat"
-        Cloud_obj.longname = "Tb objects"
-        Cloud_obj.unit = ""
+        # Cloud_obj.coordinates = "lon lat"
+        # Cloud_obj.longname = "Tb objects"
+        # Cloud_obj.unit = ""
+    if cloud_test == 'yes':
+        non_mcs_cloud_obj.coordinates = "lon lat"
+        non_mcs_cloud_obj.longname = "non MCS cloud object defined by their Tb"
+        non_mcs_cloud_obj.unit = ""
     if front_test == 'yes':
         FR_real.coordinates = "lon lat"
         FR_real.longname = "frontal index"
@@ -4408,6 +5807,14 @@ def moaap(
         ER.coordinates = "lon lat"
         ER.longname = "Equatorial Rossby wave objects"
         ER.unit = ""
+    if pr_test == "yes":
+        PR.coordinates = "lon lat"
+        PR.longname = "precipitation objects"
+        PR.unit = ""
+        if mcs_tb_test == 'no':
+            PR_real.coordinates = "lon lat"
+            PR_real.longname = "precipitation"
+            PR_real.unit = "mm/"+str(dT)+"h"
 
     lat[:] = Lat
     lon[:] = Lon
@@ -4417,7 +5824,9 @@ def moaap(
         # MCSs[:] = MCS_obj
         MCSs_Tb[:] = MCS_objects_Tb
         Cloud_real[:] = tb
-        Cloud_obj[:] = C_objects
+        # Cloud_obj[:] = C_objects
+    if cloud_test == 'yes':
+        non_mcs_cloud_obj[:] = cloud_objects
     if front_test == 'yes':
         FR_real[:] = Frontal_Diagnostic
         FR_obj[:] = FR_objects
@@ -4450,6 +5859,10 @@ def moaap(
         KELVIN[:] = kelvin_objects
         EIG[:] = eig0_objects
         ER[:] = er_objects
+    if pr_test == 'yes':
+        PR[:] = pr_objects
+        if mcs_tb_test == 'no':
+            PR_real[:] = pr
                 
     times[:] = iTime
     
@@ -4468,7 +5881,7 @@ def moaap(
     if tc_test == 'yes':
         ### SAVE THE TC TRACKS TO PICKL FILE
         # ============================
-        a_file = open(OutputFolder+str(Time[0].year)+str(Time[0].month).zfill(2)+'_TCs_tracks.pkl', "wb")
+        a_file = open(params["OutputFolder"]+str(Time[0].year)+str(Time[0].month).zfill(2)+str(Time[0].day).zfill(2)+'_TCs_tracks.pkl', "wb")
         pickle.dump(TC_Tracks, a_file)
         a_file.close()
         
