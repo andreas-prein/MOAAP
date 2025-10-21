@@ -47,3 +47,4 @@ __pycache__/
 moaap_output/
 images/
 outputs/synthetic_cells.nc
+data_cache/*

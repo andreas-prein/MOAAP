@@ -107,14 +107,14 @@ ax1.legend(fontsize=10)
 
 # Plot 2: Relative Runtime (normalized to 2D)
 ax4 = fig.add_subplot(gs[0, 1])
-time_ratio_3d = times_3d / times_2d
-time_ratio_3d_parallel = times_3d_parallel / times_2d
+time_ratio_3d = times_2d / times_3d
+time_ratio_3d_parallel = times_2d / times_3d_parallel
 ax4.plot(data_sizes, time_ratio_3d, 's-', label='3D / 2D', linewidth=2, markersize=6, color=color_3d)
 ax4.plot(data_sizes, time_ratio_3d_parallel, '^-', label='3D Parallel / 2D', linewidth=2, markersize=6, color=color_3d_parallel)
-ax4.axhline(y=1.0, color=color_2d, linestyle='--', linewidth=1.5, alpha=0.7, label='2D baseline')
+# ax4.axhline(y=1.0, color=color_2d, linestyle='--', linewidth=1.5, alpha=0.7, label='2D baseline')
 ax4.set_xlabel('Total Data Size (voxels)', fontsize=11)
-ax4.set_ylabel('Runtime Ratio (relative to 2D)', fontsize=11)
-ax4.set_title('Relative Runtime Performance', fontsize=12, fontweight='bold')
+ax4.set_ylabel('Speedup (relative to 2D)', fontsize=11)
+ax4.set_title('Relative Speedup', fontsize=12, fontweight='bold')
 ax4.set_xscale('log')
 ax4.grid(True, alpha=0.3)
 ax4.legend(fontsize=10)

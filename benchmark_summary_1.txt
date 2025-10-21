@@ -264,3 +264,17 @@ Peak Memory Usage:
   2D:           17854.82 MB
   3D:           25788.76 MB
   3D Parallel:  15337.48 MB
+
+======================================================================
+Data dimensions: (72, 4000, 4000)
+Optimal chunks (3D Parallel): 16 x 1
+
+Timing Results:
+  2D:           1718.47s
+  3D:           258.40s
+  3D Parallel:  287.46s
+
+Peak Memory Usage:
+  2D:           35687.81 MB
+  3D:           50792.97 MB
+  3D Parallel:  30738.97 MB
