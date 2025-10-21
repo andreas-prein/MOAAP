@@ -3177,7 +3177,7 @@ def cloud_tracking(
         if np.nanmax(pr_act) < min_pr:
             cloud_objects[object_indices[iobj]][cloud_objects[object_indices[iobj]] == iobj+1] = 0
 
-    return pr_objects
+    return cloud_objects
 
 
 def pr_tracking(
