@@ -169,3 +169,70 @@ plt.savefig('benchmark_comparison.pdf', format='pdf', bbox_inches='tight', dpi=3
 print("Plot saved as 'benchmark_comparison.pdf'")
 
 plt.show()
+
+'''
+================================================================================
+CHUNKING STRATEGY LEADERBOARD - TEXT SUMMARY
+================================================================================
+
+================================================================================
+ASPECT RATIO: 2:1 (7 datasets)
+================================================================================
+ 1. 8×3      -  49 pts | Avg rank: 3.4 | Range: 1-5 | Appeared: 5/7
+ 2. 16×4     -  38 pts | Avg rank: 2.3 | Range: 1-5 | Appeared: 3/7
+ 3. 8×2      -  36 pts | Avg rank: 5.0 | Range: 1-8 | Appeared: 5/7
+ 4. 8×8      -  33 pts | Avg rank: 3.3 | Range: 2-4 | Appeared: 3/7
+ 5. 16×1     -  32 pts | Avg rank: 5.6 | Range: 1-10 | Appeared: 5/7
+
+================================================================================
+ASPECT RATIO: 1:1 (7 datasets)
+================================================================================
+ 1. 4×2      -  36 pts | Avg rank: 5.2 | Range: 1-8 | Appeared: 5/7
+ 2. 16×1     -  35 pts | Avg rank: 5.0 | Range: 1-10 | Appeared: 4/7
+ 3. 3×4      -  34 pts | Avg rank: 4.0 | Range: 3-5 | Appeared: 4/7
+ 4. 4×3      -  29 pts | Avg rank: 5.8 | Range: 4-8 | Appeared: 5/7
+ 5. 8×2      -  29 pts | Avg rank: 5.5 | Range: 3-9 | Appeared: 4/7
+
+================================================================================
+ASPECT RATIO: 1:2 (6 datasets)
+================================================================================
+ 1. 1×8      -  39 pts | Avg rank: 2.8 | Range: 1-4 | Appeared: 4/6
+ 2. 8×8      -  30 pts | Avg rank: 4.0 | Range: 1-6 | Appeared: 3/6
+ 3. 4×4      -  29 pts | Avg rank: 4.0 | Range: 1-9 | Appeared: 3/6
+ 4. 2×4      -  26 pts | Avg rank: 4.0 | Range: 2-7 | Appeared: 3/6
+ 5. 3×8      -  24 pts | Avg rank: 4.0 | Range: 1-8 | Appeared: 3/6
+
+================================================================================
+RECOMMENDATION: Choose configs with highest total points AND low average rank
+================================================================================
+Based on the results, here are the best chunking strategies by aspect ratio:
+
+2:1 Aspect Ratio (lat > lon)
+Best choice: 8×3 (49 pts, avg rank 3.4)
+
+Most consistent performer across datasets
+Good balance between parallelization and overhead
+Alternative: 16×4 for very large datasets (38 pts, avg rank 2.3)
+1:1 Aspect Ratio (lat ≈ lon)
+Best choice: 4×2 (36 pts, avg rank 5.2)
+
+Consistent performer, though not always top-ranked
+Balanced chunking that works across sizes
+Alternative: 3×4 for more aggressive parallelization (34 pts, avg rank 4.0, better avg rank)
+1:2 Aspect Ratio (lat < lon)
+Best choice: 1×8 (39 pts, avg rank 2.8)
+
+Clear winner with excellent average rank
+Chunks along the longer dimension (longitude)
+Scales well with dataset size
+Key Insights:
+Chunk along the longer dimension: The pattern is clear - for 2:1, use more lat chunks (8×3); for 1:2, use more lon chunks (1×8)
+
+Sweet spot around 8-24 total chunks
+
+Avoid extreme imbalance: Configurations like 1×1 (sequential) or very high chunk counts show poor performance
+
+Size matters: The weighting shows that strategies performing well on large datasets are prioritized, which aligns with your actual use case
+
+My recommendation: Use 8×3 for 2:1, 3×4 for 1:1, and 1×8 for 1:2 as your default strategies. These balance performance with consistency across dataset sizes.
+'''
