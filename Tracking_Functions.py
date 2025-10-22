@@ -5065,7 +5065,7 @@ def moaap(
         ms_test = 'yes'
     else:
         ms_test = 'no'
-    if (pr is not None):
+    if (tb is not None):
         ew_test = 'yes'
     else:
         ew_test = 'no'
