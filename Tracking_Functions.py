@@ -2283,27 +2283,27 @@ def jetstream_tracking(
                                  int(int(5000/(Gridspacing/1000.))))
 
     uv200_Anomaly = uv200_smooth - uv200smoothAn
-    jet = uv200_Anomaly[:,:,:] >= js_min_anomaly
-
-
-    #     Pressure_anomaly[np.isnan(Pressure_anomaly)] = 0
-    #     jet[:,Mask == 0] = 0
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    rgiObjectsUD, nr_objectsUD = ndimage.label(jet, structure=rgiObj_Struct)
-    print('            '+str(nr_objectsUD)+' object found')
-
-    jet_objects, _ = clean_up_objects(rgiObjectsUD,
-                                min_tsteps=int(MinTimeJS/dT),
-                                 dT = dT)
-
     
     print('        break up long living jety objects with the '+breakup+' method')
     if breakup == 'breakup':
+        jet = uv200_Anomaly[:,:,:] >= js_min_anomaly
+
+
+        #     Pressure_anomaly[np.isnan(Pressure_anomaly)] = 0
+        #     jet[:,Mask == 0] = 0
+        rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
+        rgiObjectsUD, nr_objectsUD = ndimage.label(jet, structure=rgiObj_Struct)
+        print('            '+str(nr_objectsUD)+' object found')
+    
+        jet_objects, _ = clean_up_objects(rgiObjectsUD,
+                                    min_tsteps=int(MinTimeJS/dT),
+                                     dT = dT)
+    
         jet_objects, object_split = BreakupObjects(jet_objects,
                                     int(MinTimeJS/dT),
                                     dT)
     elif breakup == 'watershed':
-        jet_objects = watershed_2d_overlap(uv200,
+        jet_objects = watershed_2d_overlap(uv200_Anomaly, #uv200,
                                     js_min_anomaly,
                                     js_min_anomaly * 1.05,
                                     int(3000 * 10**3/Gridspacing), # this setting sets the size of jet objects
@@ -2344,46 +2344,36 @@ def ar_850hpa_tracking(
     '''
     function to track moisture streams and ARs according to the 850 hPa moisture flux
     '''
-    
-    potARs = (VapTrans > MinMSthreshold)
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    rgiObjectsAR, nr_objectsUD = ndimage.label(potARs, structure=rgiObj_Struct)
-    print('            '+str(nr_objectsUD)+' object found')
-
-    # sort the objects according to their size
-    Objects=ndimage.find_objects(rgiObjectsAR)
-    rgiAreaObj = []
-    for ob in range(nr_objectsUD):
-        try:
-            rgiAreaObj.append([np.sum(Area[Objects[ob][1:]][rgiObjectsAR[Objects[ob]][tt,:,:] == ob+1]) for tt in range(rgiObjectsAR[Objects[ob]].shape[0])])
-        except:
-            stop()
-        
-    # stop()
-    # rgiAreaObj = np.array([[np.sum(Area[Objects[ob][1:]][rgiObjectsAR[Objects[ob]][tt,:,:] == ob+1]) for tt in range(rgiObjectsAR[Objects[ob]].shape[0])] for ob in range(nr_objectsUD)])
-
-    # create final object array
-    MS_objectsTMP=np.copy(rgiObjectsAR); MS_objectsTMP[:]=0
-    ii = 1
-    for ob in range(len(rgiAreaObj)):
-        AreaTest = np.max(np.convolve(np.array(rgiAreaObj[ob]) >= MinAreaMS*1000**2, np.ones(int(MinTimeMS/dT)), mode='valid'))
-        if (AreaTest == int(MinTimeMS/dT)) & (len(rgiAreaObj[ob]) >= int(MinTimeMS/dT)):
-            MS_objectsTMP[rgiObjectsAR == (ob+1)] = ii
-            ii = ii + 1
-    # lable the objects from 1 to N
-    # MS_objects=np.copy(rgiObjectsAR); MS_objects[:]=0
-    # Unique = np.unique(MS_objectsTMP)[1:]
-    # ii = 1
-    # for ob in range(len(Unique)):
-    #     MS_objects[MS_objectsTMP == Unique[ob]] = ii
-    #     ii = ii + 1
-
-    MS_objects, _ = clean_up_objects(MS_objectsTMP,
-                                  dT,
-                                  min_tsteps=0)
 
     print('        break up long living MS objects with '+breakup)
     if breakup == 'breakup':
+        potARs = (VapTrans > MinMSthreshold)
+        rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
+        rgiObjectsAR, nr_objectsUD = ndimage.label(potARs, structure=rgiObj_Struct)
+        print('            '+str(nr_objectsUD)+' object found')
+    
+        # sort the objects according to their size
+        Objects=ndimage.find_objects(rgiObjectsAR)
+        rgiAreaObj = []
+        for ob in range(nr_objectsUD):
+            try:
+                rgiAreaObj.append([np.sum(Area[Objects[ob][1:]][rgiObjectsAR[Objects[ob]][tt,:,:] == ob+1]) for tt in range(rgiObjectsAR[Objects[ob]].shape[0])])
+            except:
+                stop()
+    
+        # create final object array
+        MS_objectsTMP=np.copy(rgiObjectsAR); MS_objectsTMP[:]=0
+        ii = 1
+        for ob in range(len(rgiAreaObj)):
+            AreaTest = np.max(np.convolve(np.array(rgiAreaObj[ob]) >= MinAreaMS*1000**2, np.ones(int(MinTimeMS/dT)), mode='valid'))
+            if (AreaTest == int(MinTimeMS/dT)) & (len(rgiAreaObj[ob]) >= int(MinTimeMS/dT)):
+                MS_objectsTMP[rgiObjectsAR == (ob+1)] = ii
+                ii = ii + 1
+    
+        MS_objects, _ = clean_up_objects(MS_objectsTMP,
+                                      dT,
+                                      min_tsteps=0)
+        
         MS_objects, object_split = BreakupObjects(MS_objects,
                                 int(MinTimeMS/dT),
                                 dT)
@@ -2415,18 +2405,18 @@ def ar_ivt_tracking(IVT,
                     Gridspacing,
                     connectLon,
                     breakup = "watershed"):
-            
-            potIVTs = (IVT > IVTtrheshold)
-            rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-            rgiObjectsIVT, nr_objectsUD = ndimage.label(potIVTs, structure=rgiObj_Struct)
-            print('        '+str(nr_objectsUD)+' object found')
-
-            IVT_objects, _ = clean_up_objects(rgiObjectsIVT,
-                                           dT,
-                                    min_tsteps=int(MinTimeIVT/dT))
 
             print('        break up long living IVT objects with '+breakup)
             if breakup == 'breakup':
+                potIVTs = (IVT > IVTtrheshold)
+                rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
+                rgiObjectsIVT, nr_objectsUD = ndimage.label(potIVTs, structure=rgiObj_Struct)
+                print('        '+str(nr_objectsUD)+' object found')
+    
+                IVT_objects, _ = clean_up_objects(rgiObjectsIVT,
+                                               dT,
+                                        min_tsteps=int(MinTimeIVT/dT))
+    
                 IVT_objects, object_split = BreakupObjects(IVT_objects,
                                          int(MinTimeIVT/dT),
                                         dT)
@@ -2576,8 +2566,7 @@ def cy_acy_psl_tracking(
     slpsmoothAn[:,nan] = np.nan
     
     slp_Anomaly = slp_smooth-slpsmoothAn
-#     slp_Anomaly[:,Mask == 0] = np.nan
-    # plt.contour(slp_Anomaly[tt,:,:], levels=[-9990,-10,1100], colors='b')
+
     Pressure_anomaly = slp_Anomaly < MaxPresAnCY # 10 hPa depression | original setting was 12
 
     rgiObjectsUD, nr_objectsUD = ndimage.label(Pressure_anomaly, structure=rgiObj_Struct)
@@ -2612,16 +2601,6 @@ def cy_acy_psl_tracking(
                 connectLon = connectLon,
                 extend_size_ratio = 0.15
                 )
-        
-        
-        # CY_objects = watershed_field(anom_sel*-1,
-        #                            Gridspacing,
-        #                            min_dist,
-        #                            threshold,
-        #                             smooth_t,
-        #                            smooth_xy)
-    
-        
     
     
     print('        track anti-cyclones')
@@ -2633,8 +2612,10 @@ def cy_acy_psl_tracking(
                                    dT,
                             min_tsteps=int(MinTimeACY/dT))
 
+
     print('            break up long living ACY objects that have many elements')
     if breakup == 'breakup':
+    
         ACY_objects, object_split = BreakupObjects(ACY_objects,
                                     int(MinTimeCY/dT),
                                     dT)
@@ -2686,14 +2667,14 @@ def cy_acy_z500_tracking(
     z500smoothAn[:,nan] = np.nan
     
     z500_Anomaly = z500_smooth - z500smoothAn
-#     z500_Anomaly[:,Mask == 0] = np.nan
 
+    print('        break up long living cyclones using the '+breakup+' method')
     z_low = z500_Anomaly < z500_low_anom
     z_high = z500_Anomaly > z500_high_anom
 
     # -------------------------------------
     print('    track 500 hPa cyclones')
-#             z_low[:,Mask == 0] = 0
+    #             z_low[:,Mask == 0] = 0
     rgiObjectsUD, nr_objectsUD = ndimage.label(z_low, structure=rgiObj_Struct)
     print('            '+str(nr_objectsUD)+' object found')
 
@@ -2701,7 +2682,6 @@ def cy_acy_z500_tracking(
                                 min_tsteps=int(MinTimeCY/dT),
                                  dT = dT)
 
-    print('        break up long living cyclones using the '+breakup+' method')
     if breakup == 'breakup':
         cy_z500_objects, object_split = BreakupObjects(cy_z500_objects,
                                     int(MinTimeCY/dT),
@@ -2954,56 +2934,28 @@ def mcs_tb_tracking(
                    ):
 
     print('        track  clouds')
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    # Csmooth=gaussian_filter(tb, sigma=(0,SmoothSigmaC,SmoothSigmaC))
-    Cmask = (tb <= Cthreshold)
-    rgiObjectsC, nr_objectsUD = ndimage.label(Cmask, structure=rgiObj_Struct)
-    print('        '+str(nr_objectsUD)+' cloud object found')
-
-    # if connectLon == 1:
-    #     # connect objects over date line
-    #     rgiObjectsC = ConnectLon(rgiObjectsC)
-        
-        
-    print('        fast way that removes obviously too small objects')
-    unique, counts = np.unique(rgiObjectsC, return_counts=True)
-    min_vol = np.round((CL_Area * (MCS_minTime/dT)) / ((Gridspacing / 1000.)**2)) # minimum grid cells requ. for MCS
-    remove = unique[counts < min_vol]
-    rgiObjectsC[np.isin(rgiObjectsC, remove)] = 0
-    
-    C_objects, nr_objectsUD = ndimage.label(rgiObjectsC, structure=rgiObj_Struct)
-    print('        '+str(nr_objectsUD)+' cloud object remaining')
-    
-    
-#     print('        remove too small clouds')
-#     Objects=ndimage.find_objects(rgiObjectsC)
-    
-#     rgiAreaObj = np.array([[np.sum(Area[Objects[ob][1],Objects[ob][2]][rgiObjectsC[Objects[ob]][tt,:,:] == ob+1]) for tt in range(rgiObjectsC[Objects[ob]].shape[0])] for ob in range(nr_objectsUD)])
-
-#     # rgiVolObjC=np.array([np.sum(rgiObjectsC[Objects[ob]] == ob+1) for ob in range(nr_objectsUD)])
-
-#     # create final object array
-#     C_objects=np.copy(rgiObjectsC); C_objects[:]=0
-#     ii = 1
-#     for ob in tqdm(range(len(rgiAreaObj))):
-#         try:
-#             AreaTest = np.max(np.convolve(np.array(rgiAreaObj[ob]) >= MinAreaC*1000**2, np.ones(int(MinTimeC/dT)), mode='valid'))
-#         except:
-#             stop()
-#         if (AreaTest == int(MinTimeC/dT)) & (len(rgiAreaObj[ob]) >=int(MinTimeC/dT)):
-#         # if rgiVolObjC[ob] >= MinAreaC:
-#             C_objects[rgiObjectsC == (ob+1)] = ii
-#             ii = ii + 1
-
     print('        break up long living cloud shield objects with '+breakup+' that have many elements')
     if breakup == 'breakup':
+        rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
+        # Csmooth=gaussian_filter(tb, sigma=(0,SmoothSigmaC,SmoothSigmaC))
+        Cmask = (tb <= Cthreshold)
+        rgiObjectsC, nr_objectsUD = ndimage.label(Cmask, structure=rgiObj_Struct)
+        print('        '+str(nr_objectsUD)+' cloud object found')
+            
+            
+        print('        fast way that removes obviously too small objects')
+        unique, counts = np.unique(rgiObjectsC, return_counts=True)
+        min_vol = np.round((CL_Area * (MCS_minTime/dT)) / ((Gridspacing / 1000.)**2)) # minimum grid cells requ. for MCS
+        remove = unique[counts < min_vol]
+        rgiObjectsC[np.isin(rgiObjectsC, remove)] = 0
+        
+        C_objects, nr_objectsUD = ndimage.label(rgiObjectsC, structure=rgiObj_Struct)
+        print('        '+str(nr_objectsUD)+' cloud object remaining')
+        
         C_objects, object_split = BreakupObjects(C_objects,
                                     int(MinTimeC/dT),
                                     dT)
     elif breakup == 'watershed':
-        # C_objects = watersheding(C_objects,
-        #                6,  # at least six grid cells apart 
-        #                1)
         threshold=1
         min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
         tb_masked = np.copy(tb)
@@ -3021,10 +2973,6 @@ def mcs_tb_tracking(
                 connectLon = connectLon,
                 extend_size_ratio = 0.10
                 )
-        
-    # if connectLon == 1:
-    #     print('        connect cloud objects over date line')
-    #     C_objects = ConnectLon_on_timestep(C_objects)
 
     # check if precipitation object is from an MCS
     object_indices = ndimage.find_objects(C_objects)
@@ -3924,26 +3872,6 @@ def track_tropwaves_tb(tb,
     tb_eq = tb_eq - np.nanmean(tb_eq, axis=(1,2), keepdims=True)
     tb_eq = tb_eq * lat_mask[None,:]
     tb_eq[np.isnan(tb_eq)] = 0
-
-    """
-    valid = (tb_eq >= 150) & (tb_eq <= 350)                   # bool view
-    # mean over valid points only, without building a big masked array:
-    sum_ = np.sum(np.where(valid, tb_eq, 0.0), axis=(1,2), keepdims=True, dtype=np.float32)
-    cnt_ = np.sum(valid,                    axis=(1,2), keepdims=True, dtype=np.int32)
-    mean_ = sum_ / np.maximum(cnt_, 1)
-    
-    tb_eq -= mean_.astype(np.float32, copy=False)             # center
-    tb_eq *= valid.astype(np.float32)                         # zero outside valid, no NaNs
-    
-    # 3) apply & renormalize
-    w2 = np.mean(lat_mask**2)
-    tb_eq = (lat_mask * tb_eq) / np.sqrt(w2)
-    """
-
-    """
-    tb_eq = tb.copy()
-    tb_eq[:,np.abs(Lat[:,0]) > 20] = 0
-    """
     
     # pad the Tb to avoid boundary effects
     # temporal turkey tapping:
@@ -3985,25 +3913,25 @@ def track_tropwaves_tb(tb,
             threshold = eig0_th
 
         amplitude = amplitude[pad_size:-pad_size]
-        rgiObjectsUD, nr_objectsUD = ndimage.label(wave, structure=rgiObj_Struct)
-        print('                '+str(nr_objectsUD)+' object found')
-
-        wave_objects, _ = clean_up_objects(rgiObjectsUD,
-                              dT,
-                              min_tsteps=int(ew_mintime/dT))
-
+        
         if breakup == 'breakup':
             print('                break up long tropical waves that have many elements')
+            rgiObjectsUD, nr_objectsUD = ndimage.label(wave, structure=rgiObj_Struct)
+            print('                '+str(nr_objectsUD)+' object found')
+    
+            wave_objects, _ = clean_up_objects(rgiObjectsUD,
+                                  dT,
+                                  min_tsteps=int(ew_mintime/dT))
+            
             wave_objects, object_split = BreakupObjects(wave_objects,
                                     int(ew_mintime/dT),
                                     dT)
+            del rgiObjectsUD
         elif breakup == 'watershed':
             # threshold=0.1
             min_dist=int((1000 * 10**3)/Gridspacing)
-            wave_amp = amplitude
-            #wave_amp[rgiObjectsUD == 0] = 0
             wave_objects = watershed_2d_overlap(
-                    wave_amp *-1,
+                    amplitude *-1,
                     np.abs(threshold),
                     np.abs(threshold),
                     min_dist,
@@ -4032,7 +3960,7 @@ def track_tropwaves_tb(tb,
 
         del wave
         del wave_objects
-        del rgiObjectsUD
+        
         gc.collect()
     return mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects
 
@@ -5083,6 +5011,7 @@ def moaap(
     cloud_test =  'no'
     ew_test =  'no'
     """
+
     pr_test = "no"
     
     print(' ')
