@@ -5083,6 +5083,7 @@ def moaap(
     cloud_test =  'no'
     ew_test =  'no'
     """
+    pr_test = "no"
     
     print(' ')
     print('The provided variables allow tracking the following phenomena')
