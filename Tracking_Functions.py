@@ -33,6 +33,8 @@ from calendar import monthrange
 from itertools import groupby
 from tqdm import tqdm # pyright: ignore[reportMissingModuleSource]
 import time
+from skimage.feature import peak_local_max
+from skimage.segmentation import watershed
 
 #### speed up interpolation
 import scipy.interpolate as spint
@@ -49,6 +51,10 @@ from dask.diagnostics import ProgressBar
 import dask_image.ndmeasure 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
+
+from scipy.ndimage import center_of_mass
+from typing import Dict, Any, Tuple, Set, List, DefaultDict
+from collections import defaultdict
 
 # # Add this near the top of your file, after other imports
 # ENABLE_PROFILING = os.getenv('MEMORY_PROFILING', 'false').lower() == 'true'
@@ -3118,6 +3124,29 @@ def mcs_tb_tracking(
                                            dT,
                                            min_tsteps=int(MCS_minTime/dT))
 
+    min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
+    print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
+    union_array, events, histories = analyze_watershed_history(
+        MCS_objects_Tb, min_dist
+    )
+
+    union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+    events_clean = [
+    {
+        'type': e['type'],
+        'time': int(e['time']),
+        'from_label': int(e['from_label']),
+        'to_label': int(e['to_label']),
+        'distance': float(e['distance'])
+    }
+    for e in events
+    ]
+    histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+
+    print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+    print(f"    Printing events: {events_clean}")
+    print(f"    Printing histories: {dict(list(histories_clean.items()))}")
+    
     return MCS_objects_Tb, C_objects
 
 
@@ -4264,52 +4293,290 @@ class SectionTimer:
     def __exit__(self, *args):
         self.results_dict[self.name] = time.perf_counter() - self.start
 
-from skimage.feature import peak_local_max
-from skimage.segmentation import watershed
-from scipy.ndimage import gaussian_filter
-def _watershed_region(data, image, max_treshold, min_dist):
 
-    """Helper function to watershed a single region"""
-    coords_list = []
+class UnionFind:
+    """
+    A Union-Find (Disjoint Set) data structure.
+    Assumes each 'label' (int) is a unique object ID.
+    """
+    def __init__(self):
+        self.parent: Dict[int, int] = {}
 
-    # find peaks in each time slice and add time as an additional coordinate
-    for t in range(data.shape[0]):
-        coords_t = peak_local_max(data[t], 
-                                min_distance = min_dist,
-                                threshold_abs = max_treshold,
-                                labels = image[t],
-                                exclude_border=True
-                               )
+    def add(self, item: int):
+        if item not in self.parent:
+            self.parent[item] = item
 
-        coords_with_time = np.column_stack((np.full(coords_t.shape[0], t), coords_t))
-        coords_list.append(coords_with_time)
+    def find(self, item: int) -> int:
+        self.add(item) 
+        if self.parent[item] == item:
+            return item
+        self.parent[item] = self.find(self.parent[item])
+        return self.parent[item]
 
-    # Combine all coordinates into a single array
-    if len(coords_list) == 1:
-        return data
-    elif len(coords_list) > 0:
-        coords = np.vstack(coords_list)
-    else:
-        coords = np.empty((0, 3), dtype=int)
-    # print("Total number of markers: ", len(coords))
-
-    mask = np.zeros(data.shape, dtype=bool)
-    mask[tuple(coords.T)] = True
-
-    # label peaks over time to ensure temporal consistency
-    labels = label_peaks_over_time_3d(coords, max_dist=min_dist)
-    markers = np.zeros(data.shape, dtype=int)
-    markers[tuple(coords.T)] = labels
+    def union(self, item1: int, item2: int):
+        root1 = self.find(item1)
+        root2 = self.find(item2)
+        if root1 != root2:
+            self.parent[root1] = root2
 
 
-    # define connectivity for 3D watershedding and perform watershedding
-    conection = np.ones((3, 3, 3))
-    return watershed(image = np.array(data)*-1,  # watershedding field with maxima transformed to minima
-                    markers = markers, # maximum points in 3D matrix
-                    connectivity = conection, # connectivity
-                    offset = (np.ones((3)) * 1).astype('int'), #4000/dx_m[dx]).astype('int'),
-                    mask = image, # binary mask for areas to watershed on
-                    compactness = 0) # high values --> more regular shaped watersheds
+def _get_all_centers_by_time(
+    labeled_data: np.ndarray
+) -> Tuple[DefaultDict[int, Dict[int, Tuple[float, float]]], 
+         DefaultDict[int, List[int]],
+         Set[int]]:
+    """
+    Calculates the 2D center for every label at every time slice it appears.
+
+    Returns:
+        A tuple containing:
+        1. centers_by_label: {label: {t: (y, x), t+1: (y,x), ...}}
+        2. labels_by_time: {t: [label1, label2, ...]}
+    """
+    print("Pre-calculating all label 2D centers at each time slice...")
+    centers_by_label: DefaultDict[int, Dict[int, Tuple[float, float]]] = defaultdict(dict)
+    labels_by_time: DefaultDict[int, List[int]] = defaultdict(list)
+    
+    num_times = labeled_data.shape[0]
+
+    for t in range(num_times):
+        label_slice = labeled_data[t, :, :]
+        labels_in_slice = np.unique(label_slice)
+        labels_in_slice = labels_in_slice[labels_in_slice != 0]
+        
+        if labels_in_slice.size == 0:
+            continue
+
+        centers = center_of_mass(label_slice, labels=label_slice, index=labels_in_slice)
+        
+        if labels_in_slice.size == 1:
+            centers = [centers] # Handle single label case
+
+        for label, center in zip(labels_in_slice, centers):
+            centers_by_label[label][t] = center
+            labels_by_time[t].append(label)
+                
+    return centers_by_label, labels_by_time
+
+def _find_nearest_neighbor(
+        center: np.ndarray,
+        time: int,
+        labels_by_time: List[int],
+        centers_by_label: DefaultDict[int, Dict[int, Tuple[float, float]]]
+) -> Tuple[int, float]:
+    """
+    Find the nearest neighbor label at a given time slice to the provided center.
+    
+    Returns: 
+        A tuple of (nearest_label, distance). If no labels exist at that time, returns (None, inf).
+    """
+    nearest_label = -1
+    min_distance = float('inf')
+
+    if not labels_by_time:
+        return None, min_distance
+
+    for label in labels_by_time:
+        actual_center = np.array(centers_by_label[label][time])
+        dist = np.linalg.norm(center - actual_center)
+        if dist < min_distance:
+            min_distance = dist
+            nearest_label = label
+
+    return nearest_label, min_distance
+
+def analyze_watershed_history(watershed_results, min_dist):
+    """
+    Analyze the history of watershed objects over time.
+    The output is a union of all objects which merged or split over time.
+    This is done via Euler-timestepping and comparing the overlap of objects
+    """
+    from collections import defaultdict
+    T = watershed_results.shape[0]
+    labels = np.unique(watershed_results)
+    labels = labels[labels != 0]
+    num_labels = labels.size
+    centers, labels_t = _get_all_centers_by_time(watershed_results)
+
+    uf = UnionFind()
+
+    for label in labels:
+        uf.add(label)
+
+    events: List[Dict[str, Any]] = []
+
+
+    for label in labels: 
+        times_present = sorted(centers[label].keys())
+        if not times_present:
+            continue
+
+        t_start = times_present[0]
+        t_end = times_present[-1]
+
+        if t_end - t_start < 1:
+            print("Skipping label", label, "with insufficient time span")
+            continue
+
+        # check for split genesis
+        center_start = np.array(centers[label][t_start])
+        if t_start > 0:
+            center_next = np.array(centers[label][t_start + 1])
+
+            # previous center prediction, c_-1 = c_0 - v * dt, v = (c_1 - c_0) / dt
+            # hence, c_-1 = 2 * c_0 - c_1
+            pred_center = 2 * center_start - center_next
+
+            nearest_label, dist = _find_nearest_neighbor(
+                pred_center,
+                t_start - 1,
+                labels_t[t_start - 1],
+                centers
+            )
+
+            if nearest_label is not None and dist < min_dist:
+                uf.union(label, nearest_label)
+                events.append({
+                    'type': 'split',
+                    'time': t_start,
+                    'from_label': nearest_label,
+                    'to_label': label,
+                    'distance': dist
+                })
+
+        if t_end < T - 1:
+            center_prev = np.array(centers[label][t_end - 1])
+            center_end = np.array(centers[label][t_end])
+
+            # next center prediction, c_+1 = c_0 + v * dt, v = (c_0 - c_-1) / dt
+            # hence, c_+1 = 2 * c_0 - c_-1
+            pred_center = 2 * center_end - center_prev
+
+            nearest_label, dist = _find_nearest_neighbor(
+                pred_center,
+                t_end + 1,
+                labels_t[t_end + 1],
+                centers
+            )
+
+            if nearest_label is not None and dist < min_dist:
+                uf.union(label, nearest_label)
+                events.append({
+                    'type': 'merge',
+                    'time': t_end,
+                    'from_label': label,
+                    'to_label': nearest_label,
+                    'distance': dist
+                })
+
+    histories: Dict[int, Set[int]] = defaultdict(set)
+    for label in labels:
+        root = uf.find(label)
+        histories[root].add(label)
+
+    union_array = uf.parent
+
+    # Plot the history
+    # Collect all unique labels and their lifetimes
+    all_labels = set()
+    for root, labels in histories.items():
+        all_labels.update(labels)
+    label_times = {}
+    for label in all_labels:
+        if label in centers:
+            times = sorted(centers[label].keys())
+            label_times[label] = (min(times), max(times))
+
+    # NEW: Filter to only labels involved in events (merges or splits)
+    event_labels = set()
+    for event in events:
+        event_labels.add(event['from_label'])
+        event_labels.add(event['to_label'])
+    filtered_labels = [label for label in all_labels if label in event_labels]
+    filtered_label_times = {label: label_times[label] for label in filtered_labels if label in label_times}
+
+    # Group filtered_labels by their history root and sort within groups and between groups
+    label_to_root = {}
+    for root, labels in histories.items():
+        for label in labels:
+            if label in filtered_labels:
+                label_to_root[label] = root
+    
+    # Group labels by root
+    root_groups = {}
+    for label in filtered_labels:
+        root = label_to_root[label]
+        if root not in root_groups:
+            root_groups[root] = []
+        root_groups[root].append(label)
+    
+    # Count events per label
+    from collections import defaultdict
+    event_count = defaultdict(int)
+    for event in events:
+        event_count[event['from_label']] += 1
+        event_count[event['to_label']] += 1
+    
+    # Sort groups by the minimum label in the group
+    sorted_roots = sorted(root_groups.keys(), key=lambda r: min(root_groups[r]))
+    
+    # For each root, arrange labels by event count, with most eventful in the middle
+    ordered_labels = []
+    for root in sorted_roots:
+        labels = root_groups[root]
+        # Sort by event count descending
+        sorted_labels = sorted(labels, key=lambda l: event_count[l], reverse=True)
+        # Arrange to place highest event count in middle
+        from collections import deque
+        left = deque()
+        right = deque()
+        for label in sorted_labels:
+            if len(right) <= len(left):
+                right.append(label)
+            else:
+                left.appendleft(label)
+        ordered_group = list(left) + list(right)
+        ordered_labels.extend(ordered_group)
+
+    # Plot setup (only for filtered labels, ordered)
+    fig, ax = plt.subplots(figsize=(12, 8))
+    y_positions = {label: i for i, label in enumerate(ordered_labels)}
+    ax.set_yticks(list(y_positions.values()))
+    ax.set_yticklabels(list(y_positions.keys()))
+    ax.set_xlabel('Time Step')
+    ax.set_title('Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)')
+
+    # Plot label lifetimes as horizontal lines (only for filtered labels)
+    for label, (t_start, t_end) in filtered_label_times.items():
+        y = y_positions[label]
+        ax.plot([t_start, t_end], [y, y], 'b-', linewidth=2)
+
+    # Plot events (only for filtered labels)
+    for event in events:
+        t = event['time']
+        from_label = event['from_label']
+        to_label = event['to_label']
+        dist = event['distance']
+        event_type = event['type']
+        
+        if from_label in y_positions and to_label in y_positions:
+            y_from = y_positions[from_label]
+            y_to = y_positions[to_label]
+            color = 'red' if event_type == 'merge' else 'green'
+            ax.plot([t, t], [y_from, y_to], color=color, linestyle='--', linewidth=1)
+            ax.scatter([t, t], [y_from, y_to], color=color, s=50)
+
+    # Create proper legend with correct colors
+    import matplotlib.patches as mpatches
+    lifetime_patch = mpatches.Patch(color='blue', label='Lifetime')
+    merge_patch = mpatches.Patch(color='red', label='Merge')
+    split_patch = mpatches.Patch(color='green', label='Split')
+    ax.legend(handles=[lifetime_patch, merge_patch, split_patch], loc='upper right')
+
+    plt.tight_layout()
+    plt.savefig('outputs/watershed_history.pdf')
+    return union_array, events, histories
+    
 
 # from memory_profiler import profile
 # # @profile__sections
