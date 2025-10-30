@@ -14,7 +14,6 @@ from scipy import stats
 import matplotlib.pyplot as plt
 from netCDF4 import Dataset
 import glob
-import os
 from pdb import set_trace as stop
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import median_filter
@@ -45,12 +44,7 @@ import netCDF4
 
 
 import os
-import dask
-import dask.array as da
-from dask.diagnostics import ProgressBar
-import dask_image.ndmeasure 
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import multiprocessing as mp
+import psutil
 
 from scipy.ndimage import center_of_mass
 from typing import Dict, Any, Tuple, Set, List, DefaultDict
@@ -2974,6 +2968,7 @@ def mcs_tb_tracking(
                     connectLon,
                     Gridspacing,
                     breakup = 'watershed',  # method for breaking up connected objects [watershed, breakup]
+                    analyze_mcs_history = False,
                    ):
 
     print('        track  clouds')
@@ -3029,11 +3024,7 @@ def mcs_tb_tracking(
         #                1)
         threshold=1
         min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
-        tb_masked = np.copy(tb)
-        # we have to make minima (cold cloud tops) to maxima
-        tb_masked = tb_masked * -1
-        # tb_masked = tb_masked + np.nanmin(tb_masked)
-        # tb_masked[C_objects == 0] = 0
+
         C_objects = watershed_3d_overlap_parallel(
                 tb * -1,
                 Cthreshold * -1,
@@ -3124,28 +3115,30 @@ def mcs_tb_tracking(
                                            dT,
                                            min_tsteps=int(MCS_minTime/dT))
 
-    min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
-    print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
-    union_array, events, histories = analyze_watershed_history(
-        MCS_objects_Tb, min_dist
-    )
+    # TODO: Add here a bool to check if wanted 
+    if analyze_mcs_history:
+        min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
+        print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
+        union_array, events, histories = analyze_watershed_history(
+            MCS_objects_Tb, min_dist
+        )
 
-    union_array_clean = {int(k): int(v) for k, v in union_array.items()}
-    events_clean = [
-    {
-        'type': e['type'],
-        'time': int(e['time']),
-        'from_label': int(e['from_label']),
-        'to_label': int(e['to_label']),
-        'distance': float(e['distance'])
-    }
-    for e in events
-    ]
-    histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+        union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+        events_clean = [
+        {
+            'type': e['type'],
+            'time': int(e['time']),
+            'from_label': int(e['from_label']),
+            'to_label': int(e['to_label']),
+            'distance': float(e['distance'])
+        }
+        for e in events
+        ]
+        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
 
-    print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
-    print(f"    Printing events: {events_clean}")
-    print(f"    Printing histories: {dict(list(histories_clean.items()))}")
+        print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+        print(f"    Printing events: {events_clean}")
+        print(f"    Printing histories: {dict(list(histories_clean.items()))}")
     
     return MCS_objects_Tb, C_objects
 
@@ -3191,11 +3184,7 @@ def cloud_tracking(
     print('        break up long living cloud shield objects with wathershedding')
     
     min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
-    tb_masked = np.copy(tb)
-    # we have to make minima (cold cloud tops) to maxima
-    tb_masked = tb_masked * -1
-    # tb_masked = tb_masked + np.nanmin(tb_masked)
-    # tb_masked[C_objects == 0] = 0
+
     cloud_objects = watershed_3d_overlap_parallel(
             tb * -1,
             tb_threshold * -1,
@@ -4222,9 +4211,19 @@ from scipy.spatial import cKDTree
 # @profile_
 def label_peaks_over_time_3d(coords, max_dist=5):
     """
-    coords: np.ndarray of shape (N_peaks, 3), each row is [t, y, x]
-    max_dist: maximum allowed distance to consider peaks as the same object (in grid units)
-    Returns: labels, np.ndarray of shape (N_peaks,), integer labels for each peak
+    Labels peaks in 3D coordinates over time based on spatial proximity.
+
+    Parameters
+    ----------
+    coords :
+        np.ndarray of shape (N_peaks, 3), each row is [t, y, x]
+    max_dist :  
+        maximum allowed distance to consider peaks as the same object (in grid units)
+
+    Returns
+    -------
+    labels : 
+        np.ndarray of shape (N_peaks,), integer labels for each peak over time
     """
     # Split coords by timestep
     timesteps = np.unique(coords[:, 0])
@@ -4258,8 +4257,15 @@ def label_peaks_over_time_3d(coords, max_dist=5):
 
 import functools
 import time
-
 def profile_sections(func):
+    """
+    Decorator to profile execution time of code sections within a function.\n
+    Usage:\n
+    @profile_sections\n
+    def my_function(..., _timer=None):\n
+        with _timer("section1"):
+            ...
+    """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         section_times = {}
@@ -4328,10 +4334,18 @@ def _get_all_centers_by_time(
     """
     Calculates the 2D center for every label at every time slice it appears.
 
-    Returns:
-        A tuple containing:
-        1. centers_by_label: {label: {t: (y, x), t+1: (y,x), ...}}
-        2. labels_by_time: {t: [label1, label2, ...]}
+    Parameters
+    ----------
+    labeled_data : np.ndarray
+        3D array of labeled data, shape (T, H, W).
+
+    Returns
+    -------
+    Tuple :
+        - centers_by_label : DefaultDict[int, Dict[int, Tuple[float, float]]]
+            Mapping of label -> time -> (y_center, x_center).
+        - labels_by_time : DefaultDict[int, List[int]]
+            Mapping of time -> list of labels present at that time.
     """
     print("Pre-calculating all label 2D centers at each time slice...")
     centers_by_label: DefaultDict[int, Dict[int, Tuple[float, float]]] = defaultdict(dict)
@@ -4339,6 +4353,7 @@ def _get_all_centers_by_time(
     
     num_times = labeled_data.shape[0]
 
+    # Iterate over time slices to compute centers via center of mass
     for t in range(num_times):
         label_slice = labeled_data[t, :, :]
         labels_in_slice = np.unique(label_slice)
@@ -4366,8 +4381,21 @@ def _find_nearest_neighbor(
 ) -> Tuple[int, float]:
     """
     Find the nearest neighbor label at a given time slice to the provided center.
-    
-    Returns: 
+
+    Parameters
+    ----------
+    center : np.ndarray
+        2D center point (y, x).
+    time : int
+        Time slice to search for neighbors.
+    labels_by_time : List[int]
+        List of labels present at the given time slice.
+    centers_by_label : DefaultDict[int, Dict[int, Tuple[float, float]]]
+        Precomputed centers for each label at each time slice.
+
+    Returns
+    -------
+    Tuple : [int, float]
         A tuple of (nearest_label, distance). If no labels exist at that time, returns (None, inf).
     """
     nearest_label = -1
@@ -4376,6 +4404,7 @@ def _find_nearest_neighbor(
     if not labels_by_time:
         return None, min_distance
 
+    # Calculate distances to all labels at the given time and find the nearest
     for label in labels_by_time:
         actual_center = np.array(centers_by_label[label][time])
         dist = np.linalg.norm(center - actual_center)
@@ -4388,14 +4417,32 @@ def _find_nearest_neighbor(
 def analyze_watershed_history(watershed_results, min_dist):
     """
     Analyze the history of watershed objects over time.
-    The output is a union of all objects which merged or split over time.
+    The output is a union of all objects which merged or split over time, 
+    along with a list of events (merges and splits) that occurred and the history array
+    (dict of sets), where two labels are in one set if they are connected via merges/splits.
     This is done via Euler-timestepping and comparing the overlap of objects
+    
+    Parameters
+    ----------
+    watershed_results : np.ndarray
+        3D array of watershed labels over time, shape (T, H, W).
+    min_dist : float
+        Minimum distance threshold to consider two objects as related (for merges/splits).
+    Returns
+    -------
+    union_array : Dict[int, int]
+        Mapping of each label to its root label in the union-find structure.
+    events : List[Dict[str, Any]]
+        List of merge and split events with details.
+    histories : Dict[int, Set[int]]
+        Dictionary mapping root labels to sets of all connected labels.
     """
     from collections import defaultdict
+    # Create Union-Find structure
     T = watershed_results.shape[0]
     labels = np.unique(watershed_results)
     labels = labels[labels != 0]
-    num_labels = labels.size
+
     centers, labels_t = _get_all_centers_by_time(watershed_results)
 
     uf = UnionFind()
@@ -4434,6 +4481,7 @@ def analyze_watershed_history(watershed_results, min_dist):
                 centers
             )
 
+            # If a nearby label is found within min_dist, consider it a split
             if nearest_label is not None and dist < min_dist:
                 uf.union(label, nearest_label)
                 events.append({
@@ -4459,6 +4507,7 @@ def analyze_watershed_history(watershed_results, min_dist):
                 centers
             )
 
+            # If a nearby label is found within min_dist, consider it a merge
             if nearest_label is not None and dist < min_dist:
                 uf.union(label, nearest_label)
                 events.append({
@@ -4469,6 +4518,7 @@ def analyze_watershed_history(watershed_results, min_dist):
                     'distance': dist
                 })
 
+    # Build histories
     histories: Dict[int, Set[int]] = defaultdict(set)
     for label in labels:
         root = uf.find(label)
@@ -4487,7 +4537,7 @@ def analyze_watershed_history(watershed_results, min_dist):
             times = sorted(centers[label].keys())
             label_times[label] = (min(times), max(times))
 
-    # NEW: Filter to only labels involved in events (merges or splits)
+    # Filter to only labels involved in events (merges or splits)
     event_labels = set()
     for event in events:
         event_labels.add(event['from_label'])
@@ -4559,6 +4609,7 @@ def analyze_watershed_history(watershed_results, min_dist):
         dist = event['distance']
         event_type = event['type']
         
+        # Only plot if both labels are in the filtered set
         if from_label in y_positions and to_label in y_positions:
             y_from = y_positions[from_label]
             y_to = y_positions[to_label]
@@ -4573,7 +4624,9 @@ def analyze_watershed_history(watershed_results, min_dist):
     split_patch = mpatches.Patch(color='green', label='Split')
     ax.legend(handles=[lifetime_patch, merge_patch, split_patch], loc='upper right')
 
+    # save the plot in a pdf
     plt.tight_layout()
+    os.makedirs('outputs', exist_ok=True)
     plt.savefig('outputs/watershed_history.pdf')
     return union_array, events, histories
     
@@ -4581,20 +4634,43 @@ def analyze_watershed_history(watershed_results, min_dist):
 # from memory_profiler import profile
 # # @profile__sections
 # @profile_
-'''
-Full 3d version of the watershedding function, split the peak finding in 2d, connect the peaks and
-do the watershed in fast 3d. Faster, (20s vs 40s for 3d vs 2d). The results are also qualitatively better
-since the peaks for the idealized test there are approx. 35 peaks for the 3d and 60 for the 2d version, where
-from the data should only be 30.
-'''
-def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array]
-                         object_threshold, # float to create binary object mast [float]
-                         max_treshold, # value for identifying max. points for spreading [float]
-                         min_dist, # minimum distance (in grid cells) between maximum points [int]
-                         dT, # time interval in hours [int]
-                         mintime = 24, # minimum time an object has to exist in dT [int]
-                         connectLon = 0,  # do we have to track features over the date line?
-                         extend_size_ratio = 0.25): # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
+def watershed_3d_overlap(
+    data: np.ndarray,
+    object_threshold: float,
+    max_treshold: float,
+    min_dist: int,
+    dT: int,
+    mintime: int = 24,
+    connectLon: int = 0,
+    extend_size_ratio: float = 0.25
+) -> np.ndarray:
+    """
+    Perform 3D watershedding on the input data with temporal consistency.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        3D matrix with data for watershedding
+    object_threshold : float
+        Float to create binary object mast
+    max_treshold : float
+        Value for identifying max. points for spreading
+    min_dist : int
+        Minimum distance (in grid cells) between maximum points
+    dT : int
+        Time interval in hours
+    mintime : int, optional
+        Minimum time an object has to exist in dT, by default 24
+    connectLon : int, optional
+        Do we have to track features over the date line?, by default 0
+    extend_size_ratio : float, optional
+        If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. 
+        This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25
+    Returns
+    -------
+    np.ndarray
+        3D matrix with watershed labels
+    """
     
     
     if connectLon == 1:
@@ -4653,12 +4729,8 @@ def watershed_3d_overlap(data, # 3D matrix with data for watershedding [np.array
 
 
     return watershed_results
-'''
-Idea is to split the region in lat and lon slices with some overlap. For non communication time is at around 15s. Now 
-with communication it is still around 15s for 7 chunks in lon and 1 in lat. The overhead of communication is not that big.
-14s for 2 in lat and 3 in lon. The result is however not yet quite perfect, since objects which would be split in the sequential at the boundary
-are merged automatically in this version
-'''
+
+
 def watershed_3d_overlap_parallel(
     data,
     object_threshold,
@@ -4668,24 +4740,54 @@ def watershed_3d_overlap_parallel(
     mintime=24,
     connectLon=0,
     extend_size_ratio=0.25,
-    n_chunks_lat=2,
-    n_chunks_lon=2,
+    n_chunks_lat=1,
+    n_chunks_lon=1,
     overlap_cells=None
 ):
     """
     Parallel version of watershed_3d_overlap using domain decomposition.
-    
+
     Parameters
     ----------
+    data : np.ndarray
+        3D matrix with data for watershedding
+    object_threshold : float
+        Float to create binary object mast
+    max_treshold : float
+        Value for identifying max. points for spreading
+    min_dist : int
+        Minimum distance (in grid cells) between maximum points
+    dT : int
+        Time interval in hours
+    mintime : int, optional
+        Minimum time an object has to exist in dT, by default 24
+    connectLon : int, optional
+        Do we have to track features over the date line?, by default 0
+    extend_size_ratio : float, optional
+        If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. 
+        This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25
     n_chunks_lat : int
         Number of chunks to split latitude dimension
     n_chunks_lon : int
         Number of chunks to split longitude dimension
     overlap_cells : int, optional
         Number of overlapping cells between chunks. If None, uses min_dist * 2
+    Returns
+    -------
+    np.ndarray
+        3D matrix with watershed labels
     """
-    if n_chunks_lat == 1 and n_chunks_lon == 1:
-        # No parallelization needed
+    # Add check for no parallelization, this should be called if no chunks are set, i.e. n_chunks_lat = n_chunks_lon = 1
+    # And if both are set to 1, check if enough memory is available to run the non-parallel version. 
+    # Based on numerical experiments, the memory requirement is roughly 4 bytes * sizeof(data) * 12
+    # watershed is depending on a threshold and therefore the data does not need to be stored in double precision
+    data = np.asarray(data, dtype=np.float32) 
+
+    estimated_memory_bytes = data.size * 4 * 12 * 1.2 # Rough estimate for watershed processing + some buffer
+    # get available memory in bytes
+    available_memory = psutil.virtual_memory().free
+
+    if n_chunks_lat == 1 and n_chunks_lon == 1 and estimated_memory_bytes < available_memory:
         return watershed_3d_overlap(
             data,
             object_threshold,
@@ -4696,8 +4798,23 @@ def watershed_3d_overlap_parallel(
             connectLon,
             extend_size_ratio
         )
+
     import multiprocessing as mp
-    from itertools import product
+    if n_chunks_lat == 1 and n_chunks_lon == 1:
+        num_proc = mp.cpu_count() - 1 # get one less for system processes
+        lat = data.shape[1]
+        lon = data.shape[2]
+        print(data.shape)
+        r = lon/lat
+        n_chunks_lon = int(np.ceil(np.sqrt(num_proc * r)))
+        n_chunks_lat = int(np.ceil(num_proc / n_chunks_lon))
+        print(n_chunks_lat, n_chunks_lon)
+        while n_chunks_lat * n_chunks_lon > num_proc:
+            if n_chunks_lon > n_chunks_lat * r and n_chunks_lon > 1 or n_chunks_lat == 1:
+                n_chunks_lon -= 1
+            else:
+                n_chunks_lat -= 1
+        print(f"Auto-configured to {n_chunks_lat} latitude chunks and {n_chunks_lon} longitude chunks for parallel processing.")
     
     # Set default overlap
     if overlap_cells is None:
@@ -4757,10 +4874,22 @@ def watershed_3d_overlap_parallel(
     
     return merged_result
 
+    # christian zehmann auf gitlab laden
+
+
 
 def _calculate_chunk_boundaries(total_size, n_chunks, overlap):
     """
     Calculate chunk boundaries with overlap.
+
+    Parameters
+    ----------
+    total_size : int
+        Total size of the dimension to be chunked.
+    n_chunks : int
+        Number of chunks to create.
+    overlap : int
+        Number of overlapping cells between chunks.
     
     Returns
     -------
@@ -4795,7 +4924,27 @@ def _process_watershed_chunk(
     lon_bounds
 ):
     """
-    Process a single chunk using watershed algorithm.
+    Process a single chunk using watershed algorithm. Similar to watershed_3d_overlap but
+    for a specific chunk of the lat x lon domain.
+
+    Parameters
+    ----------
+    chunk_i : int
+        Chunk index in latitude direction
+    chunk_j : int
+        Chunk index in longitude direction
+    chunk_data : np.ndarray
+        3D data for the chunk
+    object_threshold : float
+        Threshold for binary mask
+    max_treshold : float
+        Threshold for peak detection
+    min_dist : int
+        Minimum distance between peaks
+    lat_bounds : tuple
+        (lat_start, lat_end, lat_core_start, lat_core_end)
+    lon_bounds : tuple
+        (lon_start, lon_end, lon_core_start, lon_core_end)
     
     Returns
     -------
@@ -4872,6 +5021,17 @@ def _process_watershed_chunk(
 def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks):
     """
     Merge watershed results from all chunks and relabel consistently.
+
+    Parameters
+    ----------
+    chunk_results : list of dicts
+        Each dict contains chunk indices, boundaries, and labeled data
+    output_shape : tuple
+        Shape of the final merged output (nt, nlat, nlon)
+    lat_chunks : list of tuples
+        Latitude chunk boundaries
+    lon_chunks : list of tuples
+        Longitude chunk boundaries
     
     Returns
     -------
@@ -4884,24 +5044,26 @@ def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks)
     # Sort chunks by position
     chunk_results.sort(key=lambda x: (x['chunk_i'], x['chunk_j']))
     
-    # First pass: place all chunks and track overlaps at boundaries
+    # place all chunks and track overlaps at boundaries
     next_label = 1
     
     for result in chunk_results:
+        # Extract chunk info
         lat_start = result['lat_core_start']
         lat_end = result['lat_core_end']
         lon_start = result['lon_core_start']
         lon_end = result['lon_core_end']
-        
         chunk_labels = result['labels']
-        # old_labels = np.unique(chunk_labels[chunk_labels > 0])
         maximal_label = result['max_label']
+        # Offset labels to ensure uniqueness
         chunk_labels[chunk_labels > 0] += next_label - 1
+        # Update next_label to avoid label collisions
         next_label += maximal_label
         
+        # Place chunk into merged array
         merged[:, lat_start:lat_end, lon_start:lon_end] = chunk_labels
     
-    # Second pass: merge objects at chunk boundaries
+    # merge objects at chunk boundaries
     merged = _merge_boundary_objects(merged, lat_chunks, lon_chunks)
     print("    Final number of objects: ", np.unique(merged[merged > 0]).size)
     
@@ -4910,65 +5072,23 @@ def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks)
     
     return merged
 
-'''
-old version: slow and not vectorized, see new version below
-'''
-# def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
-#     """
-#     Merge objects that cross chunk boundaries.
-#     """
-#     # nt = labeled_array.shape[0]
-#     # Merge across latitude boundaries
-#     if len(lat_chunks) < 2 and len(lon_chunks) < 2:
-#         return labeled_array
-
-#     if len(lat_chunks) > 1:
-#         for i in range(len(lat_chunks) - 1):
-#             boundary = lat_chunks[i][3]  # lat_core_end of chunk i
-            
-#             # Check for objects crossing boundary
-#             if boundary < labeled_array.shape[1] - 1:
-#                 labels_before = labeled_array[:, boundary - 1, :]
-#                 labels_after = labeled_array[:, boundary, :]
-                
-#                 # Find touching objects
-#                 for lb in np.unique(labels_before[labels_before > 0]):
-#                     mask_before = labels_before == lb
-#                     labels_touching = labels_after[mask_before]
-#                     la_candidates = np.unique(labels_touching[labels_touching > 0])
-                    
-#                     if len(la_candidates) > 0:
-#                         # Merge: keep lb, replace all la with lb
-#                         for la in la_candidates:
-#                             if la != lb:
-#                                 labeled_array[labeled_array == la] = lb
-
-#     if len(lon_chunks) > 2:
-#         return labeled_array
-
-#     # Merge across longitude boundaries
-#     for j in range(len(lon_chunks) - 1):
-#         boundary = lon_chunks[j][3]  # lon_core_end of chunk j
-        
-#         if boundary < labeled_array.shape[2] - 1:
-#             labels_before = labeled_array[:, :, boundary - 1]
-#             labels_after = labeled_array[:, :, boundary]
-            
-#             for lb in np.unique(labels_before[labels_before > 0]):
-#                 mask_before = labels_before == lb
-#                 labels_touching = labels_after[mask_before]
-#                 la_candidates = np.unique(labels_touching[labels_touching > 0])
-                
-#                 if len(la_candidates) > 0:
-#                     for la in la_candidates:
-#                         if la != lb:
-#                             labeled_array[labeled_array == la] = lb
-    
-#     return labeled_array
-
 def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
     """
     Merge objects that cross chunk boundaries using vectorized operations.
+
+    Parameters
+    ----------
+    labeled_array : np.ndarray
+        3D array of labeled data
+    lat_chunks : list of tuples
+        Latitude chunk boundaries
+    lon_chunks : list of tuples
+        Longitude chunk boundaries
+
+    Returns
+    -------
+    np.ndarray
+        Labeled array with merged objects across boundaries
     """
     if len(lat_chunks) < 2 and len(lon_chunks) < 2:
         return labeled_array
@@ -5035,7 +5155,7 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
         root = find(int(label))
         mapping[label] = root
     
-    # Apply mapping using fancy indexing (MUCH faster than loop)
+    # Apply mapping using fancy indexing
     labeled_array = mapping[labeled_array]
     
     return labeled_array
@@ -5044,6 +5164,16 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
 def _relabel_consecutive(labeled_array):
     """
     Relabel array to have consecutive integer labels starting from 1.
+
+    Parameters
+    ----------
+    labeled_array : np.ndarray
+        3D array of labeled data with not necessarily consecutive integers.
+
+    Returns
+    -------
+    np.ndarray
+        Relabeled array with consecutive integers.
     """
     # Get unique non-zero labels
     unique_labels = np.unique(labeled_array[labeled_array > 0])
@@ -5142,6 +5272,7 @@ MOAAP_DEFAULTS = {
     "CL_MaxT": 215,         # MCS max cloud brightness temp [K]
     "CL_Area": 40000,       # MCS minimum cloud area [km^2]
     "MCS_minTime": 4,       # MCS minimum lifetime [h]
+    "analyze_mcs_history": False, # analyze MCS history [bool]
 
     # jet streams
     "js_min_anomaly": 37,    # jet stream anomaly threshold [m/s]
@@ -5307,6 +5438,8 @@ def moaap(
         Minimum cloud area for MCS detection (km²).
     MCS_minTime : int, default=4
         Minimum lifetime of MCS (h).
+    Analyze_history : bool, default=False
+        Whether to analyze the history of MCS objects.
 
     # — Jet streams & tropical waves —
     js_min_anomaly : float, default=37
@@ -5872,6 +6005,7 @@ def moaap(
                             connectLon,
                             Gridspacing,                 
                             breakup=params["breakup_mcs"],
+                            analyze_mcs_history=params["analyze_mcs_history"]
                            )
         
         grCs = calc_object_characteristics(C_objects, # feature object file

@@ -455,7 +455,7 @@ def sweep_parallel_configurations(data, tb_threshold, dT, repetitions=3, max_chu
     """
     Sweep through different chunking configurations to find optimal settings.
     
-    Parameters:
+    Parameters
     -----------
     data : np.ndarray
         Input data
@@ -468,7 +468,7 @@ def sweep_parallel_configurations(data, tb_threshold, dT, repetitions=3, max_chu
     max_chunks : int
         Maximum number of total chunks
     
-    Returns:
+    Returns
     --------
     results_df : pd.DataFrame
         DataFrame with timing and memory results for each configuration

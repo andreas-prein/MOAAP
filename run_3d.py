@@ -4,6 +4,8 @@ import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 from tqdm import tqdm
+from scipy.ndimage import center_of_mass
+
 
 from Tracking_Functions import moaap
 # @profile
@@ -62,6 +64,7 @@ def main():
                         OutputFolder = 'moaap_output/',
                         js_min_anomaly = 12,
                         MinTimeJS = 12,
+                        analyze_mcs_history = True
                           )
 
 
@@ -91,6 +94,17 @@ def main():
                       data_moaap['lat'],
                       mcs_mask,
                       cmap = 'nipy_spectral')
+
+
+  # unique_labels = np.unique(mcs_mask[~np.isnan(mcs_mask)])
+  # for label in unique_labels:
+  #     mask = (mcs_mask == label)
+  #     if np.any(mask):
+  #         com = center_of_mass(mask.astype(float))
+  #         lat_idx, lon_idx = com
+  #         # lat_val = data_moaap['lat'].values[int(lat_idx)]
+  #         # lon_val = data_moaap['lon'].values[int(lon_idx)]
+  #         plt.text(lon_idx, lat_idx, str(int(label)), fontsize=6, ha='center', va='center', transform=ccrs.PlateCarree(), color='white', weight='bold')
 
 
   # plot MCS tracks
