@@ -5071,164 +5071,156 @@ def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks)
     
     return merged
 
-def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_threshold=0.1, min_pixels=5):
+def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_threshold=0.25, min_pixels=5):
     """
-    Merge objects that cross chunk boundaries using vectorized operations.
+    Merge objects across chunk boundaries using a Global Best-Fit (Max Overlap) strategy.
     
-    Includes filtering to avoid merging objects with weak connections (noise)
-    and grazing touches of large systems (cross-point artifacts).
+    This prevents over-merging at cross-points (intersections of lat/lon boundaries)
+    by collecting all boundary statistics first, then only allowing merges between
+    objects that share their *primary* boundary connection.
 
     Parameters
     ----------
     labeled_array : np.ndarray
-        3D array of labeled data
+        3D array of labeled data (nt, nlat, nlon).
     lat_chunks : list of tuples
-        Latitude chunk boundaries
+        Latitude chunk boundaries.
     lon_chunks : list of tuples
-        Longitude chunk boundaries
-    overlap_threshold : float, optional
-        Minimum ratio of overlap area to the boundary cross-section area of the smaller object.
-        Range [0, 1]. Default 0.1 (10% overlap required).
-    min_pixels : int, optional
-        Minimum number of touching pixels required to merge. Default 5.
+        Longitude chunk boundaries.
+    overlap_threshold : float
+        The connection must account for at least this fraction of the object's 
+        total visible boundary to be considered for merging. 
+        Higher values (e.g., 0.5) prevent small bridges from merging large objects.
+    min_pixels : int
+        Minimum absolute pixels required to consider a connection.
 
     Returns
     -------
     np.ndarray
-        Labeled array with merged objects across boundaries
+        The labeled array with merged objects.
     """
-    if len(lat_chunks) < 2 and len(lon_chunks) < 2:
-        return labeled_array
-
-    # Calculate global object sizes to detect grazing touches of large systems
-    # This is crucial for preventing merges at cross-points where footprints are small
-    # but the objects themselves are large distinct systems.
-    try:
-        # Use bincount for speed
-        global_sizes = np.bincount(labeled_array.ravel())
-        use_bincount = True
-    except (TypeError, ValueError):
-        # Fallback for non-integer or negative labels
-        u_labels, u_counts = np.unique(labeled_array, return_counts=True)
-        global_sizes_dict = dict(zip(u_labels, u_counts))
-        use_bincount = False
-
-    def get_global_size(label):
-        if use_bincount:
-            return global_sizes[label]
-        return global_sizes_dict.get(label, 0)
-
-    # Use a union-find structure to track which labels should be merged
-    parent = {}
     
-    def find(x):
-        if x not in parent:
-            parent[x] = x
-        if parent[x] != x:
-            parent[x] = find(parent[x])
-        return parent[x]
-    
-    def union(x, y):
-        px, py = find(x), find(y)
-        if px != py:
-            parent[px] = py
+    # 1. Initialize Adjacency Graph
+    # Format: {label_id: {neighbor_id: overlap_count}}
+    # We also track total boundary pixels for each label to calculate ratios
+    adj_graph = {} 
+    label_boundary_totals = {}
 
-    def process_boundary(labels_before, labels_after):
-        # Vectorized approach: find all touching pairs at once
-        mask = (labels_before > 0) & (labels_after > 0)
+    def add_connection(l1, l2, count):
+        # Update l1 -> l2
+        if l1 not in adj_graph: adj_graph[l1] = {}
+        adj_graph[l1][l2] = adj_graph[l1].get(l2, 0) + count
         
-        if not np.any(mask):
-            return
+        # Update l2 -> l1
+        if l2 not in adj_graph: adj_graph[l2] = {}
+        adj_graph[l2][l1] = adj_graph[l2].get(l1, 0) + count
 
-        pairs = np.column_stack([labels_before[mask], labels_after[mask]])
-        
-        # Get unique pairs and their counts (overlap area in pixels)
-        unique_pairs, pair_counts = np.unique(pairs, axis=0, return_counts=True)
-        
-        # Calculate boundary sizes for relative overlap check if needed
-        if overlap_threshold > 0:
-            l_labels, l_counts = np.unique(labels_before[labels_before > 0], return_counts=True)
-            r_labels, r_counts = np.unique(labels_after[labels_after > 0], return_counts=True)
-            
-            l_size = dict(zip(l_labels, l_counts))
-            r_size = dict(zip(r_labels, r_counts))
-            
-            # Heuristic constants for grazing check
-            grazing_limit = min_pixels * 3
-            large_obj_limit = min_pixels * 10
+        # Track total boundary size
+        label_boundary_totals[l1] = label_boundary_totals.get(l1, 0) + count
+        label_boundary_totals[l2] = label_boundary_totals.get(l2, 0) + count
 
-            for (lb, la), count in zip(unique_pairs, pair_counts):
-                if count < min_pixels:
-                    continue
-                
-                size_b = l_size.get(lb, 0)
-                size_a = r_size.get(la, 0)
-                
-                # 1. Noise Filter: Ensure both objects have a significant presence on the boundary
-                # This prevents tiny noise fragments from acting as bridges
-                if size_b < min_pixels or size_a < min_pixels:
-                    continue
-
-                # 2. Grazing Filter: Avoid merging two large objects that touch with a small footprint
-                # This specifically targets the "cross-point" issue where distinct systems touch at a corner
-                size_b_global = get_global_size(lb)
-                size_a_global = get_global_size(la)
-                
-                is_large_b = size_b_global > large_obj_limit
-                is_large_a = size_a_global > large_obj_limit
-                is_grazing_b = size_b < grazing_limit
-                is_grazing_a = size_a < grazing_limit
-                
-                if is_large_b and is_large_a and is_grazing_b and is_grazing_a:
-                    continue
-
-                # Calculate overlap ratio relative to the smaller footprint
-                # This ensures that if a small object is fully connected to a large one, it merges.
-                min_size = min(size_b, size_a)
-                if min_size > 0:
-                    ratio = count / min_size
-                    if ratio >= overlap_threshold:
-                        union(int(lb), int(la))
-        else:
-            # Simple threshold on pixels
-            for (lb, la), count in zip(unique_pairs, pair_counts):
-                if count >= min_pixels:
-                    union(int(lb), int(la))
-
-    # Merge across latitude boundaries
+    # 2. Collect Statistics from Latitude Boundaries
     if len(lat_chunks) > 1:
         for i in range(len(lat_chunks) - 1):
-            boundary = lat_chunks[i][3]  # lat_core_end of chunk i
-            
-            if boundary < labeled_array.shape[1] - 1:
-                labels_before = labeled_array[:, boundary - 1, :]
-                labels_after = labeled_array[:, boundary, :]
-                process_boundary(labels_before, labels_after)
+            boundary_idx = lat_chunks[i][3] # lat_core_end
+            if boundary_idx < labeled_array.shape[1]:
+                # Slice N and Slice N+1
+                slice_left = labeled_array[:, boundary_idx - 1, :]
+                slice_right = labeled_array[:, boundary_idx, :]
+                _scan_boundary_face(slice_left, slice_right, add_connection)
 
-    # Merge across longitude boundaries
+    # 3. Collect Statistics from Longitude Boundaries
     if len(lon_chunks) > 1:
         for j in range(len(lon_chunks) - 1):
-            boundary = lon_chunks[j][3]  # lon_core_end of chunk j
+            boundary_idx = lon_chunks[j][3] # lon_core_end
+            if boundary_idx < labeled_array.shape[2]:
+                # Slice N and Slice N+1
+                slice_left = labeled_array[:, :, boundary_idx - 1]
+                slice_right = labeled_array[:, :, boundary_idx]
+                _scan_boundary_face(slice_left, slice_right, add_connection)
+
+    # 4. Make Merge Decisions (Union-Find)
+    # We only merge u and v if v is the *dominant* neighbor of u.
+    parent = {}
+    
+    def find(i):
+        if i not in parent: parent[i] = i
+        if parent[i] != i: parent[i] = find(parent[i])
+        return parent[i]
+
+    def union(i, j):
+        root_i = find(i)
+        root_j = find(j)
+        if root_i != root_j:
+            parent[root_i] = root_j
+
+    # Iterate over every object found on the boundaries
+    for label, neighbors in adj_graph.items():
+        if not neighbors:
+            continue
             
-            if boundary < labeled_array.shape[2] - 1:
-                labels_before = labeled_array[:, :, boundary - 1]
-                labels_after = labeled_array[:, :, boundary]
-                process_boundary(labels_before, labels_after)
-    
-    # Apply the merging: use vectorized lookup
+        # Find the neighbor with the MAXIMUM overlap
+        # key=neighbors.get retrieves the count
+        best_neighbor = max(neighbors, key=neighbors.get)
+        max_overlap_count = neighbors[best_neighbor]
+        total_boundary_pixels = label_boundary_totals[label]
+        
+        # --- CRITERIA 1: Absolute Size ---
+        if max_overlap_count < min_pixels:
+            continue
+            
+        # --- CRITERIA 2: Dominance Ratio ---
+        # Does this neighbor account for a significant portion of 'label's boundary?
+        # This prevents a large object touching a tiny corner of another large object
+        # from merging if that tiny corner is just a small fraction of the contact area.
+        if (max_overlap_count / total_boundary_pixels) < overlap_threshold:
+            continue
+
+        # If passed, we perform the merge
+        union(label, best_neighbor)
+
+    # 5. Relabel the Array
+    # Create a mapping array for fast numpy replacement
     unique_labels = np.unique(labeled_array[labeled_array > 0])
+    if len(unique_labels) == 0:
+        return labeled_array
+
+    max_val = unique_labels.max()
+    mapping = np.arange(max_val + 1, dtype=labeled_array.dtype)
     
-    # Build mapping array for fast lookup
-    max_label = unique_labels.max()
-    mapping = np.arange(max_label + 1)
     for label in unique_labels:
-        root = find(int(label))
-        mapping[label] = root
+        if label in parent:
+            root = find(label)
+            mapping[label] = root
+            
+    # Vectorized relabeling
+    return mapping[labeled_array]
+
+
+def _scan_boundary_face(slice_a, slice_b, callback):
+    """
+    Helper to find overlapping pixels between two 2D faces (time x dimension).
+    """
+    # Create a mask where both slices have valid data
+    mask = (slice_a > 0) & (slice_b > 0)
     
-    # Apply mapping using fancy indexing
-    labeled_array = mapping[labeled_array]
+    if not np.any(mask):
+        return
+
+    # Extract the touching pairs
+    labels_a = slice_a[mask]
+    labels_b = slice_b[mask]
+
+    # Use a trick to count unique pairs quickly:
+    # We stack them and find unique rows
+    pairs = np.stack((labels_a, labels_b), axis=1)
     
-    return labeled_array
+    # Get unique pairs and their counts
+    unique_pairs, counts = np.unique(pairs, axis=0, return_counts=True)
+    
+    for (la, lb), count in zip(unique_pairs, counts):
+        if la != lb: # Should naturally be different if coming from different chunks
+            callback(int(la), int(lb), int(count))
 
 
 def _relabel_consecutive(labeled_array):
