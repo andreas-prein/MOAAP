@@ -4742,8 +4742,8 @@ def watershed_3d_overlap_parallel(
     mintime=24,
     connectLon=0,
     extend_size_ratio=0.25,
-    n_chunks_lat=1,
-    n_chunks_lon=1,
+    n_chunks_lat=2,
+    n_chunks_lon=2,
     overlap_cells=None
 ):
     """
@@ -5071,14 +5071,10 @@ def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks)
     
     return merged
 
-def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_threshold=0.25, min_pixels=5):
+def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_threshold=0.25, min_pixels=5, fragment_volume_threshold=50):
     """
-    Merge objects across chunk boundaries using a Global Best-Fit (Max Overlap) strategy.
+    Merge objects across chunk boundaries using a Volume-Aware Strategy.
     
-    This prevents over-merging at cross-points (intersections of lat/lon boundaries)
-    by collecting all boundary statistics first, then only allowing merges between
-    objects that share their *primary* boundary connection.
-
     Parameters
     ----------
     labeled_array : np.ndarray
@@ -5088,11 +5084,14 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
     lon_chunks : list of tuples
         Longitude chunk boundaries.
     overlap_threshold : float
-        The connection must account for at least this fraction of the object's 
-        total visible boundary to be considered for merging. 
-        Higher values (e.g., 0.5) prevent small bridges from merging large objects.
+        For LARGE objects: The connection must account for at least this fraction 
+        of the object's visible boundary at the cut to be considered for merging.
     min_pixels : int
-        Minimum absolute pixels required to consider a connection.
+        For LARGE objects: Minimum absolute pixels required to merge.
+    fragment_volume_threshold : int
+        The Global Volume threshold. Objects smaller than this (e.g., < 50 voxels total)
+        are considered "fragments/tips" and use relaxed merging rules. 
+        Objects larger than this are considered "systems" and use strict rules.
 
     Returns
     -------
@@ -5100,9 +5099,23 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
         The labeled array with merged objects.
     """
     
+    # 0. Pre-calculate Global Object Volumes
+    # We need to know if an object is a "tiny tip" or a "massive storm" before deciding.
+    # We use ravel to flatten the 3D array and bincount to get pixel counts per label.
+    # Max label might be large, so we ensure the array is big enough.
+    flat_labels = labeled_array.ravel()
+    max_label = 0
+    if flat_labels.size > 0:
+        max_label = flat_labels.max()
+        
+    if max_label == 0:
+        return labeled_array
+
+    # object_volumes[i] = total number of pixels for label i
+    object_volumes = np.bincount(flat_labels)
+
     # 1. Initialize Adjacency Graph
     # Format: {label_id: {neighbor_id: overlap_count}}
-    # We also track total boundary pixels for each label to calculate ratios
     adj_graph = {} 
     label_boundary_totals = {}
 
@@ -5115,7 +5128,7 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
         if l2 not in adj_graph: adj_graph[l2] = {}
         adj_graph[l2][l1] = adj_graph[l2].get(l1, 0) + count
 
-        # Track total boundary size
+        # Track total boundary exposure at the cut for ratios
         label_boundary_totals[l1] = label_boundary_totals.get(l1, 0) + count
         label_boundary_totals[l2] = label_boundary_totals.get(l2, 0) + count
 
@@ -5124,7 +5137,6 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
         for i in range(len(lat_chunks) - 1):
             boundary_idx = lat_chunks[i][3] # lat_core_end
             if boundary_idx < labeled_array.shape[1]:
-                # Slice N and Slice N+1
                 slice_left = labeled_array[:, boundary_idx - 1, :]
                 slice_right = labeled_array[:, boundary_idx, :]
                 _scan_boundary_face(slice_left, slice_right, add_connection)
@@ -5134,13 +5146,11 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
         for j in range(len(lon_chunks) - 1):
             boundary_idx = lon_chunks[j][3] # lon_core_end
             if boundary_idx < labeled_array.shape[2]:
-                # Slice N and Slice N+1
                 slice_left = labeled_array[:, :, boundary_idx - 1]
                 slice_right = labeled_array[:, :, boundary_idx]
                 _scan_boundary_face(slice_left, slice_right, add_connection)
 
     # 4. Make Merge Decisions (Union-Find)
-    # We only merge u and v if v is the *dominant* neighbor of u.
     parent = {}
     
     def find(i):
@@ -5160,27 +5170,49 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
             continue
             
         # Find the neighbor with the MAXIMUM overlap
-        # key=neighbors.get retrieves the count
         best_neighbor = max(neighbors, key=neighbors.get)
         max_overlap_count = neighbors[best_neighbor]
-        total_boundary_pixels = label_boundary_totals[label]
         
-        # --- CRITERIA 1: Absolute Size ---
-        if max_overlap_count < min_pixels:
-            continue
-            
-        # --- CRITERIA 2: Dominance Ratio ---
-        # Does this neighbor account for a significant portion of 'label's boundary?
-        # This prevents a large object touching a tiny corner of another large object
-        # from merging if that tiny corner is just a small fraction of the contact area.
-        if (max_overlap_count / total_boundary_pixels) < overlap_threshold:
-            continue
+        # Data needed for decision
+        boundary_exposure = label_boundary_totals[label] # Pixels touching the cut
+        total_volume = object_volumes[label]             # Global pixels (Total Size)
 
-        # If passed, we perform the merge
-        union(label, best_neighbor)
+        # --- DECISION LOGIC ---
+
+        # PATH A: The object is a "Small Fragment" (e.g., a sliced tip)
+        if total_volume < fragment_volume_threshold:
+            # Logic: If it's tiny, it's likely noise or a tip. 
+            # Merge if a significant portion of this tiny object sits on the boundary.
+            # (i.e., don't merge if it's a small isolated dot that barely touches the line)
+            
+            # If > 25% of the fragment's total mass is on the interface, snap it.
+            connectivity_ratio = max_overlap_count / total_volume
+            if connectivity_ratio > 0.25:
+                union(label, best_neighbor)
+
+        # PATH B: The object is a "Large System" (e.g., a full storm)
+        else:
+            # Logic: Large objects should NOT merge unless they are clearly the same object.
+            # We require the boundary connection to be structurally significant.
+            
+            # 1. Absolute size check (prevent single-pixel bridges)
+            if max_overlap_count < min_pixels:
+                continue
+                
+            # 2. Relative size check (The "Kissing" Check)
+            # If two huge storms touch, the boundary pixels will be small compared to 
+            # the total length of the cut they occupy.
+            # We calculate: (Shared Connection) / (Total Exposed Boundary at Cut)
+            
+            dominance_at_boundary = max_overlap_count / boundary_exposure
+            
+            if dominance_at_boundary < overlap_threshold:
+                continue
+
+            # If passed strict checks, merge
+            union(label, best_neighbor)
 
     # 5. Relabel the Array
-    # Create a mapping array for fast numpy replacement
     unique_labels = np.unique(labeled_array[labeled_array > 0])
     if len(unique_labels) == 0:
         return labeled_array
@@ -5193,9 +5225,7 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_thres
             root = find(label)
             mapping[label] = root
             
-    # Vectorized relabeling
     return mapping[labeled_array]
-
 
 def _scan_boundary_face(slice_a, slice_b, callback):
     """
