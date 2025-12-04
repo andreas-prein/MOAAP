@@ -4592,9 +4592,11 @@ def analyze_watershed_history(watershed_results, min_dist):
     fig, ax = plt.subplots(figsize=(12, 8))
     y_positions = {label: i for i, label in enumerate(ordered_labels)}
     ax.set_yticks(list(y_positions.values()))
-    ax.set_yticklabels(list(y_positions.keys()))
-    ax.set_xlabel('Time Step')
-    ax.set_title('Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)')
+    ax.set_yticklabels(list(y_positions.keys()), fontsize=12)
+    ax.set_xlabel('Time Step', fontsize=14)
+    ax.set_title('Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)', fontsize=16)
+
+    ax.tick_params(axis='x', labelsize=14)   # increase x-axis tick fontsize
 
     # Plot label lifetimes as horizontal lines (only for filtered labels)
     for label, (t_start, t_end) in filtered_label_times.items():
@@ -4622,7 +4624,7 @@ def analyze_watershed_history(watershed_results, min_dist):
     lifetime_patch = mpatches.Patch(color='blue', label='Lifetime')
     merge_patch = mpatches.Patch(color='red', label='Merge')
     split_patch = mpatches.Patch(color='green', label='Split')
-    ax.legend(handles=[lifetime_patch, merge_patch, split_patch], loc='upper right')
+    ax.legend(handles=[lifetime_patch, merge_patch, split_patch], loc='upper left', fontsize=14)
 
     # save the plot in a pdf
     plt.tight_layout()
@@ -4874,9 +4876,6 @@ def watershed_3d_overlap_parallel(
     
     return merged_result
 
-    # christian zehmann auf gitlab laden
-
-
 
 def _calculate_chunk_boundaries(total_size, n_chunks, overlap):
     """
@@ -5072,9 +5071,12 @@ def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks)
     
     return merged
 
-def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
+def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_threshold=0.1, min_pixels=5):
     """
     Merge objects that cross chunk boundaries using vectorized operations.
+    
+    Includes filtering to avoid merging objects with weak connections (noise)
+    and grazing touches of large systems (cross-point artifacts).
 
     Parameters
     ----------
@@ -5084,6 +5086,11 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
         Latitude chunk boundaries
     lon_chunks : list of tuples
         Longitude chunk boundaries
+    overlap_threshold : float, optional
+        Minimum ratio of overlap area to the boundary cross-section area of the smaller object.
+        Range [0, 1]. Default 0.1 (10% overlap required).
+    min_pixels : int, optional
+        Minimum number of touching pixels required to merge. Default 5.
 
     Returns
     -------
@@ -5092,6 +5099,24 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
     """
     if len(lat_chunks) < 2 and len(lon_chunks) < 2:
         return labeled_array
+
+    # Calculate global object sizes to detect grazing touches of large systems
+    # This is crucial for preventing merges at cross-points where footprints are small
+    # but the objects themselves are large distinct systems.
+    try:
+        # Use bincount for speed
+        global_sizes = np.bincount(labeled_array.ravel())
+        use_bincount = True
+    except (TypeError, ValueError):
+        # Fallback for non-integer or negative labels
+        u_labels, u_counts = np.unique(labeled_array, return_counts=True)
+        global_sizes_dict = dict(zip(u_labels, u_counts))
+        use_bincount = False
+
+    def get_global_size(label):
+        if use_bincount:
+            return global_sizes[label]
+        return global_sizes_dict.get(label, 0)
 
     # Use a union-find structure to track which labels should be merged
     parent = {}
@@ -5108,6 +5133,68 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
         if px != py:
             parent[px] = py
 
+    def process_boundary(labels_before, labels_after):
+        # Vectorized approach: find all touching pairs at once
+        mask = (labels_before > 0) & (labels_after > 0)
+        
+        if not np.any(mask):
+            return
+
+        pairs = np.column_stack([labels_before[mask], labels_after[mask]])
+        
+        # Get unique pairs and their counts (overlap area in pixels)
+        unique_pairs, pair_counts = np.unique(pairs, axis=0, return_counts=True)
+        
+        # Calculate boundary sizes for relative overlap check if needed
+        if overlap_threshold > 0:
+            l_labels, l_counts = np.unique(labels_before[labels_before > 0], return_counts=True)
+            r_labels, r_counts = np.unique(labels_after[labels_after > 0], return_counts=True)
+            
+            l_size = dict(zip(l_labels, l_counts))
+            r_size = dict(zip(r_labels, r_counts))
+            
+            # Heuristic constants for grazing check
+            grazing_limit = min_pixels * 3
+            large_obj_limit = min_pixels * 10
+
+            for (lb, la), count in zip(unique_pairs, pair_counts):
+                if count < min_pixels:
+                    continue
+                
+                size_b = l_size.get(lb, 0)
+                size_a = r_size.get(la, 0)
+                
+                # 1. Noise Filter: Ensure both objects have a significant presence on the boundary
+                # This prevents tiny noise fragments from acting as bridges
+                if size_b < min_pixels or size_a < min_pixels:
+                    continue
+
+                # 2. Grazing Filter: Avoid merging two large objects that touch with a small footprint
+                # This specifically targets the "cross-point" issue where distinct systems touch at a corner
+                size_b_global = get_global_size(lb)
+                size_a_global = get_global_size(la)
+                
+                is_large_b = size_b_global > large_obj_limit
+                is_large_a = size_a_global > large_obj_limit
+                is_grazing_b = size_b < grazing_limit
+                is_grazing_a = size_a < grazing_limit
+                
+                if is_large_b and is_large_a and is_grazing_b and is_grazing_a:
+                    continue
+
+                # Calculate overlap ratio relative to the smaller footprint
+                # This ensures that if a small object is fully connected to a large one, it merges.
+                min_size = min(size_b, size_a)
+                if min_size > 0:
+                    ratio = count / min_size
+                    if ratio >= overlap_threshold:
+                        union(int(lb), int(la))
+        else:
+            # Simple threshold on pixels
+            for (lb, la), count in zip(unique_pairs, pair_counts):
+                if count >= min_pixels:
+                    union(int(lb), int(la))
+
     # Merge across latitude boundaries
     if len(lat_chunks) > 1:
         for i in range(len(lat_chunks) - 1):
@@ -5116,16 +5203,7 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
             if boundary < labeled_array.shape[1] - 1:
                 labels_before = labeled_array[:, boundary - 1, :]
                 labels_after = labeled_array[:, boundary, :]
-                
-                # Vectorized approach: find all touching pairs at once
-                mask = (labels_before > 0) & (labels_after > 0)
-                pairs = np.column_stack([labels_before[mask], labels_after[mask]])
-                
-                # Get unique pairs and merge them
-                unique_pairs = np.unique(pairs, axis=0)
-                for lb, la in unique_pairs:
-                    if lb != la:
-                        union(int(lb), int(la))
+                process_boundary(labels_before, labels_after)
 
     # Merge across longitude boundaries
     if len(lon_chunks) > 1:
@@ -5135,15 +5213,7 @@ def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks):
             if boundary < labeled_array.shape[2] - 1:
                 labels_before = labeled_array[:, :, boundary - 1]
                 labels_after = labeled_array[:, :, boundary]
-                
-                # Vectorized approach
-                mask = (labels_before > 0) & (labels_after > 0)
-                pairs = np.column_stack([labels_before[mask], labels_after[mask]])
-                
-                unique_pairs = np.unique(pairs, axis=0)
-                for lb, la in unique_pairs:
-                    if lb != la:
-                        union(int(lb), int(la))
+                process_boundary(labels_before, labels_after)
     
     # Apply the merging: use vectorized lookup
     unique_labels = np.unique(labeled_array[labeled_array > 0])

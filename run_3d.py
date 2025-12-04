@@ -113,14 +113,23 @@ def main():
     plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='k')
 
   ax.set_extent([-180, 180, -70, 70], crs=ccrs.PlateCarree())
+  lon_ticks = np.linspace(-180, 180, 7)
+  lat_ticks = [-70, -60, -40, -20, 0, 20, 40, 60, 70]
+  ax.set_xticks(lon_ticks, crs=ccrs.PlateCarree())
+  ax.set_yticks(lat_ticks, crs=ccrs.PlateCarree())
+  ax.set_xticklabels([f"{int(x)}°" for x in lon_ticks])
+  ax.set_yticklabels([f"{int(y)}°" for y in lat_ticks])
+  ax.set_xlabel('Longitude')
+  ax.set_ylabel('Latitude')
 
   # Add a colorbar to the plot
   cbar = plt.colorbar(sc, ax=ax, orientation='vertical', shrink=0.7, label='MCS mask')
+  fig.subplots_adjust(left=0.02, right=0.96, top=0.97, bottom=0.03)
 
   # Set the title of the plot
   plt.title('MCS tracks (black lines) and masks at '+str(time_datetime[12])[:16])
 
-  plt.savefig("MCS_tracks_masks_3d.png")
+  plt.savefig("MCS_tracks_masks_3d.png", bbox_inches='tight', dpi=600)
 
   print_gif = False
   if print_gif:
