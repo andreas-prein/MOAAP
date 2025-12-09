@@ -38,28 +38,30 @@ def main():
                         time_datetime,
                         dT,
                         Mask,
-                        # v850 =  data_vars['V850'].values,
-                        # u850 = data_vars['U850'].values,
-                        # t850 = data_vars['T850'].values,
-                        # q850 = data_vars['Q850'].values,
-                        # slp = data_vars['SLP'].values,
-                        # ivte = data_vars['IVTE'].values,
-                        # ivtn = data_vars['IVTN'].values,
-                        # z500 = data_vars['Z500'].values,
-                        # v200 = data_vars['V200'].values,
-                        # u200 = data_vars['U200'].values,
-                        v850 =None, #  data_vars['V850'],
-                        u850 = None, #data_vars['U850'],
-                        t850 = None, #data_vars['T850'],
-                        q850 = None, #data_vars['Q850'],
-                        slp = None, #data_vars['SLP'],
-                        ivte = None, #data_vars['IVTE'],
-                        ivtn = None, #data_vars['IVTN'],
-                        z500 = None, #data_vars['Z500'],
-                        v200 = None, #data_vars['V200'],
-                        u200 = None, #data_vars['U200'],
+                        v850 =  data_vars['V850'].values,
+                        u850 = data_vars['U850'].values,
+                        t850 = data_vars['T850'].values,
+                        q850 = data_vars['Q850'].values,
+                        slp = data_vars['SLP'].values,
+                        ivte = data_vars['IVTE'].values,
+                        ivtn = data_vars['IVTN'].values,
+                        z500 = data_vars['Z500'].values,
+                        v200 = data_vars['V200'].values,
+                        u200 = data_vars['U200'].values,
                         pr   = data_vars['PR'].values,
                         tb   = data_vars['Tb'].values,
+                        # v850 =None, #  data_vars['V850'],
+                        # u850 = None, #data_vars['U850'],
+                        # t850 = None, #data_vars['T850'],
+                        # q850 = None, #data_vars['Q850'],
+                        # slp = None, #data_vars['SLP'],
+                        # ivte = None, #data_vars['IVTE'],
+                        # ivtn = None, #data_vars['IVTN'],
+                        # z500 = None, #data_vars['Z500'],
+                        # v200 = None, #data_vars['V200'],
+                        # u200 = None, #data_vars['U200'],
+                        # pr   = None, #data_vars['PR'],
+                        # tb   = None, #data_vars['Tb'],
                         DataName = DataName,
                         OutputFolder = 'moaap_output/',
                         js_min_anomaly = 12,
@@ -87,30 +89,66 @@ def main():
   ax.coastlines(color='#969696')
   ax.gridlines()
 
-  # Generate some random data (latitude, longitude, and values)
-  mcs_mask = np.array(data_moaap['MCS_Tb_Objects'][12,:,:])
-  mcs_mask[mcs_mask == 0] = np.nan
-  sc = plt.pcolormesh(data_moaap['lon'],
-                      data_moaap['lat'],
-                      mcs_mask,
-                      cmap = 'nipy_spectral')
+  mode = "MCS"  # "MCS", "fronts", "cyclones"
 
+  if mode == "MCS":
+    # Generate some random data (latitude, longitude, and values)
+    mcs_mask = np.array(data_moaap['MCS_Tb_Objects'][12,:,:])
+    mcs_mask[mcs_mask == 0] = np.nan
+    sc = plt.pcolormesh(data_moaap['lon'],
+                        data_moaap['lat'],
+                        mcs_mask,
+                        cmap = 'nipy_spectral')
+    
+    # plot MCS tracks
+    for ii in range(len(mcs_charac.keys())):
+      LatLonTrack = mcs_charac[list(mcs_charac.keys())[ii]]['track']
+      plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='k')
+    
+    plt.title('MCS tracks (black lines) and masks at '+str(time_datetime[12])[:16])
+  
+  elif mode == "fronts":
+    fronts_mask = np.array(data_moaap['FR_Objects'][12,:,:])
+    fronts_mask[fronts_mask == 0] = np.nan
+    sc = plt.pcolormesh(data_moaap['lon'],
+                        data_moaap['lat'],
+                        fronts_mask,
+                        cmap = 'coolwarm')
 
-  # unique_labels = np.unique(mcs_mask[~np.isnan(mcs_mask)])
-  # for label in unique_labels:
-  #     mask = (mcs_mask == label)
-  #     if np.any(mask):
-  #         com = center_of_mass(mask.astype(float))
-  #         lat_idx, lon_idx = com
-  #         # lat_val = data_moaap['lat'].values[int(lat_idx)]
-  #         # lon_val = data_moaap['lon'].values[int(lon_idx)]
-  #         plt.text(lon_idx, lat_idx, str(int(label)), fontsize=6, ha='center', va='center', transform=ccrs.PlateCarree(), color='white', weight='bold')
+    # plot front tracks
+    for ii in range(len(mcs_charac.keys())):
+      if 'FR_track' in mcs_charac[list(mcs_charac.keys())[ii]].keys():
+        LatLonTrack = mcs_charac[list(mcs_charac.keys())[ii]]['FR_track']
+        plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='k')
+    
+    plt.title('Front tracks (black lines) and masks at '+str(time_datetime[12])[:16])
 
-
-  # plot MCS tracks
-  for ii in range(len(mcs_charac.keys())):
-    LatLonTrack = mcs_charac[list(mcs_charac.keys())[ii]]['track']
-    plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='k')
+  elif mode == "cyclones":
+    cy_mask = np.array(data_moaap['CY_z500_Objects'][12,:,:])
+    acy_mask = np.array(data_moaap['ACY_z500_Objects'][12,:,:])
+    cy_mask[cy_mask == 0] = np.nan
+    acy_mask[acy_mask == 0] = np.nan
+    sc = plt.pcolormesh(data_moaap['lon'],
+                        data_moaap['lat'],
+                        cy_mask,
+                        cmap = 'Blues',
+                        alpha=0.6)
+    sc2 = plt.pcolormesh(data_moaap['lon'],
+                        data_moaap['lat'],
+                        acy_mask,
+                        cmap = 'Reds',
+                        alpha=0.6)
+    
+    for ii in range(len(mcs_charac.keys())):
+      if 'CY_track' in mcs_charac[list(mcs_charac.keys())[ii]].keys():
+        LatLonTrack = mcs_charac[list(mcs_charac.keys())[ii]]['CY_track']
+        plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='blue')
+      if 'ACY_track' in mcs_charac[list(mcs_charac.keys())[ii]].keys():
+        LatLonTrack = mcs_charac[list(mcs_charac.keys())[ii]]['ACY_track']
+        plt.plot(LatLonTrack[:,1],LatLonTrack[:,0], transform=ccrs.PlateCarree(), lw=1, color='red')
+    
+    plt.title('Cyclone (blue) and anticyclone (red) masks at '+str(time_datetime[12])[:16])
+    
 
   ax.set_extent([-180, 180, -70, 70], crs=ccrs.PlateCarree())
   lon_ticks = np.linspace(-180, 180, 7)
@@ -123,15 +161,16 @@ def main():
   ax.set_ylabel('Latitude')
 
   # Add a colorbar to the plot
-  cbar = plt.colorbar(sc, ax=ax, orientation='vertical', shrink=0.7, label='MCS mask')
+  # q: how do i need to set the colorbar when using sc1 and sc2?
+  # a: use only one of them, as they share the same scale
+  cbar = plt.colorbar(sc, ax=ax, orientation='vertical', shrink=0.7, label= mode + ' mask')
   fig.subplots_adjust(left=0.02, right=0.96, top=0.97, bottom=0.03)
 
   # Set the title of the plot
-  plt.title('MCS tracks (black lines) and masks at '+str(time_datetime[12])[:16])
 
-  plt.savefig("MCS_tracks_masks_3d.png", bbox_inches='tight', dpi=600)
+  plt.savefig("tracks/"+mode+"_tracks_masks_3d.png", bbox_inches='tight', dpi=600)
 
-  print_gif = False
+  print_gif = True
   if print_gif:
     for tt in tqdm(range(len(time_datetime))):
 
