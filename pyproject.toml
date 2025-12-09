@@ -19,8 +19,12 @@ dependencies = [
     "scikit-image",
     "cartopy",
     "shapely",
-    "psutil"
+    "psutil",
+    "metpy",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/grafrap/Semester-thesis"
+
+[tool.setuptools.packages.find]
+include = ["moaap*"]
