@@ -1,0 +1,101 @@
+MOAAP_DEFAULTS = {
+    # 850 hPa winds & thermodynamics
+    "v850": None,        # 850 hPa zonal wind speed [m/s]
+    "u850": None,        # 850 hPa meridional wind speed [m/s]
+    "t850": None,        # 850 hPa air temperature [K]
+    "q850": None,        # 850 hPa mixing ratio [g/kg]
+
+    
+    "v200": None,        # 200 hPa zonal wind speed [m/s]
+    "u200": None,        # 200 hPa meridional wind speed [m/s]
+    
+    "z500": None,        # 500 hPa gepotential height [gpm]
+
+    "ivte": None,        # eastward integrated moisture transport [kg s-2 m-1]
+    "ivtn": None,        # nothward integrated moisture transport [kg s-2 m-1]
+    
+    # surface fields
+    "slp": None,         # sea level pressure [Pa]
+    "pr": None,          # surface precipitation [mm per time step]
+    "tb": None,          # brightness temperature [K]
+
+    # IO & metadata
+    "DataName": "",     # common grid name [str]
+    "OutputFolder": "", # output directory path [str]
+
+    # precipitation objects
+    "SmoothSigmaP": 0,   # Gaussian sigma for precipitation smoothing [pixels]
+    "Pthreshold": 2,     # precipitation threshold [mm/h]
+    "MinTimePR": 4,      # minimum precipitation feature lifetime [h]
+    "MinAreaPR": 5000,   # minimum precipitation feature area [km^2]
+
+    # moisture streams
+    "MinTimeMS": 9,            # minimum moisture stream lifetime [h]
+    "MinAreaMS": 100000,       # minimum moisture stream area [km^2]
+    "MinMSthreshold": 0.11,    # moisture stream threshold [g·m/g·s]
+
+    # cyclone tracking
+    "MinTimeCY": 12,        # minimum cyclone lifetime [h]
+    "MaxPresAnCY": -8,      # cyclone pressure anomaly threshold [hPa]
+    "breakup_cy": "watershed", # cyclone breakup method [str]
+
+    # anticyclone tracking
+    "MinTimeACY": 12,       # minimum anticyclone lifetime [h]
+    "MinPresAnACY": 6,      # anticyclone pressure anomaly threshold [hPa]
+
+    # frontal zones
+    "MinAreaFR": 50000,     # minimum frontal zone area [km^2]
+    "front_treshold": 1,    # frontal masking threshold [unitless]
+
+    # cloud tracking
+    "SmoothSigmaC": 0,      # Gaussian sigma for cloud smoothing [pixels]
+    "Cthreshold": 241,      # cloud brightness temp threshold [K]
+    "MinTimeC": 4,          # minimum cloud shield lifetime [h]
+    "MinAreaC": 40000,      # minimum cloud shield area [km^2]
+    "cloud_overshoot":235,  # overshoot threshold for cloud objects [K]
+
+    # atmospheric rivers (AR)
+    "IVTtrheshold": 500,    # IVT threshold for AR detection [kg m^-1 s^-1]
+    "MinTimeIVT": 12,       # minimum AR lifetime [h]
+    "breakup_ivt": "watershed", # AR breakup method [str]
+    "AR_MinLen": 2000,      # minimum AR length [km]
+    "AR_Lat": 20,           # AR centroid latitude threshold [°N]
+    "AR_width_lenght_ratio": 2, # AR length/width ratio [unitless]
+
+    # tropical cyclone detection
+    "TC_Pmin": 995,         # TC minimum pressure [hPa]
+    "TC_lat_genesis": 35,   # TC genesis latitude limit [°]
+    "TC_deltaT_core": 0,    # TC core temperature anomaly threshold [K]
+    "TC_T850min": 285,      # TC core temperature at 850 hPa [K]
+    "TC_minBT": 241,        # TC cloud-top brightness temp threshold [K]
+
+    # mesoscale convective systems (MCS)
+    "MCS_Minsize": 5000,    # MCS minimum precipitation area [km^2]
+    "MCS_minPR": 15,        # MCS precipitation threshold [mm/h]
+    "CL_MaxT": 215,         # MCS max cloud brightness temp [K]
+    "CL_Area": 40000,       # MCS minimum cloud area [km^2]
+    "MCS_minTime": 4,       # MCS minimum lifetime [h]
+    "analyze_mcs_history": False, # analyze MCS history [bool]
+
+    # jet streams
+    "js_min_anomaly": 37,    # jet stream anomaly threshold [m/s]
+    "MinTimeJS": 24,        # minimum jet lifetime [h]
+    "breakup_jet": "watershed", # jet breakup method [str]
+
+    # tropical waves
+    "tropwave_minTime": 48, # minimum tropical wave lifetime [h]
+    "breakup_mcs": "watershed", # MCS breakup method [str]
+
+    # 500 hPa cyclones/anticyclones
+    "z500_low_anom": -80,    # 500 hPa cyclone anomaly threshold [m]
+    "z500_high_anom": 70,    # 500 hPa anticyclone anomaly threshold [m]
+    "breakup_zcy": "watershed", # 500 hPa cyclone CA breakup method [str]
+
+    # equatorial waves
+    "er_th": -0.5,           # equatorial Rossby wave threshold [unitless]
+    "mrg_th": -3,          # mixed Rossby-gravity wave threshold [unitless]
+    "igw_th": -5,          # inertia-gravity wave threshold [unitless]
+    "kel_th": -5,          # Kelvin wave threshold [unitless]
+    "eig0_th": -4,         # n>=1 inertia-gravity wave threshold [unitless]
+    "breakup_tw": "watershed", # equatorial wave breakup method [str]
+}

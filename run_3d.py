@@ -7,7 +7,7 @@ from tqdm import tqdm
 from scipy.ndimage import center_of_mass
 
 
-from Tracking_Functions import moaap
+from moaap import moaap
 # @profile
 def main():
   object_names = [['cold clouds', '#737373', '-', 2],
