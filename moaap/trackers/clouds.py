@@ -6,7 +6,7 @@ from moaap.utils.segmentation import (
 )
 from moaap.utils.data_proc import smooth_uniform
 from moaap.utils.object_props import clean_up_objects, BreakupObjects, is_land
-from tqdm import tqdm # pyright: ignore[reportMissingModuleSource]
+from tqdm import tqdm
 
 
 #from memory_profiler import profile
