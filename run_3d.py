@@ -170,7 +170,7 @@ def main():
 
   plt.savefig("tracks/"+mode+"_tracks_masks_3d.png", bbox_inches='tight', dpi=600)
 
-  print_gif = True
+  print_gif = False
   if print_gif:
     for tt in tqdm(range(len(time_datetime))):
 
