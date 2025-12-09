@@ -64,15 +64,27 @@ from collections import defaultdict
 
 ### UTILITY Functions
 def calc_grid_distance_area(lon,lat):
-    """ Function to calculate grid parameters
-        It uses haversine function to approximate distances
-        It approximates the first row and column to the sencond
-        because coordinates of grid cell center are assumed
-        lat, lon: input coordinates(degrees) 2D [y,x] dimensions
-        dx: distance (m)
-        dy: distance (m)
-        area: area of grid cell (m2)
-        grid_distance: average grid distance over the domain (m)
+    """
+    Calculates grid cell dimensions and areas using the Haversine formula.
+    Approximates distances for a 2D grid of coordinates.
+
+    Parameters
+    ----------
+    lon : np.ndarray
+        2D array of longitudes [lat, lon].
+    lat : np.ndarray
+        2D array of latitudes [lat, lon].
+
+    Returns
+    -------
+    dx : np.ndarray
+        Zonal grid spacing (m).
+    dy : np.ndarray
+        Meridional grid spacing (m).
+    area : np.ndarray
+        Area of each grid cell (m^2).
+    grid_distance : float
+        Mean grid spacing over the domain (m).
     """
     dy = np.zeros(lon.shape)
     dx = np.zeros(lat.shape)
@@ -93,6 +105,22 @@ def calc_grid_distance_area(lon,lat):
 
 
 def radialdistance(lat1,lon1,lat2,lon2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees).
+
+    Parameters
+    ----------
+    lat1, lon1 : float
+        Coordinates of the first point in degrees.
+    lat2, lon2 : float
+        Coordinates of the second point in degrees.
+
+    Returns
+    -------
+    distance : float
+        Distance in kilometers.
+    """
     # Approximate radius of earth in km
     R = 6373.0
 
@@ -112,9 +140,21 @@ def radialdistance(lat1,lon1,lat2,lon2):
 
 def haversine(lon1, lat1, lon2, lat2):
     """
-    Calculate the great circle distance between two points
-    on the earth (specified in decimal degrees)
+    Calculate the great circle distance between two points on the earth.
+
+    Parameters
+    ----------
+    lon1, lat1 : float or np.ndarray
+        Coordinates of the first point(s) in degrees.
+    lon2, lat2 : float or np.ndarray
+        Coordinates of the second point(s) in degrees.
+
+    Returns
+    -------
+    km : float or np.ndarray
+        Distance in kilometers (assuming Earth radius of 6367 km).
     """
+
     # convert decimal degrees to radians
     lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
     # haversine formula
@@ -147,6 +187,37 @@ def calc_object_characteristics(
     min_tsteps=1,       # minimum lifetime in data timesteps
     split_merge = None  # dict containing information of splitting and merging of objects
     ):
+    """
+    Calculates comprehensive statistics for tracked objects, including size, 
+    intensity, velocity, and trajectory.
+
+    Parameters
+    ----------
+    var_objects : np.ndarray
+        3D labeled object array.
+    var_data : np.ndarray
+        Original data field used for detection (e.g., precipitation, pressure).
+    filename_out : str
+        Path to save the resulting dictionary as a pickle file.
+    times : np.ndarray
+        Array of datetime objects corresponding to the time axis.
+    Lat, Lon : np.ndarray
+        Latitude and Longitude grids.
+    grid_spacing : float
+        Average grid spacing (m).
+    grid_cell_area : np.ndarray
+        Area of grid cells.
+    min_tsteps : int, optional
+        Minimum timesteps an object must exist to be processed.
+    split_merge : dict, optional
+        Dictionary containing lineage info (split/merge history).
+
+    Returns
+    -------
+    objects_charac : dict
+        Dictionary where keys are object IDs and values are dictionaries containing:
+        'mass_center_loc', 'speed', 'tot', 'min', 'max', 'mean', 'size', 'times', 'track'.
+    """
     # ========
 
     num_objects = int(var_objects.max())
@@ -239,10 +310,21 @@ def calc_object_characteristics(
 
 def ConnectLon_on_timestep(object_indices):
     
-    """ This function connects objects over the date line on a time-step by
-        time-step basis, which makes it different from the ConnectLon function.
-        This function is needed when long-living objects are first split into
-        smaller objects using the BreakupObjects function.
+    """ 
+    This function connects objects over the date line on a time-step by
+    time-step basis, which makes it different from the ConnectLon function.
+    This function is needed when long-living objects are first split into
+    smaller objects using the BreakupObjects function.
+    
+    Parameters
+    ----------
+    object_indices : np.ndarray
+        Array of object indices from ndimage.find_objects
+    
+    Returns
+    -------
+    object_indices : np.ndarray
+        Updated array of object indices with connected objects across the date line.
     """
     
     for tt in range(object_indices.shape[0]):
@@ -520,6 +602,20 @@ def BreakupObjects(
 
 # from https://stackoverflow.com/questions/27779677/how-to-format-elapsed-time-from-seconds-to-hours-minutes-seconds-and-milliseco
 def timer(start,end):
+    """
+    Prints elapsed time in hh:mm:ss.ss format.
+    
+    Parameters
+    ----------
+    start : float
+        Start time in seconds.
+    end : float
+        End time in seconds.
+        
+    Returns
+    -------
+    None (output via print)
+    """
     hours, rem = divmod(end-start, 3600)
     minutes, seconds = divmod(rem, 60)
     print("        "+"{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
@@ -660,7 +756,12 @@ class KFfilter:
         self.frequency = frequency
 
     def decompose_antisymm(self):
-        """decompose attribute data to sym and antisym component
+        """
+        decompose attribute data to sym and antisym component.
+
+        Parameters
+        ----------
+        None
         """
         fftdata = self.fftdata
         nf, nlat, nk = fftdata.shape
@@ -677,6 +778,9 @@ class KFfilter:
            'fmin/fmax' --
 
            'kmin/kmax' --
+
+        Returns:
+              'mask' -- 2D boolean array (wavenumber, frequency).domain to be filterd
         """
         nf, nlat, nk = self.fftdata.shape
         knum = self.knum
@@ -704,6 +808,8 @@ class KFfilter:
         
            'mask' -- 2D boolean array (wavenumber, frequency).domain to be filterd
                      is False (True member to be zero)
+        Returns:
+              'filterd' -- filtered data in the original data space
         """
         wavenumber = self.wavenumber
         frequency = self.frequency
@@ -732,6 +838,9 @@ class KFfilter:
            'kmin/kmax' -- zonal wave number
 
            'hmin/hmax' --equivalent depth
+        
+        Returns:
+              'filterd' -- filtered data in the original data space
         """
         
         fftdata = self.fftdata.copy()
@@ -783,6 +892,9 @@ class KFfilter:
            'hmin/hmax' -- equivalent depth
 
            'n'         -- meridional mode number
+        
+        Returns:
+            'filterd' -- filtered data in the original data space
         """
 
         if n <=0 or n%1 !=0:
@@ -839,6 +951,9 @@ class KFfilter:
            'hmin/hmax' -- equivalent depth
 
            'n'         -- meridional mode number
+        
+        Returns:
+            'filterd' -- filtered data in the original data space
         """
         if n <=0 or n%1 !=0:
             print("n must be n>=1 integer. for n=0 EIG you must use eig0filter method.")
@@ -891,6 +1006,9 @@ class KFfilter:
                           eastward
 
            'hmin/hmax' -- equivalent depth
+
+        Returns:
+            'filterd' -- filtered data in the original data space
         """
         if kmin < 0:
             print("kmin must be positive. if k < 0, this mode is MRG")
@@ -943,6 +1061,9 @@ class KFfilter:
                           eastward
 
            'hmin/hmax' -- equivalent depth
+
+        Returns:
+            'filterd' -- filtered data in the original data space
         """
         if kmax > 0:
             print("kmax must be negative. if k > 0, this mode is the same as n=0 EIG")
@@ -993,6 +1114,9 @@ class KFfilter:
 
            'kmin/kmax' -- zonal wave number. negative is westward, positive is
                           eastward
+        
+        Returns:
+            'filterd' -- filtered data in the original data space
         """
         fftdata = self.fftdata.copy()
         knum = self.knum
@@ -1026,6 +1150,26 @@ class KFfilter:
 
 # from - https://stackoverflow.com/questions/19412462/getting-distance-between-two-points-based-on-latitude-longitude
 def DistanceCoord(Lo1,La1,Lo2,La2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    
+    Parameters
+    ----------
+    Lo1 : float
+        Longitude of point 1.
+    La1 : float
+        Latitude of point 1.
+    Lo2 : float
+        Longitude of point 2.
+    La2 : float
+        Latitude of point 2.
+
+    Returns
+    -------
+    distance : float
+        Distance between point 1 and point 2 in kilometers.
+    """
 
     from math import sin, cos, sqrt, atan2, radians
 
@@ -1137,8 +1281,27 @@ def clean_up_objects(DATA,
                      dT,
                      min_tsteps = 0,
                      obj_splitmerge = None):
-    """ Function to remove objects that are too short lived
-        and to numerrate the object from 1...N
+    """ 
+    Function to remove objects that are too short lived
+    and to numerrate the object from 1...N
+
+    Parameters
+    ----------
+    DATA : np.ndarray
+        Labeled object array [time, lat, lon].
+    dT : int
+        Time step (hours).
+    min_tsteps : int
+        Minimum lifetime of objects to keep (hours).
+    obj_splitmerge : dict, optional
+        Dictionary tracking object splits/merges. Default is None.
+
+    Returns
+    -------
+    objectsTMP : np.ndarray
+        Cleaned labeled object array.
+    obj_splitmerge_clean : dict
+        Updated split/merge history dictionary.
     """
     
     object_indices = ndimage.find_objects(DATA)
@@ -1193,15 +1356,25 @@ def clean_up_objects(DATA,
 
 
 
-def smooth_uniform(
-            data,       # matrix to smooth [time, lat, lon]
-            t_smoot,    # temporal window length [time steps]
-            xy_smooth,  # spatial window [grid cells]
-            ):
-    '''
-    Function to spatiotemporal smooth atmospheric fiels even 
-    if they contain missing data
-    '''
+def smooth_uniform(data, t_smoot, xy_smooth):
+    """
+    Applies a uniform (box) smoothing filter in time and space, handling NaNs 
+    by separating valid data from masks.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Input array [time, lat, lon].
+    t_smoot : int
+        Size of the smoothing window in the time dimension.
+    xy_smooth : int
+        Size of the smoothing window in spatial dimensions.
+
+    Returns
+    -------
+    smooth_data : np.ndarray
+        The smoothed data array.
+    """
     if np.isnan(data).any() == False:
         smooth_data = ndimage.uniform_filter(data, 
                                       size=[int(t_smoot),
@@ -1226,18 +1399,41 @@ def smooth_uniform(
 
 
 def jetstream_tracking(
-                      uv200,            # wind speed at 200 hPa [m/s] - [time,lat,lon]
-                      js_min_anomaly,   # minimum anomaly to indeitify jet objects [m/s]
-                      MinTimeJS,        # minimum lifetime of jet objects [h]
-                      dT,               # data time step [h]
+                      uv200,            
+                      js_min_anomaly,   
+                      MinTimeJS,        
+                      dT,               
                       Gridspacing,
                       connectLon,
                       breakup = 'breakup',
                       ):
-    
-    '''
-    function to track jetstream objects
-    '''
+    """
+    Identifies and tracks Jet Stream objects based on 200hPa wind speed anomalies.
+
+    Parameters
+    ----------
+    uv200 : np.ndarray
+        Wind speed at 200 hPa [m/s].
+    js_min_anomaly : float
+        Minimum wind speed anomaly to define a jet object.
+    MinTimeJS : int
+        Minimum lifetime (hours).
+    dT : int
+        Time step (hours).
+    Gridspacing : float
+        Grid spacing (m).
+    connectLon : int
+        1 to connect across the date line.
+    breakup : str
+        Method to split merged objects ('breakup' or 'watershed').
+
+    Returns
+    -------
+    jet_objects : np.ndarray
+        Labeled jet stream objects.
+    object_split : dict
+        History of object splitting/merging.
+    """
 
     uv200_smooth = smooth_uniform(uv200,
                              1,
@@ -1294,7 +1490,7 @@ def jetstream_tracking(
 
 
 def ar_850hpa_tracking(
-                    VapTrans,        # 850 hPa moisture flux [g/g m/s] - [time,lat,lon]
+                    VapTrans,        
                     MinMSthreshold,
                     MinTimeMS,
                     MinAreaMS,
@@ -1304,10 +1500,33 @@ def ar_850hpa_tracking(
                     Gridspacing,
                     breakup = "watershed"
                 ):
-    
-    '''
-    function to track moisture streams and ARs according to the 850 hPa moisture flux
-    '''
+    """
+    Tracks Moisture Streams (MS) based on 850 hPa moisture flux.
+
+    Parameters
+    ----------
+    VapTrans : np.ndarray
+        Moisture flux magnitude [g/kg * m/s].
+    MinMSthreshold : float
+        Threshold for detection.
+    MinTimeMS : int
+        Minimum lifetime (hours).
+    MinAreaMS : float
+        Minimum area (km^2).
+    Area : np.ndarray
+        Grid cell area array.
+    dT : int
+        Time step (hours).
+    connectLon : int
+        1 to connect across date line.
+    breakup : str
+        Method for object separation.
+
+    Returns
+    -------
+    MS_objects : np.ndarray
+        Labeled moisture stream objects.
+    """
     
     potARs = (VapTrans > MinMSthreshold)
     rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
@@ -1598,11 +1817,11 @@ def cy_acy_psl_tracking(
     slp : np.ndarray
         Sea Level Pressure data [Pa].
     MaxPresAnCY : float
-        Maximum anomaly threshold for Cyclones (negative value, e.g., -8 hPa).
+        Maximum anomaly threshold for Cyclones.
     MinTimeCY : int
         Minimum lifetime for Cyclones (hours).
     MinPresAnACY : float
-        Minimum anomaly threshold for Anticyclones (positive value, e.g., 6 hPa).
+        Minimum anomaly threshold for Anticyclones.
     MinTimeACY : int
         Minimum lifetime for Anticyclones (hours).
     dT : int
@@ -1733,6 +1952,35 @@ def cy_acy_z500_tracking(
                     z500_high_anom = 70,
                     breakup = 'breakup',
                     ):
+    """
+    Tracks mid-tropospheric cyclones and anticyclones based on Z500 anomalies.
+
+    Parameters
+    ----------
+    z500 : np.ndarray
+        Geopotential height at 500 hPa [m or gpm].
+    MinTimeCY : int
+        Minimum lifetime (hours).
+    dT : int
+        Time step (hours).
+    Gridspacing : float
+        Grid spacing (m).
+    connectLon : int
+        1 to connect across date line.
+    z500_low_anom : float
+        Anomaly threshold for cyclones (e.g., -80 m).
+    z500_high_anom : float
+        Anomaly threshold for anticyclones (e.g., +70 m).
+    breakup : str
+        Method for object separation.
+
+    Returns
+    -------
+    cy_z500_objects : np.ndarray
+        Labeled Z500 cyclone objects.
+    acy_z500_objects : np.ndarray
+        Labeled Z500 anticyclone objects.
+    """
 
     rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
     z500 = z500 / 9.81
@@ -2037,9 +2285,57 @@ def mcs_tb_tracking(
                     Area,
                     connectLon,
                     Gridspacing,
-                    breakup = 'watershed',  # method for breaking up connected objects [watershed, breakup]
+                    breakup = 'watershed', 
                     analyze_mcs_history = False,
                    ):
+    """
+    Tracks Mesoscale Convective Systems (MCS) using Brightness Temperature (Tb).
+    Verifies candidates using precipitation criteria.
+
+    Parameters
+    ----------
+    tb : np.ndarray
+        Brightness temperature [K].
+    pr : np.ndarray
+        Precipitation [mm/h].
+    SmoothSigmaC : float
+        Smoothing factor for Tb.
+    Pthreshold : float
+        Precipitation threshold.
+    CL_Area, CL_MaxT : float
+        Cloud shield area and max temp thresholds.
+    Cthreshold : float
+        Tb threshold for initial cloud detection.
+    MinAreaC : float
+        Minimum cloud area for initial detection.
+    MinTimeC : int
+        Minimum cloud duration.
+    MCS_minPR : float
+        Minimum peak precipitation for MCS verification.
+    MCS_minTime : int
+        Minimum MCS duration.
+    MCS_Minsize : float
+        Minimum precipitation area for MCS verification.
+    dT : int
+        Data timestep (hours).
+    Area : np.ndarray
+        Grid cell area array.
+    connectLon : int
+        1 to connect objects across date line.
+    Gridspacing : float
+        Grid spacing in meters.
+    breakup : str
+        Method to handle merging objects ('breakup' or 'watershed').
+    analyze_mcs_history : bool
+        If True, computes watershed merge/split history.
+
+    Returns
+    -------
+    MCS_objects_Tb : np.ndarray
+        Labeled MCS objects based on Tb.
+    C_objects : np.ndarray
+        Labeled cloud objects (all clouds, not just MCS).
+    """
 
     print('        track  clouds')
     rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
@@ -2210,17 +2506,19 @@ def cloud_tracking(
     Tracks clouds from hourly or sub-hourly brightness temperature data.
     Calculates cloud statistics, including their precipitation (pr) properties if pr is provided.
 
-    Args:
+    Parameters
+    ----------
         tb (float): brightness temperature of dimension [time,lat,lon]
         connectLon (bol): 1 means that clouds should be connected accross date line
         Gridspacing (float): average horizontal grid spacing in [m]
         tb_threshold (float, optional): tb threshold to define cloud mask. Default is "241".
-        cloud_overshoot (float, optional): tb threshold to find local minima for watershedding. Default is "235".
+        tb_overshoot (float, optional): tb threshold to find local minima for watershedding. Default is "235".
         erosion_disk (float, optional): reduction of next timestep mask for temporal connection of features. Larger values result in more erosion and can remove smaller clouds. The default is "0.15".
         min_dist (int, optional): minimum distance in grid cells between two tb minima (overshoots). The default is "8".
 
-    Returns:
-        float: The product of `a` and `b`.
+    Returns
+    -------
+        cloud_objects (np.ndarray): labeled cloud objects of dimension [time,lat,lon]
     """
 
     CL_Area = min_dist * Gridspacing
@@ -2292,7 +2590,7 @@ def tc_tracking(CY_objects,
     uv850, uv200 : np.ndarray
         Wind speed magnitudes at 850hPa and 200hPa.
     TC_lat_genesis : float
-        Maximum latitude for TC genesis (e.g., 35 degrees).
+        Maximum latitude for TC genesis.
     TC_t_core : float
         Minimum core temperature threshold.
 
@@ -2503,8 +2801,19 @@ import numpy as np
 
 def temporal_tukey_window(nt, alpha=0.1):
     """
-    nt    : number of time steps
-    alpha : fraction of the window length to taper (e.g. 0.1 → 10% on each end)
+    Create a Tukey window for temporal tapering.
+
+    Parameters
+    ----------
+    nt    : int
+        number of time steps
+    alpha : float
+        fraction of the window length to taper (e.g. 0.1 → 10% on each end)
+
+    Returns
+    -------
+    w : np.ndarray
+        Tukey window of length nt
     """
     # nt points from 0 to 1
     n = np.arange(nt)
@@ -2524,19 +2833,35 @@ def track_tropwaves_tb(tb,
                    connectLon,
                    dT,
                    Gridspacing,
-                   er_th = -0.5,  # threshold for Rossby Waves
-                   mrg_th = -3, # threshold for mixed Rossby Gravity Waves
-                   igw_th = -5,  # threshold for inertia gravity waves
-                   kel_th = -5,  # threshold for Kelvin waves
-                   eig0_th = -4, # threshold for n>=1 Inertio Gravirt Wave
+                   er_th = 0.05,  
+                   mrg_th = 0.05, 
+                   igw_th = 0.2,  
+                   kel_th = 0.1,  
+                   eig0_th = 0.1, 
                    breakup = 'watershed',
                    ):
-    """ Identifies and tracks four types of tropical waves from
-        Hourly brightness temperature data:
-        Mixed Rossby Gravity Waves
-        n>=0 Eastward Inertial Gravity Wave
-        Kelvin Waves
-        and n>=1 Inertio Gravirt Wave
+    """
+    Identifies and tracks tropical waves using wavenumber-frequency filtering 
+    (Wheeler & Kiladis method) applied to precipitation data.
+
+    Parameters
+    ----------
+    pr : np.ndarray
+        Precipitation data.
+    Lat : np.ndarray
+        Latitude grid.
+    dT : int
+        Time step (hours).
+    er_th, mrg_th, igw_th, kel_th, eig0_th : float
+        Amplitude thresholds for identifying Equatorial Rossby, Mixed Rossby Gravity, 
+        Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.
+    breakup : str
+        Method to handle merging objects ('breakup' or 'watershed').
+
+    Returns
+    -------
+    mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects : np.ndarray
+        Labeled object arrays for each wave type.
     """
 
     from Tracking_Functions import interpolate_numba
@@ -2675,9 +3000,24 @@ def track_tropwaves_tb(tb,
 
 def connect_3d_objects(labels, min_tsteps, dT):
     """
-    labels : np.ndarray, shape (T,H,W), int watershed labels per time-slice
-    returns objects_watershed of same shape, with labels tracked over time.
+    Links 2D labeled slices into 3D objects based on maximum spatial overlap 
+    between consecutive time steps.
+
+    Parameters
+    ----------
+    labels : np.ndarray
+        3D array where each [t, :, :] slice contains independent 2D labels.
+    min_tsteps : int
+        Minimum duration to keep an object.
+    dT : int
+        Time step.
+
+    Returns
+    -------
+    objects_watershed : np.ndarray
+        3D array with consistent object IDs tracked over time.
     """
+
     T, H, W = labels.shape
     objects_watershed = np.zeros_like(labels, dtype=int)
     objects_watershed[0] = labels[0]
@@ -2739,10 +3079,6 @@ def connect_3d_objects(labels, min_tsteps, dT):
 
 #from memory_profiler import profile
 # @profile_
-# This function performs watershedding on 2D anomaly fields and
-# succeeds an older version of this function (watershed_2d_overlap_temp_discontin).
-# This function uses spatially reduced watersheds from the previous time step as seed for the
-# current time step, which improves temporal consistency of features.
 def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array]
                          object_threshold, # float to create binary object mast [float]
                          max_treshold, # value for identifying max. points for spreading [float]
@@ -2752,7 +3088,34 @@ def watershed_2d_overlap(data, # 3D matrix with data for watershedding [np.array
                          connectLon = 0,  # do we have to track features over the date line?
                          extend_size_ratio = 0.25, # if connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs
                          erosion_disk = 3.5): 
+    """
+    This function performs watershedding on 2D anomaly fields over time and connects
+    the resulting 2D features into 3D objects based on maximum overlap.
+    This function uses spatially reduced watersheds from the previous time step as seed for the
+    current time step, which improves temporal consistency of features.
 
+    Parameters
+    ----------
+    data : np.ndarray
+        3D array of data for watershedding [time, lat, lon].
+    object_threshold : float
+        Threshold to create binary object mask.
+    max_treshold : float
+        Threshold for identifying maximum points for spreading.
+    min_dist : int
+        Minimum distance (in grid cells) between maximum points.
+    dT : int
+        Time interval in hours.
+    mintime : int, optional
+        Minimum time an object has to exist in dT. Default is 24.
+    connectLon : int, optional
+        Whether to track features over the date line (1 for yes, 0 for no). Default is 0.
+    extend_size_ratio : float, optional
+        If connectLon = 1, this sets the ratio of the zonal domain added to the watershedding.
+        This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs. Default is 0.25.
+    erosion_disk : float, optional
+        Disk size for erosion of previous timestep mask to improve temporal connection of features. Default is 3.5.
+    """
     from scipy import ndimage as ndi
     from skimage.feature import peak_local_max
     from skimage.segmentation import watershed
@@ -3722,6 +4085,24 @@ def _merge_using_halos(merged_array, chunk_results, chunk_offsets, lat_chunks, l
     Merges objects based on 3D overlap in the halo regions.
     overlap_match_threshold: Fraction of the halo object that must overlap 
                              with the core object to trigger a merge.
+    
+    Parameters
+    ----------
+    merged_array : np.ndarray
+        The merged array with core regions placed.
+    chunk_results : list
+        List of chunk result dictionaries.
+    chunk_offsets : dict
+        Mapping of (chunk_i, chunk_j) to label offset.
+    lat_chunks, lon_chunks : list
+        Boundaries used for chunking.
+    overlap_match_threshold : float
+        Minimum fraction of halo object overlapping core object to consider a match.
+
+    Returns
+    -------
+    np.ndarray
+        The merged array with updated labels after merging.
     """
     parent = {}
     def find(i):

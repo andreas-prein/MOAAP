@@ -1120,8 +1120,23 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
 
 def calculate_area_objects(objects_id_pr,object_indices,grid_cell_area):
 
-    """ Calculates the area of each object during their lifetime
-        one area value for each object and each timestep it exist
+    """
+    Calculates the spatial area of each object for every timestep it exists.
+
+    Parameters
+    ----------
+    objects_id_pr : np.ndarray
+        3D array of labeled objects [time, lat, lon].
+    object_indices : list of slices
+        Output from ndimage.find_objects, containing the bounding box slices.
+    grid_cell_area : np.ndarray
+        2D array of grid cell areas [lat, lon].
+
+    Returns
+    -------
+    area_objects : np.ndarray
+        Array of lists, where each list contains the area (m^2) of a specific object 
+        for each timestep of its life.
     """
     num_objects = len(object_indices)
     area_objects = np.array(
@@ -1144,13 +1159,28 @@ def remove_small_short_objects(objects_id,
                                min_time,
                                DT,
                                objects = None):
-    """Checks if the object is large enough during enough time steps
-        and removes objects that do not meet this condition
-        area_object: array of lists with areas of each objects during their lifetime [objects[tsteps]]
-        min_area: minimum area of the object (km2)
-        min_time: minimum time with the object large enough (hours)
-        DT: time step of input data [hours]
-        objects: object slices - speeds up processing if provided
+    """
+    Filters out objects that do not meet minimum area or lifetime requirements.
+
+    Parameters
+    ----------
+    objects_id : np.ndarray
+        3D array of labeled objects.
+    area_objects : list
+        List of areas per timestep for each object (from calculate_area_objects).
+    min_area : float
+        Minimum area threshold (km^2).
+    min_time : int
+        Minimum lifetime threshold (hours).
+    DT : int
+        Time resolution of data (hours).
+    objects : list, optional
+        Pre-calculated object slices to speed up processing.
+
+    Returns
+    -------
+    sel_objects : np.ndarray
+        New 3D array containing only the objects that passed the filter, re-labeled.
     """
 
     #create final object array
@@ -1315,6 +1345,40 @@ def Feature_Calculation(DATA_all,    # np array that contains [time,lat,lon,Vari
                         Lat,         # Latitude coordinates
                         dT,          # time step in hours
                         Gridspacing):# grid spacing in m
+    """
+    Computes derived meteorological fields from raw ERA5 variables for tracking.
+
+    Parameters
+    ----------
+    DATA_all : np.ndarray
+        4D array [time, lat, lon, variable_index].
+    Variables : list
+        List of variable names corresponding to the last dimension of DATA_all.
+    dLon, dLat : np.ndarray
+        Grid spacing arrays.
+    Lat : np.ndarray
+        Latitude coordinates.
+    dT : int
+        Time step (hours).
+    Gridspacing : float
+        Average grid spacing (m).
+
+    Returns
+    -------
+    Pressure_anomaly : np.ndarray (bool)
+        Mask of low pressure systems.
+    Frontal_Diagnostic : np.ndarray
+        Frontal parameter (F*).
+    VapTrans : np.ndarray
+        Vapor transport magnitude.
+    SLP_Anomaly : np.ndarray
+        Smoothed Sea Level Pressure anomaly.
+    vgrad : np.ndarray
+        Temperature gradient.
+    HighPressure_annomaly : np.ndarray (bool)
+        Mask of high pressure systems.
+    """
+
     from scipy import ndimage
     
     
@@ -1359,13 +1423,28 @@ def Feature_Calculation(DATA_all,    # np array that contains [time,lat,lon,Vari
     return Pressure_anomaly, Frontal_Diagnostic, VapTrans, SLP_Anomaly, vgrad, HighPressure_annomaly
 
 
-def ReadERA5(TIME,      # Time period to read (this program will read hourly data)
-            var,        # Variable name. See list below for defined variables
-            PL,         # Pressure level of variable
-            REGION):    # Region to read. Format must be <[N,E,S,W]> in degrees from -180 to +180 longitude
-    # ----------
-    # This function reads hourly ERA5 data for one variable from NCAR's RDA archive in a region of interest.
-    # ----------
+def ReadERA5(TIME, var, PL, REGION):
+    """
+    Reads hourly ERA5 data for a specific variable and region from NCAR RDA archives.
+
+    Parameters
+    ----------
+    TIME : list or pd.DatetimeIndex
+        Time range to read.
+    var : str
+        Variable name (e.g., 'U', 'V', 'T', 'Q', 'SLP').
+    PL : int
+        Pressure level (hPa). Set to -1 for surface variables.
+    REGION : list
+        Bounding box [North, East, South, West] in degrees.
+
+    Returns
+    -------
+    DataAll : np.ndarray
+        3D array [time, lat, lon] of the requested variable.
+    Lat, Lon : np.ndarray
+        Latitude and Longitude grids for the extracted region.
+    """
 
     DayStart = datetime.datetime(TIME[0].year, TIME[0].month, TIME[0].day,TIME[0].hour)
     DayStop = datetime.datetime(TIME[-1].year, TIME[-1].month, TIME[-1].day,TIME[-1].hour)
