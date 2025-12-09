@@ -4742,8 +4742,8 @@ def watershed_3d_overlap_parallel(
     mintime=24,
     connectLon=0,
     extend_size_ratio=0.25,
-    n_chunks_lat=2,
-    n_chunks_lon=2,
+    n_chunks_lat=1,
+    n_chunks_lon=1,
     overlap_cells=None
 ):
     """
@@ -5000,10 +5000,25 @@ def _process_watershed_chunk(
         compactness=0
     )
     
-    # Extract core region (without overlap)
-    core_lat_slice = slice(lat_core_start - lat_start, lat_core_end - lat_start)
-    core_lon_slice = slice(lon_core_start - lon_start, lon_core_end - lon_start)
-    core_result = watershed_result[:, core_lat_slice, core_lon_slice]
+    # Indices relative to the chunk array
+    lat_start, lat_end, lat_core_start, lat_core_end = lat_bounds
+    lon_start, lon_end, lon_core_start, lon_core_end = lon_bounds
+    
+    rel_lat_core_start = lat_core_start - lat_start
+    rel_lat_core_end = lat_core_end - lat_start
+    rel_lon_core_start = lon_core_start - lon_start
+    rel_lon_core_end = lon_core_end - lon_start
+
+    # Extract Core (for final image)
+    core_result = watershed_result[:, rel_lat_core_start:rel_lat_core_end, rel_lon_core_start:rel_lon_core_end]
+    
+    # Extract Halos (for merging)
+    # We grab the labels that extend BEYOND the core into the overlap region
+    halo_lat_upper = watershed_result[:, rel_lat_core_end:, rel_lon_core_start:rel_lon_core_end]
+    halo_lon_upper = watershed_result[:, rel_lat_core_start:rel_lat_core_end, rel_lon_core_end:]
+    
+    # Note: We only strictly need the "Upper" (Right/Bottom) halos if we process 
+    # boundaries in a fixed order (e.g. Chunk i vs Chunk i+1).
     
     return {
         'chunk_i': chunk_i,
@@ -5013,18 +5028,21 @@ def _process_watershed_chunk(
         'lon_core_start': lon_core_start,
         'lon_core_end': lon_core_end,
         'labels': core_result,
+        'halo_lat_upper': halo_lat_upper, # Overlap into the chunk to the South (or North depending on index)
+        'halo_lon_upper': halo_lon_upper, # Overlap into the chunk to the East
         'max_label': watershed_result.max()
     }
 
 
 def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks):
     """
-    Merge watershed results from all chunks and relabel consistently.
+    Merges results from parallel watershed processing of spatial chunks.
+    Stitches core regions and resolves boundary objects using halo overlaps.
 
     Parameters
     ----------
-    chunk_results : list of dicts
-        Each dict contains chunk indices, boundaries, and labeled data
+    chunk_results : list
+        List of dictionaries containing 'labels', 'halo_lat_upper', etc. from worker processes.
     output_shape : tuple
         Shape of the final merged output (nt, nlat, nlon)
     lat_chunks : list of tuples
@@ -5040,192 +5058,139 @@ def _merge_watershed_chunks(chunk_results, output_shape, lat_chunks, lon_chunks)
     nt, nlat, nlon = output_shape
     merged = np.zeros((nt, nlat, nlon), dtype=int)
     
-    # Sort chunks by position
+    # Sort chunks
     chunk_results.sort(key=lambda x: (x['chunk_i'], x['chunk_j']))
     
-    # place all chunks and track overlaps at boundaries
-    next_label = 1
-    
+    # 1. Place Cores into Merged Array AND Offset Labels
+    next_label = 0
+    # We need to track the offset for each chunk to adjust the halo labels later
+    chunk_offsets = {} 
+
     for result in chunk_results:
-        # Extract chunk info
-        lat_start = result['lat_core_start']
-        lat_end = result['lat_core_end']
-        lon_start = result['lon_core_start']
-        lon_end = result['lon_core_end']
-        chunk_labels = result['labels']
-        maximal_label = result['max_label']
-        # Offset labels to ensure uniqueness
-        chunk_labels[chunk_labels > 0] += next_label - 1
-        # Update next_label to avoid label collisions
-        next_label += maximal_label
+        idx = (result['chunk_i'], result['chunk_j'])
         
-        # Place chunk into merged array
-        merged[:, lat_start:lat_end, lon_start:lon_end] = chunk_labels
+        # Offset Core Labels
+        core_labels = result['labels']
+        mask = core_labels > 0
+        core_labels[mask] += next_label
+        
+        # Store offset for this chunk
+        chunk_offsets[idx] = next_label
+        
+        # Place into global array
+        merged[:, result['lat_core_start']:result['lat_core_end'], 
+               result['lon_core_start']:result['lon_core_end']] = core_labels
+        
+        # Update counter
+        next_label += result['max_label']
+
+    # 2. Merge using Halos
+    # We update the 'merged' array in-place (re-labeling)
+    merged = _merge_using_halos(merged, chunk_results, chunk_offsets, lat_chunks, lon_chunks)
     
-    # merge objects at chunk boundaries
-    merged = _merge_boundary_objects(merged, lat_chunks, lon_chunks)
-    print("    Final number of objects: ", np.unique(merged[merged > 0]).size)
-    
-    # Relabel to consecutive integers
+    # 3. Final cleanup (make labels consecutive)
     merged = _relabel_consecutive(merged)
     
     return merged
 
-def _merge_boundary_objects(labeled_array, lat_chunks, lon_chunks, overlap_threshold=0.25, min_pixels=5, fragment_volume_threshold=50):
+def _merge_using_halos(merged_array, chunk_results, chunk_offsets, lat_chunks, lon_chunks, overlap_match_threshold=0.5):
     """
-    Merge objects across chunk boundaries using a Volume-Aware Strategy.
-    
-    Parameters
-    ----------
-    labeled_array : np.ndarray
-        3D array of labeled data (nt, nlat, nlon).
-    lat_chunks : list of tuples
-        Latitude chunk boundaries.
-    lon_chunks : list of tuples
-        Longitude chunk boundaries.
-    overlap_threshold : float
-        For LARGE objects: The connection must account for at least this fraction 
-        of the object's visible boundary at the cut to be considered for merging.
-    min_pixels : int
-        For LARGE objects: Minimum absolute pixels required to merge.
-    fragment_volume_threshold : int
-        The Global Volume threshold. Objects smaller than this (e.g., < 50 voxels total)
-        are considered "fragments/tips" and use relaxed merging rules. 
-        Objects larger than this are considered "systems" and use strict rules.
-
-    Returns
-    -------
-    np.ndarray
-        The labeled array with merged objects.
+    Merges objects based on 3D overlap in the halo regions.
+    overlap_match_threshold: Fraction of the halo object that must overlap 
+                             with the core object to trigger a merge.
     """
-    
-    # 0. Pre-calculate Global Object Volumes
-    # We need to know if an object is a "tiny tip" or a "massive storm" before deciding.
-    # We use ravel to flatten the 3D array and bincount to get pixel counts per label.
-    # Max label might be large, so we ensure the array is big enough.
-    flat_labels = labeled_array.ravel()
-    max_label = 0
-    if flat_labels.size > 0:
-        max_label = flat_labels.max()
-        
-    if max_label == 0:
-        return labeled_array
-
-    # object_volumes[i] = total number of pixels for label i
-    object_volumes = np.bincount(flat_labels)
-
-    # 1. Initialize Adjacency Graph
-    # Format: {label_id: {neighbor_id: overlap_count}}
-    adj_graph = {} 
-    label_boundary_totals = {}
-
-    def add_connection(l1, l2, count):
-        # Update l1 -> l2
-        if l1 not in adj_graph: adj_graph[l1] = {}
-        adj_graph[l1][l2] = adj_graph[l1].get(l2, 0) + count
-        
-        # Update l2 -> l1
-        if l2 not in adj_graph: adj_graph[l2] = {}
-        adj_graph[l2][l1] = adj_graph[l2].get(l1, 0) + count
-
-        # Track total boundary exposure at the cut for ratios
-        label_boundary_totals[l1] = label_boundary_totals.get(l1, 0) + count
-        label_boundary_totals[l2] = label_boundary_totals.get(l2, 0) + count
-
-    # 2. Collect Statistics from Latitude Boundaries
-    if len(lat_chunks) > 1:
-        for i in range(len(lat_chunks) - 1):
-            boundary_idx = lat_chunks[i][3] # lat_core_end
-            if boundary_idx < labeled_array.shape[1]:
-                slice_left = labeled_array[:, boundary_idx - 1, :]
-                slice_right = labeled_array[:, boundary_idx, :]
-                _scan_boundary_face(slice_left, slice_right, add_connection)
-
-    # 3. Collect Statistics from Longitude Boundaries
-    if len(lon_chunks) > 1:
-        for j in range(len(lon_chunks) - 1):
-            boundary_idx = lon_chunks[j][3] # lon_core_end
-            if boundary_idx < labeled_array.shape[2]:
-                slice_left = labeled_array[:, :, boundary_idx - 1]
-                slice_right = labeled_array[:, :, boundary_idx]
-                _scan_boundary_face(slice_left, slice_right, add_connection)
-
-    # 4. Make Merge Decisions (Union-Find)
     parent = {}
-    
     def find(i):
         if i not in parent: parent[i] = i
         if parent[i] != i: parent[i] = find(parent[i])
         return parent[i]
-
     def union(i, j):
-        root_i = find(i)
-        root_j = find(j)
-        if root_i != root_j:
-            parent[root_i] = root_j
+        root_i = find(i); root_j = find(j)
+        if root_i != root_j: parent[root_i] = root_j
 
-    # Iterate over every object found on the boundaries
-    for label, neighbors in adj_graph.items():
-        if not neighbors:
-            continue
-            
-        # Find the neighbor with the MAXIMUM overlap
-        best_neighbor = max(neighbors, key=neighbors.get)
-        max_overlap_count = neighbors[best_neighbor]
-        
-        # Data needed for decision
-        boundary_exposure = label_boundary_totals[label] # Pixels touching the cut
-        total_volume = object_volumes[label]             # Global pixels (Total Size)
-
-        # --- DECISION LOGIC ---
-
-        # PATH A: The object is a "Small Fragment" (e.g., a sliced tip)
-        if total_volume < fragment_volume_threshold:
-            # Logic: If it's tiny, it's likely noise or a tip. 
-            # Merge if a significant portion of this tiny object sits on the boundary.
-            # (i.e., don't merge if it's a small isolated dot that barely touches the line)
-            
-            # If > 25% of the fragment's total mass is on the interface, snap it.
-            connectivity_ratio = max_overlap_count / total_volume
-            if connectivity_ratio > 0.25:
-                union(label, best_neighbor)
-
-        # PATH B: The object is a "Large System" (e.g., a full storm)
-        else:
-            # Logic: Large objects should NOT merge unless they are clearly the same object.
-            # We require the boundary connection to be structurally significant.
-            
-            # 1. Absolute size check (prevent single-pixel bridges)
-            if max_overlap_count < min_pixels:
-                continue
-                
-            # 2. Relative size check (The "Kissing" Check)
-            # If two huge storms touch, the boundary pixels will be small compared to 
-            # the total length of the cut they occupy.
-            # We calculate: (Shared Connection) / (Total Exposed Boundary at Cut)
-            
-            dominance_at_boundary = max_overlap_count / boundary_exposure
-            
-            if dominance_at_boundary < overlap_threshold:
-                continue
-
-            # If passed strict checks, merge
-            union(label, best_neighbor)
-
-    # 5. Relabel the Array
-    unique_labels = np.unique(labeled_array[labeled_array > 0])
-    if len(unique_labels) == 0:
-        return labeled_array
-
-    max_val = unique_labels.max()
-    mapping = np.arange(max_val + 1, dtype=labeled_array.dtype)
+    # Organize chunks by grid coordinate for easy lookup
+    grid_map = {(r['chunk_i'], r['chunk_j']): r for r in chunk_results}
     
+    # Helper to check overlap between a Halo slice and a Core slice
+    def check_overlap(halo_slice_data, core_slice_global, offset_halo):
+        # halo_slice_data: Raw labels from the chunk's halo
+        # core_slice_global: Global labels from the merged array (already offset)
+        # offset_halo: Integer to adjust halo labels to global IDs
+        
+        mask = (halo_slice_data > 0) & (core_slice_global > 0)
+        if not np.any(mask): return
+
+        # Adjust halo labels to match the global ID space
+        halo_ids = halo_slice_data[mask] + offset_halo
+        core_ids = core_slice_global[mask]
+
+        # Count overlaps: (Halo_ID, Core_ID) -> Count
+        pairs = np.stack((halo_ids, core_ids), axis=1)
+        unique_pairs, counts = np.unique(pairs, axis=0, return_counts=True)
+        
+        # Also need total size of the Halo Object in this slice to calculate ratio
+        halo_counts = np.bincount(halo_ids, minlength=halo_ids.max()+1)
+
+        for (h_id, c_id), count in zip(unique_pairs, counts):
+            # Criterion:
+            # Does the halo object map significantly to the core object?
+            # Ratio = (Intersection Area) / (Halo Object Area in Overlap)
+            
+            total_halo_pixels = halo_counts[h_id]
+            ratio = count / total_halo_pixels
+            
+            if ratio > overlap_match_threshold:
+                union(int(h_id), int(c_id))
+            else:
+                print("no merge at ratio", ratio, "for halo", h_id, "and core", c_id)
+
+    # --- Process Latitude Boundaries ---
+    # Merge Chunk(i, j) with Chunk(i+1, j)
+    for res in chunk_results:
+        i, j = res['chunk_i'], res['chunk_j']
+        
+        # Check North Neighbor (i+1)
+        if (i + 1, j) in grid_map:
+            # My Halo (Lat Upper) vs Neighbor's Core (Lat Lower)
+            halo_data = res['halo_lat_upper'] # Shape: (T, Overlap, Lon_Width)
+            if halo_data.size == 0: continue
+            
+            # Find where this halo sits in the global array
+            # It starts exactly where the core ends
+            global_lat_start = res['lat_core_end']
+            # It extends by the size of the halo array
+            global_lat_end = global_lat_start + halo_data.shape[1]
+            
+            # Extract the corresponding Core region from the MERGED array
+            # This region is owned by the neighbor (i+1)
+            core_slice = merged_array[:, global_lat_start:global_lat_end, 
+                                      res['lon_core_start']:res['lon_core_end']]
+            
+            # Compare
+            check_overlap(halo_data, core_slice, chunk_offsets[(i, j)])
+
+        # Check East Neighbor (j+1)
+        if (i, j + 1) in grid_map:
+            # My Halo (Lon Upper) vs Neighbor's Core (Lon Lower)
+            halo_data = res['halo_lon_upper']
+            if halo_data.size == 0: continue
+            
+            global_lon_start = res['lon_core_end']
+            global_lon_end = global_lon_start + halo_data.shape[2]
+            
+            core_slice = merged_array[:, res['lat_core_start']:res['lat_core_end'],
+                                      global_lon_start:global_lon_end]
+            
+            check_overlap(halo_data, core_slice, chunk_offsets[(i, j)])
+
+    # Apply Merges
+    unique_labels = np.unique(merged_array[merged_array > 0])
+    mapping = np.arange(unique_labels.max() + 1, dtype=merged_array.dtype)
     for label in unique_labels:
         if label in parent:
-            root = find(label)
-            mapping[label] = root
+            mapping[label] = find(label)
             
-    return mapping[labeled_array]
+    return mapping[merged_array]
 
 def _scan_boundary_face(slice_a, slice_b, callback):
     """
