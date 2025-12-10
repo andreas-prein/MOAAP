@@ -1,0 +1,1320 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOAAP Reference &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="MOAAP documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MOAAP Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-moaap.main">Main Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.main.moaap"><code class="docutils literal notranslate"><span class="pre">moaap()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-moaap.utils.constants">Utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.data_proc.fill_small_gaps"><code class="docutils literal notranslate"><span class="pre">fill_small_gaps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.data_proc.interpolate_temporal"><code class="docutils literal notranslate"><span class="pre">interpolate_temporal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.data_proc.smooth_uniform"><code class="docutils literal notranslate"><span class="pre">smooth_uniform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.data_proc.temporal_tukey_window"><code class="docutils literal notranslate"><span class="pre">temporal_tukey_window()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.data_proc.tukey_latitude_mask"><code class="docutils literal notranslate"><span class="pre">tukey_latitude_mask()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.grid.DistanceCoord"><code class="docutils literal notranslate"><span class="pre">DistanceCoord()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.grid.calc_grid_distance_area"><code class="docutils literal notranslate"><span class="pre">calc_grid_distance_area()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.grid.haversine"><code class="docutils literal notranslate"><span class="pre">haversine()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.grid.radialdistance"><code class="docutils literal notranslate"><span class="pre">radialdistance()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.BreakupObjects"><code class="docutils literal notranslate"><span class="pre">BreakupObjects()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.ConnectLon_on_timestep"><code class="docutils literal notranslate"><span class="pre">ConnectLon_on_timestep()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.calc_object_characteristics"><code class="docutils literal notranslate"><span class="pre">calc_object_characteristics()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.clean_up_objects"><code class="docutils literal notranslate"><span class="pre">clean_up_objects()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.is_land"><code class="docutils literal notranslate"><span class="pre">is_land()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.minimum_bounding_rectangle"><code class="docutils literal notranslate"><span class="pre">minimum_bounding_rectangle()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.profiling.SectionTimer"><code class="docutils literal notranslate"><span class="pre">SectionTimer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.profiling.profile_sections"><code class="docutils literal notranslate"><span class="pre">profile_sections()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.profiling.timer"><code class="docutils literal notranslate"><span class="pre">timer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.UnionFind"><code class="docutils literal notranslate"><span class="pre">UnionFind</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.utils.segmentation.UnionFind.add"><code class="docutils literal notranslate"><span class="pre">UnionFind.add()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.utils.segmentation.UnionFind.find"><code class="docutils literal notranslate"><span class="pre">UnionFind.find()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.utils.segmentation.UnionFind.union"><code class="docutils literal notranslate"><span class="pre">UnionFind.union()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.analyze_watershed_history"><code class="docutils literal notranslate"><span class="pre">analyze_watershed_history()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.connect_3d_objects"><code class="docutils literal notranslate"><span class="pre">connect_3d_objects()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.label_peaks_over_time_3d"><code class="docutils literal notranslate"><span class="pre">label_peaks_over_time_3d()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_2d_overlap"><code class="docutils literal notranslate"><span class="pre">watershed_2d_overlap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_3d_overlap"><code class="docutils literal notranslate"><span class="pre">watershed_3d_overlap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_3d_overlap_parallel"><code class="docutils literal notranslate"><span class="pre">watershed_3d_overlap_parallel()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-moaap.trackers.atmospheric_rivers">Trackers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.atmospheric_rivers.ar_850hpa_tracking"><code class="docutils literal notranslate"><span class="pre">ar_850hpa_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.atmospheric_rivers.ar_check"><code class="docutils literal notranslate"><span class="pre">ar_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.atmospheric_rivers.ar_ivt_tracking"><code class="docutils literal notranslate"><span class="pre">ar_ivt_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.clouds.cloud_tracking"><code class="docutils literal notranslate"><span class="pre">cloud_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.clouds.mcs_tb_tracking"><code class="docutils literal notranslate"><span class="pre">mcs_tb_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.cyclones.col_identification"><code class="docutils literal notranslate"><span class="pre">col_identification()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.cyclones.cy_acy_psl_tracking"><code class="docutils literal notranslate"><span class="pre">cy_acy_psl_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.cyclones.cy_acy_z500_tracking"><code class="docutils literal notranslate"><span class="pre">cy_acy_z500_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.fronts.frontal_identification"><code class="docutils literal notranslate"><span class="pre">frontal_identification()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.jets.jetstream_tracking"><code class="docutils literal notranslate"><span class="pre">jetstream_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.tropical_cyclones.tc_tracking"><code class="docutils literal notranslate"><span class="pre">tc_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.waves.KFfilter"><code class="docutils literal notranslate"><span class="pre">KFfilter</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.decompose_antisymm"><code class="docutils literal notranslate"><span class="pre">KFfilter.decompose_antisymm()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.eig0filter"><code class="docutils literal notranslate"><span class="pre">KFfilter.eig0filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.erfilter"><code class="docutils literal notranslate"><span class="pre">KFfilter.erfilter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.igfilter"><code class="docutils literal notranslate"><span class="pre">KFfilter.igfilter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.kelvinfilter"><code class="docutils literal notranslate"><span class="pre">KFfilter.kelvinfilter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.kfmask"><code class="docutils literal notranslate"><span class="pre">KFfilter.kfmask()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.mrgfilter"><code class="docutils literal notranslate"><span class="pre">KFfilter.mrgfilter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.tdfilter"><code class="docutils literal notranslate"><span class="pre">KFfilter.tdfilter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#moaap.trackers.waves.KFfilter.wavefilter"><code class="docutils literal notranslate"><span class="pre">KFfilter.wavefilter()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.trackers.waves.track_tropwaves_tb"><code class="docutils literal notranslate"><span class="pre">track_tropwaves_tb()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MOAAP Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/modules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="moaap-reference">
+<h1>MOAAP Reference<a class="headerlink" href="#moaap-reference" title="Link to this heading"></a></h1>
+<section id="module-moaap.main">
+<span id="main-interface"></span><h2>Main Interface<a class="headerlink" href="#module-moaap.main" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.main.moaap">
+<span class="sig-prename descclassname"><span class="pre">moaap.main.</span></span><span class="sig-name descname"><span class="pre">moaap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Mask</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/main.html#moaap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.main.moaap" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Lon</strong> (<em>array_like</em>) – 2D array of longitude grid centers.</p></li>
+<li><p><strong>Lat</strong> (<em>array_like</em>) – 2D array of latitude grid centers.</p></li>
+<li><p><strong>Time</strong> (<em>array_like</em><em> of </em><em>datetime</em>) – 1D vector of datetimes for each time step.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Temporal frequency of the data in hours.</p></li>
+<li><p><strong>Mask</strong> (<em>array_like</em>) – 2D mask defining the analysis region.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>v850</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – 850 hPa zonal wind speed (m/s).</p></li>
+<li><p><strong>u850</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – 850 hPa meridional wind speed (m/s).</p></li>
+<li><p><strong>t850</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – 850 hPa air temperature (K).</p></li>
+<li><p><strong>q850</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – 850 hPa mixing ratio (g/kg).</p></li>
+<li><p><strong>slp</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Sea level pressure (Pa).</p></li>
+<li><p><strong>ivte</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Zonal integrated vapor transport (kg m⁻¹ s⁻¹).</p></li>
+<li><p><strong>ivtn</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Meridional integrated vapor transport (kg m⁻¹ s⁻¹).</p></li>
+<li><p><strong>z500</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Geopotential height at 500 hPa (gpm).</p></li>
+<li><p><strong>v200</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – 200 hPa zonal wind speed (m/s).</p></li>
+<li><p><strong>u200</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – 200 hPa meridional wind speed (m/s).</p></li>
+<li><p><strong>pr</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Accumulated surface precipitation (mm per time step).</p></li>
+<li><p><strong>tb</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Brightness temperature (K).</p></li>
+<li><p><strong>DataName</strong> (<em>str</em><em>, </em><em>default=''</em>) – Name of the common grid.</p></li>
+<li><p><strong>OutputFolder</strong> (<em>str</em><em>, </em><em>default=''</em>) – Path to the output directory.</p></li>
+<li><p><strong>objects</strong> (<em>Precipitation</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>SmoothSigmaP</strong> (<em>float</em><em>, </em><em>default=0</em>) – Gaussian σ for precipitation smoothing.</p></li>
+<li><p><strong>Pthreshold</strong> (<em>float</em><em>, </em><em>default=2</em>) – Precipitation threshold (mm h⁻¹).</p></li>
+<li><p><strong>MinTimePR</strong> (<em>int</em><em>, </em><em>default=4</em>) – Minimum lifetime of precipitation features (h).</p></li>
+<li><p><strong>MinAreaPR</strong> (<em>float</em><em>, </em><em>default=5000</em>) – Minimum area of precipitation features (km²).</p></li>
+<li><p><strong>streams</strong> (<em>Moisture</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>MinTimeMS</strong> (<em>int</em><em>, </em><em>default=9</em>) – Minimum lifetime of moisture stream features (h).</p></li>
+<li><p><strong>MinAreaMS</strong> (<em>float</em><em>, </em><em>default=100000</em>) – Minimum area of moisture stream features (km²).</p></li>
+<li><p><strong>MinMSthreshold</strong> (<em>float</em><em>, </em><em>default=0.11</em>) – Detection threshold for moisture streams (g·m/g·s).</p></li>
+<li><p><strong>anticyclones</strong> (<em>Cyclones &amp;</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>MinTimeCY</strong> (<em>int</em><em>, </em><em>default=12</em>) – Minimum lifetime of cyclones (h).</p></li>
+<li><p><strong>MaxPresAnCY</strong> (<em>float</em><em>, </em><em>default=-8</em>) – Pressure anomaly threshold for cyclones (hPa).</p></li>
+<li><p><strong>breakup_cy</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for cyclone breakup.</p></li>
+<li><p><strong>MinTimeACY</strong> (<em>int</em><em>, </em><em>default=12</em>) – Minimum lifetime of anticyclones (h).</p></li>
+<li><p><strong>MinPresAnACY</strong> (<em>float</em><em>, </em><em>default=6</em>) – Pressure anomaly threshold for anticyclones (hPa).</p></li>
+<li><p><strong>zones</strong> (<em>Frontal</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>MinAreaFR</strong> (<em>float</em><em>, </em><em>default=50000</em>) – Minimum area of frontal zones (km²).</p></li>
+<li><p><strong>front_treshold</strong> (<em>float</em><em>, </em><em>default=1</em>) – Threshold for masking frontal zones.</p></li>
+<li><p><strong>tracking</strong> (<em>Cloud</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>SmoothSigmaC</strong> (<em>float</em><em>, </em><em>default=0</em>) – Gaussian σ for cloud‐shield smoothing.</p></li>
+<li><p><strong>Cthreshold</strong> (<em>float</em><em>, </em><em>default=241</em>) – Brightness temperature threshold for ice‐cloud shields (K).</p></li>
+<li><p><strong>MinTimeC</strong> (<em>int</em><em>, </em><em>default=4</em>) – Minimum lifetime of ice‐cloud shields (h).</p></li>
+<li><p><strong>MinAreaC</strong> (<em>float</em><em>, </em><em>default=40000</em>) – Minimum area of ice‐cloud shields (km²).</p></li>
+<li><p><strong>(</strong><strong>AR</strong><strong>)</strong> (<em>Atmospheric rivers</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>IVTtrheshold</strong> (<em>float</em><em>, </em><em>default=500</em>) – Integrated vapor transport threshold for AR detection (kg m⁻¹ s⁻¹).</p></li>
+<li><p><strong>MinTimeIVT</strong> (<em>int</em><em>, </em><em>default=12</em>) – Minimum lifetime of ARs (h).</p></li>
+<li><p><strong>breakup_ivt</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for AR breakup.</p></li>
+<li><p><strong>AR_MinLen</strong> (<em>float</em><em>, </em><em>default=2000</em>) – Minimum length of an AR (km).</p></li>
+<li><p><strong>AR_Lat</strong> (<em>float</em><em>, </em><em>default=20</em>) – Minimum centroid latitude for ARs (degrees N).</p></li>
+<li><p><strong>AR_width_lenght_ratio</strong> (<em>float</em><em>, </em><em>default=2</em>) – Minimum length‐to‐width ratio for ARs.</p></li>
+<li><p><strong>detection</strong> (<em>Tropical cyclone</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>TC_Pmin</strong> (<em>float</em><em>, </em><em>default=995</em>) – Minimum central pressure for TC detection (hPa).</p></li>
+<li><p><strong>TC_lat_genesis</strong> (<em>float</em><em>, </em><em>default=35</em>) – Maximum latitude for TC genesis (degrees).</p></li>
+<li><p><strong>TC_lat_max</strong> (<em>float</em><em>, </em><em>default=60</em>) – Maximum latitude for TC existence (degrees).</p></li>
+<li><p><strong>TC_deltaT_core</strong> (<em>float</em><em>, </em><em>default=0</em>) – Minimum core‐to‐environment temperature difference (K).</p></li>
+<li><p><strong>TC_T850min</strong> (<em>float</em><em>, </em><em>default=285</em>) – Minimum core temperature at 850 hPa for TCs (K).</p></li>
+<li><p><strong>(</strong><strong>MCS</strong><strong>)</strong> (<em>Mesoscale convective systems</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>MCS_Minsize</strong> (<em>float</em><em>, </em><em>default=5000</em>) – Minimum precipitation area size for MCS (km²).</p></li>
+<li><p><strong>MCS_minPR</strong> (<em>float</em><em>, </em><em>default=15</em>) – Precipitation threshold for MCS detection (mm h⁻¹).</p></li>
+<li><p><strong>CL_MaxT</strong> (<em>float</em><em>, </em><em>default=215</em>) – Maximum brightness temperature in ice shield for MCS (K).</p></li>
+<li><p><strong>CL_Area</strong> (<em>float</em><em>, </em><em>default=40000</em>) – Minimum cloud area for MCS detection (km²).</p></li>
+<li><p><strong>MCS_minTime</strong> (<em>int</em><em>, </em><em>default=4</em>) – Minimum lifetime of MCS (h).</p></li>
+<li><p><strong>Analyze_history</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to analyze the history of MCS objects.</p></li>
+<li><p><strong>waves</strong> (<em>Equatorial</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>js_min_anomaly</strong> (<em>float</em><em>, </em><em>default=37</em>) – Minimum jet‐stream anomaly (m/s).</p></li>
+<li><p><strong>MinTimeJS</strong> (<em>int</em><em>, </em><em>default=24</em>) – Minimum lifetime of jet streams (h).</p></li>
+<li><p><strong>breakup_jet</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for jet‐stream breakup.</p></li>
+<li><p><strong>tropwave_minTime</strong> (<em>int</em><em>, </em><em>default=48</em>) – Minimum lifetime of tropical waves (h).</p></li>
+<li><p><strong>breakup_mcs</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for MCS breakup.</p></li>
+<li><p><strong>cyclones/anticyclones</strong> (<em>500 hPa</em>)</p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>z500_low_anom</strong> (<em>float</em><em>, </em><em>default=-80</em>) – Minimum anomaly for 500 hPa cyclones (m).</p></li>
+<li><p><strong>z500_high_anom</strong> (<em>float</em><em>, </em><em>default=70</em>) – Minimum anomaly for 500 hPa anticyclones (m).</p></li>
+<li><p><strong>breakup_zcy</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for 500 hPa cyclone/anticyclone breakup.</p></li>
+<li><p><strong>waves</strong></p></li>
+<li><p><strong>-----------</strong></p></li>
+<li><p><strong>er_th</strong> (<em>float</em><em>, </em><em>default=0.05</em>) – Threshold for equatorial Rossby waves.</p></li>
+<li><p><strong>mrg_th</strong> (<em>float</em><em>, </em><em>default=0.05</em>) – Threshold for mixed Rossby‐gravity waves.</p></li>
+<li><p><strong>igw_th</strong> (<em>float</em><em>, </em><em>default=0.20</em>) – Threshold for inertia–gravity waves.</p></li>
+<li><p><strong>kel_th</strong> (<em>float</em><em>, </em><em>default=0.10</em>) – Threshold for Kelvin waves.</p></li>
+<li><p><strong>eig0_th</strong> (<em>float</em><em>, </em><em>default=0.10</em>) – Threshold for n≥1 inertia–gravity waves.</p></li>
+<li><p><strong>breakup_tw</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for equatorial wave breakup.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A dictionary containing detected features grouped by type
+(e.g., ‘precip’, ‘moisture’, ‘cyclones’, etc.).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-moaap.utils.constants">
+<span id="utils"></span><span id="module-moaap.config"></span><h2>Utils<a class="headerlink" href="#module-moaap.utils.constants" title="Link to this heading"></a></h2>
+<dl class="py function" id="module-moaap.utils.data_proc">
+<dt class="sig sig-object py" id="moaap.utils.data_proc.fill_small_gaps">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.data_proc.</span></span><span class="sig-name descname"><span class="pre">fill_small_gaps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/data_proc.html#fill_small_gaps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.data_proc.fill_small_gaps" title="Link to this definition"></a></dt>
+<dd><p>Replace gaps (sequences of zeros) with ones if the gap length is
+less than the specified gap_threshold. Only gaps that are flanked
+by ones are filled.</p>
+<section id="parameters">
+<h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>data<span class="classifier">list or np.ndarray</span></dt><dd><p>Time series of zeros and ones.</p>
+</dd>
+<dt>gap_threshold<span class="classifier">int, optional</span></dt><dd><p>Maximum number of zeros allowed in a gap to be filled with ones.
+(Default value is 12)</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h3>Returns:<a class="headerlink" href="#returns" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>np.ndarray</dt><dd><p>The modified time series with small gaps filled.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.data_proc.interpolate_temporal">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.data_proc.</span></span><span class="sig-name descname"><span class="pre">interpolate_temporal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/data_proc.html#interpolate_temporal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.data_proc.interpolate_temporal" title="Link to this definition"></a></dt>
+<dd><p>Fill missing (np.nan) values along axis-0 (time) by linear interpolation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>arr</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>ntime</em><em>, </em><em>nlat</em><em>, </em><em>nlon</em><em>)</em>) – Input brightness‐temperature (or any) data, with np.nan marking missing.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>result</strong> – Same as <cite>arr</cite> but with NaNs replaced via 1D linear interpolation in time.
+If an entire time series is NaN, it remains NaN.  Leading/trailing NaNs
+become constant at the first/last valid value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray, shape (ntime, nlat, nlon), dtype float64</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.data_proc.smooth_uniform">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.data_proc.</span></span><span class="sig-name descname"><span class="pre">smooth_uniform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_smoot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy_smooth</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/data_proc.html#smooth_uniform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.data_proc.smooth_uniform" title="Link to this definition"></a></dt>
+<dd><p>Applies a uniform (box) smoothing filter in time and space, handling NaNs
+by separating valid data from masks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>np.ndarray</em>) – Input array [time, lat, lon].</p></li>
+<li><p><strong>t_smoot</strong> (<em>int</em>) – Size of the smoothing window in the time dimension.</p></li>
+<li><p><strong>xy_smooth</strong> (<em>int</em>) – Size of the smoothing window in spatial dimensions.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>smooth_data</strong> – The smoothed data array.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.data_proc.temporal_tukey_window">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.data_proc.</span></span><span class="sig-name descname"><span class="pre">temporal_tukey_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/data_proc.html#temporal_tukey_window"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.data_proc.temporal_tukey_window" title="Link to this definition"></a></dt>
+<dd><p>Create a Tukey window for temporal tapering.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nt</strong> (<em>int</em>) – number of time steps</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – fraction of the window length to taper (e.g. 0.1 → 10% on each end)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>w</strong> – Tukey window of length nt</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.data_proc.tukey_latitude_mask">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.data_proc.</span></span><span class="sig-name descname"><span class="pre">tukey_latitude_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat_matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_stop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/moaap/utils/data_proc.html#tukey_latitude_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.data_proc.tukey_latitude_mask" title="Link to this definition"></a></dt>
+<dd><p>Build a latitude-dependent Tukey taper mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat_matrix</strong> (<em>np.ndarray</em>) – 2D array of center-point latitudes (degrees), shape (ny, nx).</p></li>
+<li><p><strong>lat_start</strong> (<em>float</em>) – Latitude (in degrees) where the taper begins (<code class="docutils literal notranslate"><span class="pre">|lat|</span> <span class="pre">&lt;=</span> <span class="pre">lat_start</span></code> =&gt; weight=1).</p></li>
+<li><p><strong>lat_stop</strong> (<em>float</em>) – Latitude (in degrees) where the taper ends (<code class="docutils literal notranslate"><span class="pre">|lat|</span> <span class="pre">&gt;=</span> <span class="pre">lat_stop</span></code> =&gt; weight=0).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mask</strong> – 2D taper mask of same shape as lat_matrix, with values in [0,1].</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.utils.grid">
+<dt class="sig sig-object py" id="moaap.utils.grid.DistanceCoord">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.grid.</span></span><span class="sig-name descname"><span class="pre">DistanceCoord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Lo1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">La1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lo2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">La2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/grid.html#DistanceCoord"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.grid.DistanceCoord" title="Link to this definition"></a></dt>
+<dd><p>Calculate the great circle distance between two points
+on the earth (specified in decimal degrees)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Lo1</strong> (<em>float</em>) – Longitude of point 1.</p></li>
+<li><p><strong>La1</strong> (<em>float</em>) – Latitude of point 1.</p></li>
+<li><p><strong>Lo2</strong> (<em>float</em>) – Longitude of point 2.</p></li>
+<li><p><strong>La2</strong> (<em>float</em>) – Latitude of point 2.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>distance</strong> – Distance between point 1 and point 2 in kilometers.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.grid.calc_grid_distance_area">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.grid.</span></span><span class="sig-name descname"><span class="pre">calc_grid_distance_area</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/grid.html#calc_grid_distance_area"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.grid.calc_grid_distance_area" title="Link to this definition"></a></dt>
+<dd><p>Calculates grid cell dimensions and areas using the Haversine formula.
+Approximates distances for a 2D grid of coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lon</strong> (<em>np.ndarray</em>) – 2D array of longitudes [lat, lon].</p></li>
+<li><p><strong>lat</strong> (<em>np.ndarray</em>) – 2D array of latitudes [lat, lon].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>dx</strong> (<em>np.ndarray</em>) – Zonal grid spacing (m).</p></li>
+<li><p><strong>dy</strong> (<em>np.ndarray</em>) – Meridional grid spacing (m).</p></li>
+<li><p><strong>area</strong> (<em>np.ndarray</em>) – Area of each grid cell (m^2).</p></li>
+<li><p><strong>grid_distance</strong> (<em>float</em>) – Mean grid spacing over the domain (m).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.grid.haversine">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.grid.</span></span><span class="sig-name descname"><span class="pre">haversine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/grid.html#haversine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.grid.haversine" title="Link to this definition"></a></dt>
+<dd><p>Calculate the great circle distance between two points on the earth.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lon1</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Coordinates of the first point(s) in degrees.</p></li>
+<li><p><strong>lat1</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Coordinates of the first point(s) in degrees.</p></li>
+<li><p><strong>lon2</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Coordinates of the second point(s) in degrees.</p></li>
+<li><p><strong>lat2</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Coordinates of the second point(s) in degrees.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>km</strong> – Distance in kilometers (assuming Earth radius of 6367 km).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.grid.radialdistance">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.grid.</span></span><span class="sig-name descname"><span class="pre">radialdistance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/grid.html#radialdistance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.grid.radialdistance" title="Link to this definition"></a></dt>
+<dd><p>Calculate the great circle distance between two points
+on the earth (specified in decimal degrees).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat1</strong> (<em>float</em>) – Coordinates of the first point in degrees.</p></li>
+<li><p><strong>lon1</strong> (<em>float</em>) – Coordinates of the first point in degrees.</p></li>
+<li><p><strong>lat2</strong> (<em>float</em>) – Coordinates of the second point in degrees.</p></li>
+<li><p><strong>lon2</strong> (<em>float</em>) – Coordinates of the second point in degrees.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>distance</strong> – Distance in kilometers.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.utils.object_props">
+<dt class="sig sig-object py" id="moaap.utils.object_props.BreakupObjects">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">BreakupObjects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">DATA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tsteps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_history</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#BreakupObjects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.BreakupObjects" title="Link to this definition"></a></dt>
+<dd><p>Splits long-living objects that may be artificially merged (e.g., distinct
+storms merging for one timestep). It analyzes the 2D connectivity over time
+and keeps the largest consistent overlap.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>DATA</strong> (<em>np.ndarray</em>) – 3D matrix [time, lat, lon] containing labeled objects.</p></li>
+<li><p><strong>min_tsteps</strong> (<em>int</em>) – Minimum lifetime (in timesteps) required to keep an object.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time resolution of the data in hours.</p></li>
+<li><p><strong>obj_history</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, calculates how objects start and end (merges/splits).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>DATA_fin</strong> (<em>np.ndarray</em>) – The re-labeled 3D object array.</p></li>
+<li><p><strong>object_split</strong> (<em>dict or None</em>) – Dictionary containing splitting/merging history if obj_history is True.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.object_props.ConnectLon_on_timestep">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">ConnectLon_on_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#ConnectLon_on_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.ConnectLon_on_timestep" title="Link to this definition"></a></dt>
+<dd><p>This function connects objects over the date line on a time-step by
+time-step basis, which makes it different from the ConnectLon function.
+This function is needed when long-living objects are first split into
+smaller objects using the BreakupObjects function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>object_indices</strong> (<em>np.ndarray</em>) – Array of object indices from ndimage.find_objects</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>object_indices</strong> – Updated array of object indices with connected objects across the date line.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.object_props.calc_object_characteristics">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">calc_object_characteristics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">var_objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_spacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_cell_area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tsteps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_merge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#calc_object_characteristics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.calc_object_characteristics" title="Link to this definition"></a></dt>
+<dd><p>Calculates comprehensive statistics for tracked objects, including size,
+intensity, velocity, and trajectory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>var_objects</strong> (<em>np.ndarray</em>) – 3D labeled object array.</p></li>
+<li><p><strong>var_data</strong> (<em>np.ndarray</em>) – Original data field used for detection (e.g., precipitation, pressure).</p></li>
+<li><p><strong>filename_out</strong> (<em>str</em>) – Path to save the resulting dictionary as a pickle file.</p></li>
+<li><p><strong>times</strong> (<em>np.ndarray</em>) – Array of datetime objects corresponding to the time axis.</p></li>
+<li><p><strong>Lat</strong> (<em>np.ndarray</em>) – Latitude and Longitude grids.</p></li>
+<li><p><strong>Lon</strong> (<em>np.ndarray</em>) – Latitude and Longitude grids.</p></li>
+<li><p><strong>grid_spacing</strong> (<em>float</em>) – Average grid spacing (m).</p></li>
+<li><p><strong>grid_cell_area</strong> (<em>np.ndarray</em>) – Area of grid cells.</p></li>
+<li><p><strong>min_tsteps</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum timesteps an object must exist to be processed.</p></li>
+<li><p><strong>split_merge</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary containing lineage info (split/merge history).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>objects_charac</strong> – Dictionary where keys are object IDs and values are dictionaries containing:
+‘mass_center_loc’, ‘speed’, ‘tot’, ‘min’, ‘max’, ‘mean’, ‘size’, ‘times’, ‘track’.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.object_props.clean_up_objects">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">clean_up_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">DATA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tsteps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_splitmerge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#clean_up_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.clean_up_objects" title="Link to this definition"></a></dt>
+<dd><p>Function to remove objects that are too short lived
+and to numerrate the object from 1…N</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>DATA</strong> (<em>np.ndarray</em>) – Labeled object array [time, lat, lon].</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step (hours).</p></li>
+<li><p><strong>min_tsteps</strong> (<em>int</em>) – Minimum lifetime of objects to keep (hours).</p></li>
+<li><p><strong>obj_splitmerge</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary tracking object splits/merges. Default is None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>objectsTMP</strong> (<em>np.ndarray</em>) – Cleaned labeled object array.</p></li>
+<li><p><strong>obj_splitmerge_clean</strong> (<em>dict</em>) – Updated split/merge history dictionary.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.object_props.is_land">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">is_land</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#is_land"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.is_land" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.object_props.minimum_bounding_rectangle">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">minimum_bounding_rectangle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#minimum_bounding_rectangle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.minimum_bounding_rectangle" title="Link to this definition"></a></dt>
+<dd><p>Find the smallest bounding rectangle for a set of points.
+Returns a set of points representing the corners of the bounding box.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>points</strong> – an nx2 matrix of coordinates</p>
+</dd>
+<dt class="field-even">Rval<span class="colon">:</span></dt>
+<dd class="field-even"><p>an nx2 matrix of coordinates</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class" id="module-moaap.utils.profiling">
+<dt class="sig sig-object py" id="moaap.utils.profiling.SectionTimer">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">moaap.utils.profiling.</span></span><span class="sig-name descname"><span class="pre">SectionTimer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">results_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/profiling.html#SectionTimer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.profiling.SectionTimer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.profiling.profile_sections">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.profiling.</span></span><span class="sig-name descname"><span class="pre">profile_sections</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/profiling.html#profile_sections"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.profiling.profile_sections" title="Link to this definition"></a></dt>
+<dd><p>Decorator to profile execution time of code sections within a function.</p>
+<p>Usage:</p>
+<p>&#64;profile_sections</p>
+<p>def my_function(…, _timer=None):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>with _timer(“section1”):</dt><dd><p>…</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.profiling.timer">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.profiling.</span></span><span class="sig-name descname"><span class="pre">timer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/profiling.html#timer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.profiling.timer" title="Link to this definition"></a></dt>
+<dd><p>Prints elapsed time in hh:mm:ss.ss format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>float</em>) – Start time in seconds.</p></li>
+<li><p><strong>end</strong> (<em>float</em>) – End time in seconds.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None (output via print)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class" id="module-moaap.utils.segmentation">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.UnionFind">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">UnionFind</span></span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#UnionFind"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.UnionFind" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Union-Find (Disjoint Set) data structure.
+Assumes each ‘label’ (int) is a unique object ID.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.UnionFind.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#UnionFind.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.UnionFind.add" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.UnionFind.find">
+<span class="sig-name descname"><span class="pre">find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#UnionFind.find"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.UnionFind.find" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.UnionFind.union">
+<span class="sig-name descname"><span class="pre">union</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#UnionFind.union"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.UnionFind.union" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.analyze_watershed_history">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">analyze_watershed_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">watershed_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#analyze_watershed_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.analyze_watershed_history" title="Link to this definition"></a></dt>
+<dd><p>Analyze the history of watershed objects over time.
+The output is a union of all objects which merged or split over time,
+along with a list of events (merges and splits) that occurred and the history array
+(dict of sets), where two labels are in one set if they are connected via merges/splits.
+This is done via Euler-timestepping and comparing the overlap of objects</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>watershed_results</strong> (<em>np.ndarray</em>) – 3D array of watershed labels over time, shape (T, H, W).</p></li>
+<li><p><strong>min_dist</strong> (<em>float</em>) – Minimum distance threshold to consider two objects as related (for merges/splits).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>union_array</strong> (<em>Dict[int, int]</em>) – Mapping of each label to its root label in the union-find structure.</p></li>
+<li><p><strong>events</strong> (<em>List[Dict[str, Any]]</em>) – List of merge and split events with details.</p></li>
+<li><p><strong>histories</strong> (<em>Dict[int, Set[int]]</em>) – Dictionary mapping root labels to sets of all connected labels.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.connect_3d_objects">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">connect_3d_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tsteps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#connect_3d_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.connect_3d_objects" title="Link to this definition"></a></dt>
+<dd><p>Links 2D labeled slices into 3D objects based on maximum spatial overlap
+between consecutive time steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>labels</strong> (<em>np.ndarray</em>) – 3D array where each [t, :, :] slice contains independent 2D labels.</p></li>
+<li><p><strong>min_tsteps</strong> (<em>int</em>) – Minimum duration to keep an object.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>objects_watershed</strong> – 3D array with consistent object IDs tracked over time.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.label_peaks_over_time_3d">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">label_peaks_over_time_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#label_peaks_over_time_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.label_peaks_over_time_3d" title="Link to this definition"></a></dt>
+<dd><p>Labels peaks in 3D coordinates over time based on spatial proximity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coords</strong> – np.ndarray of shape (N_peaks, 3), each row is [t, y, x]</p></li>
+<li><p><strong>max_dist</strong> – maximum allowed distance to consider peaks as the same object (in grid units)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray of shape (N_peaks,), integer labels for each peak over time</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>labels</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.watershed_2d_overlap">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">watershed_2d_overlap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_treshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mintime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_size_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">erosion_disk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#watershed_2d_overlap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.watershed_2d_overlap" title="Link to this definition"></a></dt>
+<dd><p>This function performs watershedding on 2D anomaly fields over time and connects
+the resulting 2D features into 3D objects based on maximum overlap.
+This function uses spatially reduced watersheds from the previous time step as seed for the
+current time step, which improves temporal consistency of features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>np.ndarray</em>) – 3D array of data for watershedding [time, lat, lon].</p></li>
+<li><p><strong>object_threshold</strong> (<em>float</em>) – Threshold to create binary object mask.</p></li>
+<li><p><strong>max_treshold</strong> (<em>float</em>) – Threshold for identifying maximum points for spreading.</p></li>
+<li><p><strong>min_dist</strong> (<em>int</em>) – Minimum distance (in grid cells) between maximum points.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time interval in hours.</p></li>
+<li><p><strong>mintime</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum time an object has to exist in dT. Default is 24.</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em><em>, </em><em>optional</em>) – Whether to track features over the date line (1 for yes, 0 for no). Default is 0.</p></li>
+<li><p><strong>extend_size_ratio</strong> (<em>float</em><em>, </em><em>optional</em>) – If connectLon = 1, this sets the ratio of the zonal domain added to the watershedding.
+This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs. Default is 0.25.</p></li>
+<li><p><strong>erosion_disk</strong> (<em>float</em><em>, </em><em>optional</em>) – Disk size for erosion of previous timestep mask to improve temporal connection of features. Default is 3.5.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.watershed_3d_overlap">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">watershed_3d_overlap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_treshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mintime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_size_ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#watershed_3d_overlap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.watershed_3d_overlap" title="Link to this definition"></a></dt>
+<dd><p>Perform 3D watershedding on the input data with temporal consistency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>np.ndarray</em>) – 3D matrix with data for watershedding</p></li>
+<li><p><strong>object_threshold</strong> (<em>float</em>) – Float to create binary object mast</p></li>
+<li><p><strong>max_treshold</strong> (<em>float</em>) – Value for identifying max. points for spreading</p></li>
+<li><p><strong>min_dist</strong> (<em>int</em>) – Minimum distance (in grid cells) between maximum points</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time interval in hours</p></li>
+<li><p><strong>mintime</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum time an object has to exist in dT, by default 24</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em><em>, </em><em>optional</em>) – Do we have to track features over the date line?, by default 0</p></li>
+<li><p><strong>extend_size_ratio</strong> (<em>float</em><em>, </em><em>optional</em>) – If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding.
+This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D matrix with watershed labels</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.watershed_3d_overlap_parallel">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">watershed_3d_overlap_parallel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_treshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mintime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_size_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_chunks_lat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_chunks_lon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlap_cells</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#watershed_3d_overlap_parallel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.watershed_3d_overlap_parallel" title="Link to this definition"></a></dt>
+<dd><p>Parallel version of watershed_3d_overlap using domain decomposition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>np.ndarray</em>) – 3D matrix with data for watershedding</p></li>
+<li><p><strong>object_threshold</strong> (<em>float</em>) – Float to create binary object mast</p></li>
+<li><p><strong>max_treshold</strong> (<em>float</em>) – Value for identifying max. points for spreading</p></li>
+<li><p><strong>min_dist</strong> (<em>int</em>) – Minimum distance (in grid cells) between maximum points</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time interval in hours</p></li>
+<li><p><strong>mintime</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum time an object has to exist in dT, by default 24</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em><em>, </em><em>optional</em>) – Do we have to track features over the date line?, by default 0</p></li>
+<li><p><strong>extend_size_ratio</strong> (<em>float</em><em>, </em><em>optional</em>) – If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding.
+This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25</p></li>
+<li><p><strong>n_chunks_lat</strong> (<em>int</em>) – Number of chunks to split latitude dimension</p></li>
+<li><p><strong>n_chunks_lon</strong> (<em>int</em>) – Number of chunks to split longitude dimension</p></li>
+<li><p><strong>overlap_cells</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of overlapping cells between chunks. If None, uses min_dist * 2</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D matrix with watershed labels</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-moaap.trackers.atmospheric_rivers">
+<span id="trackers"></span><h2>Trackers<a class="headerlink" href="#module-moaap.trackers.atmospheric_rivers" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.atmospheric_rivers.ar_850hpa_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.atmospheric_rivers.</span></span><span class="sig-name descname"><span class="pre">ar_850hpa_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">VapTrans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinMSthreshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeMS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinAreaMS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'watershed'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/atmospheric_rivers.html#ar_850hpa_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.atmospheric_rivers.ar_850hpa_tracking" title="Link to this definition"></a></dt>
+<dd><p>Tracks Moisture Streams (MS) based on 850 hPa moisture flux.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>VapTrans</strong> (<em>np.ndarray</em>) – Moisture flux magnitude [g/kg * m/s].</p></li>
+<li><p><strong>MinMSthreshold</strong> (<em>float</em>) – Threshold for detection.</p></li>
+<li><p><strong>MinTimeMS</strong> (<em>int</em>) – Minimum lifetime (hours).</p></li>
+<li><p><strong>MinAreaMS</strong> (<em>float</em>) – Minimum area (km^2).</p></li>
+<li><p><strong>Area</strong> (<em>np.ndarray</em>) – Grid cell area array.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step (hours).</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em>) – 1 to connect across date line.</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method for object separation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>MS_objects</strong> – Labeled moisture stream objects.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.atmospheric_rivers.ar_check">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.atmospheric_rivers.</span></span><span class="sig-name descname"><span class="pre">ar_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objects_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AR_Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AR_width_lenght_ratio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AR_MinLen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/atmospheric_rivers.html#ar_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.atmospheric_rivers.ar_check" title="Link to this definition"></a></dt>
+<dd><p>Filters potential AR objects based on geometric criteria (Centroid latitude,
+Length, and Length/Width ratio).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>objects_mask</strong> (<em>np.ndarray</em>) – Labeled AR candidate objects.</p></li>
+<li><p><strong>AR_Lat</strong> (<em>float</em>) – Minimum latitude for the object centroid (to filter tropical moisture).</p></li>
+<li><p><strong>AR_width_lenght_ratio</strong> (<em>float</em>) – Minimum length-to-width ratio (ARs must be elongated).</p></li>
+<li><p><strong>AR_MinLen</strong> (<em>float</em>) – Minimum length of the object in km.</p></li>
+<li><p><strong>Lon</strong> (<em>np.ndarray</em>) – Longitude and Latitude grids.</p></li>
+<li><p><strong>Lat</strong> (<em>np.ndarray</em>) – Longitude and Latitude grids.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AR_obj</strong> – Filtered array containing only valid AR objects.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.atmospheric_rivers.ar_ivt_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.atmospheric_rivers.</span></span><span class="sig-name descname"><span class="pre">ar_ivt_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">IVT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IVTtrheshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeIVT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'watershed'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/atmospheric_rivers.html#ar_ivt_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.atmospheric_rivers.ar_ivt_tracking" title="Link to this definition"></a></dt>
+<dd><p>Tracks Atmospheric Rivers (ARs) based on Integrated Vapor Transport (IVT).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>IVT</strong> (<em>np.ndarray</em>) – Total IVT magnitude [time, lat, lon].</p></li>
+<li><p><strong>IVTtrheshold</strong> (<em>float</em>) – Threshold to define AR candidates.</p></li>
+<li><p><strong>MinTimeIVT</strong> (<em>int</em>) – Minimum duration an AR object must exist (hours).</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Data timestep (hours).</p></li>
+<li><p><strong>Gridspacing</strong> (<em>float</em>) – Grid spacing in meters.</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em>) – 1 to connect objects across the date line, 0 otherwise.</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method to handle merging objects (‘breakup’ or ‘watershed’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>IVT_objects</strong> – Labeled array of tracked IVT objects.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.trackers.clouds">
+<dt class="sig sig-object py" id="moaap.trackers.clouds.cloud_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.clouds.</span></span><span class="sig-name descname"><span class="pre">cloud_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tb_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">241</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tb_overshoot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">235</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">erosion_disk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/clouds.html#cloud_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.clouds.cloud_tracking" title="Link to this definition"></a></dt>
+<dd><p>Tracks clouds from hourly or sub-hourly brightness temperature data.
+Calculates cloud statistics, including their precipitation (pr) properties if pr is provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>(</strong><strong>float</strong><strong>)</strong> (<em>Gridspacing</em>)</p></li>
+<li><p><strong>(</strong><strong>bol</strong><strong>)</strong> (<em>connectLon</em>)</p></li>
+<li><p><strong>(</strong><strong>float</strong><strong>)</strong></p></li>
+<li><p><strong>(</strong><strong>float</strong> (<em>erosion_disk</em>)</p></li>
+<li><p><strong>optional</strong><strong>)</strong> (<em>minimum distance in grid cells between two tb minima</em><em> (</em><em>overshoots</em><em>)</em><em>. The default is &quot;8&quot;.</em>)</p></li>
+<li><p><strong>(</strong><strong>float</strong></p></li>
+<li><p><strong>optional</strong><strong>)</strong></p></li>
+<li><p><strong>(</strong><strong>float</strong></p></li>
+<li><p><strong>optional</strong><strong>)</strong></p></li>
+<li><p><strong>(</strong><strong>int</strong> (<em>min_dist</em>)</p></li>
+<li><p><strong>optional</strong><strong>)</strong></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>cloud_objects (np.ndarray)</strong></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>labeled cloud objects of dimension [time,lat,lon]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.clouds.mcs_tb_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.clouds.</span></span><span class="sig-name descname"><span class="pre">mcs_tb_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SmoothSigmaC</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Pthreshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CL_Area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CL_MaxT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Cthreshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinAreaC</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeC</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MCS_minPR</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MCS_minTime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MCS_Minsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'watershed'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">analyze_mcs_history</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/clouds.html#mcs_tb_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.clouds.mcs_tb_tracking" title="Link to this definition"></a></dt>
+<dd><p>Tracks Mesoscale Convective Systems (MCS) using Brightness Temperature (Tb).
+Verifies candidates using precipitation criteria.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tb</strong> (<em>np.ndarray</em>) – Brightness temperature [K].</p></li>
+<li><p><strong>pr</strong> (<em>np.ndarray</em>) – Precipitation [mm/h].</p></li>
+<li><p><strong>SmoothSigmaC</strong> (<em>float</em>) – Smoothing factor for Tb.</p></li>
+<li><p><strong>Pthreshold</strong> (<em>float</em>) – Precipitation threshold.</p></li>
+<li><p><strong>CL_Area</strong> (<em>float</em>) – Cloud shield area and max temp thresholds.</p></li>
+<li><p><strong>CL_MaxT</strong> (<em>float</em>) – Cloud shield area and max temp thresholds.</p></li>
+<li><p><strong>Cthreshold</strong> (<em>float</em>) – Tb threshold for initial cloud detection.</p></li>
+<li><p><strong>MinAreaC</strong> (<em>float</em>) – Minimum cloud area for initial detection.</p></li>
+<li><p><strong>MinTimeC</strong> (<em>int</em>) – Minimum cloud duration.</p></li>
+<li><p><strong>MCS_minPR</strong> (<em>float</em>) – Minimum peak precipitation for MCS verification.</p></li>
+<li><p><strong>MCS_minTime</strong> (<em>int</em>) – Minimum MCS duration.</p></li>
+<li><p><strong>MCS_Minsize</strong> (<em>float</em>) – Minimum precipitation area for MCS verification.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Data timestep (hours).</p></li>
+<li><p><strong>Area</strong> (<em>np.ndarray</em>) – Grid cell area array.</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em>) – 1 to connect objects across date line.</p></li>
+<li><p><strong>Gridspacing</strong> (<em>float</em>) – Grid spacing in meters.</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method to handle merging objects (‘breakup’ or ‘watershed’).</p></li>
+<li><p><strong>analyze_mcs_history</strong> (<em>bool</em>) – If True, computes watershed merge/split history.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>MCS_objects_Tb</strong> (<em>np.ndarray</em>) – Labeled MCS objects based on Tb.</p></li>
+<li><p><strong>C_objects</strong> (<em>np.ndarray</em>) – Labeled cloud objects (all clouds, not just MCS).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.trackers.cyclones">
+<dt class="sig sig-object py" id="moaap.trackers.cyclones.col_identification">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.cyclones.</span></span><span class="sig-name descname"><span class="pre">col_identification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cy_z500_objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Frontal_Diagnostic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeC</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/cyclones.html#col_identification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.cyclones.col_identification" title="Link to this definition"></a></dt>
+<dd><p>Identifies Cut-Off Lows (COLs) from tracked upper-level cyclones.
+Checks for isolation (Z500 gradient), flow reversal (poleward easterlies),
+and frontal separation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cy_z500_objects</strong> (<em>np.ndarray</em>) – Labeled 500hPa cyclone objects.</p></li>
+<li><p><strong>z500</strong> (<em>np.ndarray</em>) – Geopotential height at 500hPa.</p></li>
+<li><p><strong>u200</strong> (<em>np.ndarray</em>) – Zonal wind at 200hPa.</p></li>
+<li><p><strong>Frontal_Diagnostic</strong> (<em>np.ndarray</em>) – Frontal parameter field.</p></li>
+<li><p><strong>MinTimeC</strong> (<em>int</em>) – Minimum lifetime required.</p></li>
+<li><p><strong>dx</strong> (<em>np.ndarray</em>) – Grid spacing arrays.</p></li>
+<li><p><strong>dy</strong> (<em>np.ndarray</em>) – Grid spacing arrays.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>col_obj</strong> – Labeled Cut-Off Low objects.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.cyclones.cy_acy_psl_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.cyclones.</span></span><span class="sig-name descname"><span class="pre">cy_acy_psl_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxPresAnCY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeCY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinPresAnACY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeACY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'watershed'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/cyclones.html#cy_acy_psl_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.cyclones.cy_acy_psl_tracking" title="Link to this definition"></a></dt>
+<dd><p>Tracks Cyclones (CY) and Anticyclones (ACY) based on Sea Level Pressure (SLP) anomalies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>slp</strong> (<em>np.ndarray</em>) – Sea Level Pressure data [Pa].</p></li>
+<li><p><strong>MaxPresAnCY</strong> (<em>float</em>) – Maximum anomaly threshold for Cyclones.</p></li>
+<li><p><strong>MinTimeCY</strong> (<em>int</em>) – Minimum lifetime for Cyclones (hours).</p></li>
+<li><p><strong>MinPresAnACY</strong> (<em>float</em>) – Minimum anomaly threshold for Anticyclones.</p></li>
+<li><p><strong>MinTimeACY</strong> (<em>int</em>) – Minimum lifetime for Anticyclones (hours).</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step (hours).</p></li>
+<li><p><strong>Gridspacing</strong> (<em>float</em>) – Average grid spacing (m).</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em>) – 1 to connect across date line.</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method for object separation (‘breakup’ or ‘watershed’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>CY_objects</strong> (<em>np.ndarray</em>) – Labeled Cyclone objects.</p></li>
+<li><p><strong>ACY_objects</strong> (<em>np.ndarray</em>) – Labeled Anticyclone objects.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.cyclones.cy_acy_z500_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.cyclones.</span></span><span class="sig-name descname"><span class="pre">cy_acy_z500_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeCY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z500_low_anom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-80</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z500_high_anom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">70</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'breakup'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/cyclones.html#cy_acy_z500_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.cyclones.cy_acy_z500_tracking" title="Link to this definition"></a></dt>
+<dd><p>Tracks mid-tropospheric cyclones and anticyclones based on Z500 anomalies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z500</strong> (<em>np.ndarray</em>) – Geopotential height at 500 hPa [m or gpm].</p></li>
+<li><p><strong>MinTimeCY</strong> (<em>int</em>) – Minimum lifetime (hours).</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step (hours).</p></li>
+<li><p><strong>Gridspacing</strong> (<em>float</em>) – Grid spacing (m).</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em>) – 1 to connect across date line.</p></li>
+<li><p><strong>z500_low_anom</strong> (<em>float</em>) – Anomaly threshold for cyclones (e.g., -80 m).</p></li>
+<li><p><strong>z500_high_anom</strong> (<em>float</em>) – Anomaly threshold for anticyclones (e.g., +70 m).</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method for object separation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>cy_z500_objects</strong> (<em>np.ndarray</em>) – Labeled Z500 cyclone objects.</p></li>
+<li><p><strong>acy_z500_objects</strong> (<em>np.ndarray</em>) – Labeled Z500 anticyclone objects.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.trackers.fronts">
+<dt class="sig sig-object py" id="moaap.trackers.fronts.frontal_identification">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.fronts.</span></span><span class="sig-name descname"><span class="pre">frontal_identification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Frontal_Diagnostic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">front_treshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinAreaFR</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Area</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/fronts.html#frontal_identification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.fronts.frontal_identification" title="Link to this definition"></a></dt>
+<dd><p>Identifies frontal zones based on a thermal frontal parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Frontal_Diagnostic</strong> (<em>np.ndarray</em>) – Calculated frontal diagnostic field (F*).</p></li>
+<li><p><strong>front_treshold</strong> (<em>float</em>) – Threshold value to identify fronts.</p></li>
+<li><p><strong>MinAreaFR</strong> (<em>float</em>) – Minimum area required for a frontal zone (km^2).</p></li>
+<li><p><strong>Area</strong> (<em>np.ndarray</em>) – Grid cell area array.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>FR_objects</strong> – Labeled frontal zone objects.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.trackers.jets">
+<dt class="sig sig-object py" id="moaap.trackers.jets.jetstream_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.jets.</span></span><span class="sig-name descname"><span class="pre">jetstream_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uv200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">js_min_anomaly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTimeJS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'breakup'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/jets.html#jetstream_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.jets.jetstream_tracking" title="Link to this definition"></a></dt>
+<dd><p>Identifies and tracks Jet Stream objects based on 200hPa wind speed anomalies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>uv200</strong> (<em>np.ndarray</em>) – Wind speed at 200 hPa [m/s].</p></li>
+<li><p><strong>js_min_anomaly</strong> (<em>float</em>) – Minimum wind speed anomaly to define a jet object.</p></li>
+<li><p><strong>MinTimeJS</strong> (<em>int</em>) – Minimum lifetime (hours).</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step (hours).</p></li>
+<li><p><strong>Gridspacing</strong> (<em>float</em>) – Grid spacing (m).</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em>) – 1 to connect across the date line.</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method to split merged objects (‘breakup’ or ‘watershed’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>jet_objects</strong> (<em>np.ndarray</em>) – Labeled jet stream objects.</p></li>
+<li><p><strong>object_split</strong> (<em>dict</em>) – History of object splitting/merging.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-moaap.trackers.tropical_cyclones">
+<dt class="sig sig-object py" id="moaap.trackers.tropical_cyclones.tc_tracking">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.tropical_cyclones.</span></span><span class="sig-name descname"><span class="pre">tc_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">CY_objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t850</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uv850</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uv200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TC_lat_genesis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TC_t_core</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/tropical_cyclones.html#tc_tracking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.tropical_cyclones.tc_tracking" title="Link to this definition"></a></dt>
+<dd><p>Filters tracked surface cyclones to identify Tropical Cyclones (TCs).
+Checks for warm core, genesis latitude, low pressure, and wind structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>CY_objects</strong> (<em>np.ndarray</em>) – Labeled surface cyclone objects.</p></li>
+<li><p><strong>slp</strong> (<em>np.ndarray</em>) – Sea Level Pressure.</p></li>
+<li><p><strong>t850</strong> (<em>np.ndarray</em>) – Temperature at 850hPa (for warm core check).</p></li>
+<li><p><strong>tb</strong> (<em>np.ndarray</em>) – Brightness Temperature (for cloud shield check).</p></li>
+<li><p><strong>uv850</strong> (<em>np.ndarray</em>) – Wind speed magnitudes at 850hPa and 200hPa.</p></li>
+<li><p><strong>uv200</strong> (<em>np.ndarray</em>) – Wind speed magnitudes at 850hPa and 200hPa.</p></li>
+<li><p><strong>TC_lat_genesis</strong> (<em>float</em>) – Maximum latitude for TC genesis.</p></li>
+<li><p><strong>TC_t_core</strong> (<em>float</em>) – Minimum core temperature threshold.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>TC_obj</strong> (<em>np.ndarray</em>) – Labeled Tropical Cyclone objects.</p></li>
+<li><p><strong>TC_Tracks</strong> (<em>dict</em>) – Dictionary containing Lat/Lon tracks for each TC ID.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class" id="module-moaap.trackers.waves">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">moaap.trackers.waves.</span></span><span class="sig-name descname"><span class="pre">KFfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tim_taper</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>class for wavenumber-frequency filtering for WK99 and WKH00</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.decompose_antisymm">
+<span class="sig-name descname"><span class="pre">decompose_antisymm</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.decompose_antisymm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.decompose_antisymm" title="Link to this definition"></a></dt>
+<dd><p>decompose attribute data to sym and antisym component.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>None</strong></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.eig0filter">
+<span class="sig-name descname"><span class="pre">eig0filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.55</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.eig0filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.eig0filter" title="Link to this definition"></a></dt>
+<dd><p>n&gt;=0 eastward inertio gravirt wave filter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>day</strong> (<em>'fmin/fmax' -- unit is cycle per</em>)</p></li>
+<li><p><strong>westward</strong> (<em>'kmin/kmax' -- zonal wave number. negative is</em>) – eastward</p></li>
+<li><p><strong>is</strong> (<em>positive</em>) – eastward</p></li>
+<li><p><strong>depth</strong> (<em>'hmin/hmax' -- equivalent</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.erfilter">
+<span class="sig-name descname"><span class="pre">erfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.erfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.erfilter" title="Link to this definition"></a></dt>
+<dd><p>equatorial wave filter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>day</strong> (<em>'fmin/fmax' -- unit is cycle per</em>)</p></li>
+<li><p><strong>number</strong> (<em>'n'         -- meridional mode</em>)</p></li>
+<li><p><strong>depth</strong> (<em>'hmin/hmax' -- equivalent</em>)</p></li>
+<li><p><strong>number</strong></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.igfilter">
+<span class="sig-name descname"><span class="pre">igfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.igfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.igfilter" title="Link to this definition"></a></dt>
+<dd><p>n&gt;=1 inertio gravirt wave filter. default is n=1 WIG.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>day</strong> (<em>'fmin/fmax' -- unit is cycle per</em>)</p></li>
+<li><p><strong>westward</strong> (<em>'kmin/kmax' -- zonal wave number. negative is</em>) – eastward</p></li>
+<li><p><strong>is</strong> (<em>positive</em>) – eastward</p></li>
+<li><p><strong>depth</strong> (<em>'hmin/hmax' -- equivalent</em>)</p></li>
+<li><p><strong>number</strong> (<em>'n'         -- meridional mode</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.kelvinfilter">
+<span class="sig-name descname"><span class="pre">kelvinfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.kelvinfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.kelvinfilter" title="Link to this definition"></a></dt>
+<dd><p>kelvin wave filter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>day</strong> (<em>'fmin/fmax' -- unit is cycle per</em>)</p></li>
+<li><p><strong>number</strong> (<em>'kmin/kmax' -- zonal wave</em>)</p></li>
+<li><p><strong>depth</strong> (<em>'hmin/hmax' --equivalent</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.kfmask">
+<span class="sig-name descname"><span class="pre">kfmask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.kfmask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.kfmask" title="Link to this definition"></a></dt>
+<dd><p>return wavenumber-frequency mask for wavefilter method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>--</strong> (<em>'kmin/kmax'</em>)</p></li>
+<li><p><strong>--</strong></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘mask’ – 2D boolean array (wavenumber, frequency).domain to be filterd</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.mrgfilter">
+<span class="sig-name descname"><span class="pre">mrgfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.mrgfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.mrgfilter" title="Link to this definition"></a></dt>
+<dd><p>mixed Rossby gravity wave</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>day</strong> (<em>'fmin/fmax' -- unit is cycle per</em>)</p></li>
+<li><p><strong>westward</strong> (<em>'kmin/kmax' -- zonal wave number. negative is</em>) – eastward</p></li>
+<li><p><strong>is</strong> (<em>positive</em>) – eastward</p></li>
+<li><p><strong>depth</strong> (<em>'hmin/hmax' -- equivalent</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.tdfilter">
+<span class="sig-name descname"><span class="pre">tdfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-6</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.tdfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.tdfilter" title="Link to this definition"></a></dt>
+<dd><p>KTH05 TD-type filter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>day</strong> (<em>'fmin/fmax' -- unit is cycle per</em>)</p></li>
+<li><p><strong>westward</strong> (<em>'kmin/kmax' -- zonal wave number. negative is</em>) – eastward</p></li>
+<li><p><strong>is</strong> (<em>positive</em>) – eastward</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="moaap.trackers.waves.KFfilter.wavefilter">
+<span class="sig-name descname"><span class="pre">wavefilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#KFfilter.wavefilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.KFfilter.wavefilter" title="Link to this definition"></a></dt>
+<dd><p>apply wavenumber-frequency filtering by original mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>array</strong> (<em>'mask' -- 2D boolean</em>) – is False (True member to be zero)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>‘filterd’ – filtered data in the original data space</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.trackers.waves.track_tropwaves_tb">
+<span class="sig-prename descclassname"><span class="pre">moaap.trackers.waves.</span></span><span class="sig-name descname"><span class="pre">track_tropwaves_tb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Gridspacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">er_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mrg_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">igw_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kel_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eig0_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'watershed'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/trackers/waves.html#track_tropwaves_tb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.trackers.waves.track_tropwaves_tb" title="Link to this definition"></a></dt>
+<dd><p>Identifies and tracks tropical waves using wavenumber-frequency filtering
+(Wheeler &amp; Kiladis method) applied to precipitation data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pr</strong> (<em>np.ndarray</em>) – Precipitation data.</p></li>
+<li><p><strong>Lat</strong> (<em>np.ndarray</em>) – Latitude grid.</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time step (hours).</p></li>
+<li><p><strong>er_th</strong> (<em>float</em>) – Amplitude thresholds for identifying Equatorial Rossby, Mixed Rossby Gravity,
+Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.</p></li>
+<li><p><strong>mrg_th</strong> (<em>float</em>) – Amplitude thresholds for identifying Equatorial Rossby, Mixed Rossby Gravity,
+Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.</p></li>
+<li><p><strong>igw_th</strong> (<em>float</em>) – Amplitude thresholds for identifying Equatorial Rossby, Mixed Rossby Gravity,
+Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.</p></li>
+<li><p><strong>kel_th</strong> (<em>float</em>) – Amplitude thresholds for identifying Equatorial Rossby, Mixed Rossby Gravity,
+Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.</p></li>
+<li><p><strong>eig0_th</strong> (<em>float</em>) – Amplitude thresholds for identifying Equatorial Rossby, Mixed Rossby Gravity,
+Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.</p></li>
+<li><p><strong>breakup</strong> (<em>str</em>) – Method to handle merging objects (‘breakup’ or ‘watershed’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects</strong> – Labeled object arrays for each wave type.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="MOAAP documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,197 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moaap.trackers.jets &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">MOAAP Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">moaap.trackers.jets</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for moaap.trackers.jets</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">smooth_uniform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">watershed_3d_overlap_parallel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">BreakupObjects</span>
+
+<div class="viewcode-block" id="jetstream_tracking">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.jets.jetstream_tracking">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">jetstream_tracking</span><span class="p">(</span>
+                      <span class="n">uv200</span><span class="p">,</span>            
+                      <span class="n">js_min_anomaly</span><span class="p">,</span>   
+                      <span class="n">MinTimeJS</span><span class="p">,</span>        
+                      <span class="n">dT</span><span class="p">,</span>               
+                      <span class="n">Gridspacing</span><span class="p">,</span>
+                      <span class="n">connectLon</span><span class="p">,</span>
+                      <span class="n">breakup</span> <span class="o">=</span> <span class="s1">&#39;breakup&#39;</span><span class="p">,</span>
+                      <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identifies and tracks Jet Stream objects based on 200hPa wind speed anomalies.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    uv200 : np.ndarray</span>
+<span class="sd">        Wind speed at 200 hPa [m/s].</span>
+<span class="sd">    js_min_anomaly : float</span>
+<span class="sd">        Minimum wind speed anomaly to define a jet object.</span>
+<span class="sd">    MinTimeJS : int</span>
+<span class="sd">        Minimum lifetime (hours).</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Time step (hours).</span>
+<span class="sd">    Gridspacing : float</span>
+<span class="sd">        Grid spacing (m).</span>
+<span class="sd">    connectLon : int</span>
+<span class="sd">        1 to connect across the date line.</span>
+<span class="sd">    breakup : str</span>
+<span class="sd">        Method to split merged objects (&#39;breakup&#39; or &#39;watershed&#39;).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jet_objects : np.ndarray</span>
+<span class="sd">        Labeled jet stream objects.</span>
+<span class="sd">    object_split : dict</span>
+<span class="sd">        History of object splitting/merging.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">uv200_smooth</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+                             <span class="mi">1</span><span class="p">,</span>
+                             <span class="nb">int</span><span class="p">(</span><span class="mi">500</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)))</span>
+    <span class="n">uv200smoothAn</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+                                 <span class="nb">int</span><span class="p">(</span><span class="mi">78</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                 <span class="nb">int</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">5000</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">))))</span>
+
+    <span class="n">uv200_Anomaly</span> <span class="o">=</span> <span class="n">uv200_smooth</span> <span class="o">-</span> <span class="n">uv200smoothAn</span>
+    <span class="n">jet</span> <span class="o">=</span> <span class="n">uv200_Anomaly</span><span class="p">[:,:,:]</span> <span class="o">&gt;=</span> <span class="n">js_min_anomaly</span>
+
+
+    <span class="c1">#     Pressure_anomaly[np.isnan(Pressure_anomaly)] = 0</span>
+    <span class="c1">#     jet[:,Mask == 0] = 0</span>
+    <span class="n">rgiObj_Struct</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">));</span> <span class="n">rgiObj_Struct</span><span class="p">[:,:,:]</span><span class="o">=</span><span class="mi">1</span>
+    <span class="n">rgiObjectsUD</span><span class="p">,</span> <span class="n">nr_objectsUD</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">jet</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">rgiObj_Struct</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;            &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">nr_objectsUD</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39; object found&#39;</span><span class="p">)</span>
+
+    <span class="n">jet_objects</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">rgiObjectsUD</span><span class="p">,</span>
+                                <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">MinTimeJS</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                 <span class="n">dT</span> <span class="o">=</span> <span class="n">dT</span><span class="p">)</span>
+
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        break up long living jety objects with the &#39;</span><span class="o">+</span><span class="n">breakup</span><span class="o">+</span><span class="s1">&#39; method&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;breakup&#39;</span><span class="p">:</span>
+        <span class="n">jet_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">BreakupObjects</span><span class="p">(</span><span class="n">jet_objects</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeJS</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                    <span class="n">dT</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
+        <span class="n">jet_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+                                    <span class="n">js_min_anomaly</span><span class="p">,</span>
+                                    <span class="n">js_min_anomaly</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="mi">3000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">),</span> <span class="c1"># this setting sets the size of jet objects</span>
+                                    <span class="n">dT</span><span class="p">,</span>
+                                    <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeJS</span><span class="p">,</span>
+                                    <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>
+                                    <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.25</span>
+                                    <span class="p">)</span>
+        <span class="n">object_split</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<span class="c1">#     jet_objects, object_split = clean_up_objects(rgiObjectsUD,</span>
+<span class="c1">#                                 min_tsteps=int(MinTimeJS/dT),</span>
+<span class="c1">#                                 dT = dT,</span>
+<span class="c1">#                                 obj_splitmerge = object_split)</span>
+    
+    <span class="c1"># if connectLon == 1:</span>
+    <span class="c1">#     print(&#39;        connect cyclones objects over date line&#39;)</span>
+    <span class="c1">#     jet_objects = ConnectLon_on_timestep(jet_objects)</span>
+
+    <span class="k">return</span> <span class="n">jet_objects</span><span class="p">,</span> <span class="n">object_split</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
