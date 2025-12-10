@@ -74,7 +74,8 @@ def moaap(
     OutputFolder : str, default=''
         Path to the output directory.
 
-    # — Precipitation objects —
+    Precipitation objects
+    -----------        
     SmoothSigmaP : float, default=0
         Gaussian σ for precipitation smoothing.
     Pthreshold : float, default=2
@@ -84,7 +85,8 @@ def moaap(
     MinAreaPR : float, default=5000
         Minimum area of precipitation features (km²).
 
-    # — Moisture streams —
+    Moisture streams
+    -----------
     MinTimeMS : int, default=9
         Minimum lifetime of moisture stream features (h).
     MinAreaMS : float, default=100000
@@ -92,7 +94,8 @@ def moaap(
     MinMSthreshold : float, default=0.11
         Detection threshold for moisture streams (g·m/g·s).
 
-    # — Cyclones & anticyclones —
+    Cyclones & anticyclones
+    -------------------
     MinTimeCY : int, default=12
         Minimum lifetime of cyclones (h).
     MaxPresAnCY : float, default=-8
@@ -104,13 +107,15 @@ def moaap(
     MinPresAnACY : float, default=6
         Pressure anomaly threshold for anticyclones (hPa).
 
-    # — Frontal zones —
+    Frontal zones
+    -------------------
     MinAreaFR : float, default=50000
         Minimum area of frontal zones (km²).
     front_treshold : float, default=1
         Threshold for masking frontal zones.
 
-    # — Cloud tracking —
+    Cloud tracking
+    -----------
     SmoothSigmaC : float, default=0
         Gaussian σ for cloud‐shield smoothing.
     Cthreshold : float, default=241
@@ -120,7 +125,8 @@ def moaap(
     MinAreaC : float, default=40000
         Minimum area of ice‐cloud shields (km²).
 
-    # — Atmospheric rivers (AR) —
+    Atmospheric rivers (AR)
+    -----------
     IVTtrheshold : float, default=500
         Integrated vapor transport threshold for AR detection (kg m⁻¹ s⁻¹).
     MinTimeIVT : int, default=12
@@ -134,7 +140,8 @@ def moaap(
     AR_width_lenght_ratio : float, default=2
         Minimum length‐to‐width ratio for ARs.
 
-    # — Tropical cyclone detection —
+    Tropical cyclone detection
+    -----------
     TC_Pmin : float, default=995
         Minimum central pressure for TC detection (hPa).
     TC_lat_genesis : float, default=35
@@ -146,7 +153,8 @@ def moaap(
     TC_T850min : float, default=285
         Minimum core temperature at 850 hPa for TCs (K).
 
-    # — Mesoscale convective systems (MCS) —
+    Mesoscale convective systems (MCS)
+    -----------
     MCS_Minsize : float, default=5000
         Minimum precipitation area size for MCS (km²).
     MCS_minPR : float, default=15
@@ -160,7 +168,8 @@ def moaap(
     Analyze_history : bool, default=False
         Whether to analyze the history of MCS objects.
 
-    # — Jet streams & tropical waves —
+    Jet streams & tropical waves
+    -----------
     js_min_anomaly : float, default=37
         Minimum jet‐stream anomaly (m/s).
     MinTimeJS : int, default=24
@@ -172,7 +181,8 @@ def moaap(
     breakup_mcs : str, default='watershed'
         Method for MCS breakup.
 
-    # — 500 hPa cyclones/anticyclones —
+    **500 hPa cyclones/anticyclones**
+
     z500_low_anom : float, default=-80
         Minimum anomaly for 500 hPa cyclones (m).
     z500_high_anom : float, default=70
@@ -180,7 +190,8 @@ def moaap(
     breakup_zcy : str, default='watershed'
         Method for 500 hPa cyclone/anticyclone breakup.
 
-    # — Equatorial waves —
+    Equatorial waves
+    -----------
     er_th : float, default=0.05
         Threshold for equatorial Rossby waves.
     mrg_th : float, default=0.05

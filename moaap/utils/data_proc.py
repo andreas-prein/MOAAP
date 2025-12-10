@@ -140,9 +140,9 @@ def tukey_latitude_mask(lat_matrix: np.ndarray,
     lat_matrix : np.ndarray
         2D array of center-point latitudes (degrees), shape (ny, nx).
     lat_start : float
-        Latitude (in degrees) where the taper begins (|lat|<=lat_start => weight=1).
+        Latitude (in degrees) where the taper begins (``|lat| <= lat_start`` => weight=1).
     lat_stop : float
-        Latitude (in degrees) where the taper ends (|lat|>=lat_stop => weight=0).
+        Latitude (in degrees) where the taper ends (``|lat| >= lat_stop`` => weight=0).
 
     Returns
     -------

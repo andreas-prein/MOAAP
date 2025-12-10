@@ -169,77 +169,96 @@
 <li><p><strong>tb</strong> (<em>array_like</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Brightness temperature (K).</p></li>
 <li><p><strong>DataName</strong> (<em>str</em><em>, </em><em>default=''</em>) – Name of the common grid.</p></li>
 <li><p><strong>OutputFolder</strong> (<em>str</em><em>, </em><em>default=''</em>) – Path to the output directory.</p></li>
-<li><p><strong>objects</strong> (<em>Precipitation</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>SmoothSigmaP</strong> (<em>float</em><em>, </em><em>default=0</em>) – Gaussian σ for precipitation smoothing.</p></li>
-<li><p><strong>Pthreshold</strong> (<em>float</em><em>, </em><em>default=2</em>) – Precipitation threshold (mm h⁻¹).</p></li>
-<li><p><strong>MinTimePR</strong> (<em>int</em><em>, </em><em>default=4</em>) – Minimum lifetime of precipitation features (h).</p></li>
-<li><p><strong>MinAreaPR</strong> (<em>float</em><em>, </em><em>default=5000</em>) – Minimum area of precipitation features (km²).</p></li>
-<li><p><strong>streams</strong> (<em>Moisture</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>MinTimeMS</strong> (<em>int</em><em>, </em><em>default=9</em>) – Minimum lifetime of moisture stream features (h).</p></li>
-<li><p><strong>MinAreaMS</strong> (<em>float</em><em>, </em><em>default=100000</em>) – Minimum area of moisture stream features (km²).</p></li>
-<li><p><strong>MinMSthreshold</strong> (<em>float</em><em>, </em><em>default=0.11</em>) – Detection threshold for moisture streams (g·m/g·s).</p></li>
-<li><p><strong>anticyclones</strong> (<em>Cyclones &amp;</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>MinTimeCY</strong> (<em>int</em><em>, </em><em>default=12</em>) – Minimum lifetime of cyclones (h).</p></li>
-<li><p><strong>MaxPresAnCY</strong> (<em>float</em><em>, </em><em>default=-8</em>) – Pressure anomaly threshold for cyclones (hPa).</p></li>
-<li><p><strong>breakup_cy</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for cyclone breakup.</p></li>
-<li><p><strong>MinTimeACY</strong> (<em>int</em><em>, </em><em>default=12</em>) – Minimum lifetime of anticyclones (h).</p></li>
-<li><p><strong>MinPresAnACY</strong> (<em>float</em><em>, </em><em>default=6</em>) – Pressure anomaly threshold for anticyclones (hPa).</p></li>
-<li><p><strong>zones</strong> (<em>Frontal</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>MinAreaFR</strong> (<em>float</em><em>, </em><em>default=50000</em>) – Minimum area of frontal zones (km²).</p></li>
-<li><p><strong>front_treshold</strong> (<em>float</em><em>, </em><em>default=1</em>) – Threshold for masking frontal zones.</p></li>
-<li><p><strong>tracking</strong> (<em>Cloud</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>SmoothSigmaC</strong> (<em>float</em><em>, </em><em>default=0</em>) – Gaussian σ for cloud‐shield smoothing.</p></li>
-<li><p><strong>Cthreshold</strong> (<em>float</em><em>, </em><em>default=241</em>) – Brightness temperature threshold for ice‐cloud shields (K).</p></li>
-<li><p><strong>MinTimeC</strong> (<em>int</em><em>, </em><em>default=4</em>) – Minimum lifetime of ice‐cloud shields (h).</p></li>
-<li><p><strong>MinAreaC</strong> (<em>float</em><em>, </em><em>default=40000</em>) – Minimum area of ice‐cloud shields (km²).</p></li>
-<li><p><strong>(</strong><strong>AR</strong><strong>)</strong> (<em>Atmospheric rivers</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>IVTtrheshold</strong> (<em>float</em><em>, </em><em>default=500</em>) – Integrated vapor transport threshold for AR detection (kg m⁻¹ s⁻¹).</p></li>
-<li><p><strong>MinTimeIVT</strong> (<em>int</em><em>, </em><em>default=12</em>) – Minimum lifetime of ARs (h).</p></li>
-<li><p><strong>breakup_ivt</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for AR breakup.</p></li>
-<li><p><strong>AR_MinLen</strong> (<em>float</em><em>, </em><em>default=2000</em>) – Minimum length of an AR (km).</p></li>
-<li><p><strong>AR_Lat</strong> (<em>float</em><em>, </em><em>default=20</em>) – Minimum centroid latitude for ARs (degrees N).</p></li>
-<li><p><strong>AR_width_lenght_ratio</strong> (<em>float</em><em>, </em><em>default=2</em>) – Minimum length‐to‐width ratio for ARs.</p></li>
-<li><p><strong>detection</strong> (<em>Tropical cyclone</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>TC_Pmin</strong> (<em>float</em><em>, </em><em>default=995</em>) – Minimum central pressure for TC detection (hPa).</p></li>
-<li><p><strong>TC_lat_genesis</strong> (<em>float</em><em>, </em><em>default=35</em>) – Maximum latitude for TC genesis (degrees).</p></li>
-<li><p><strong>TC_lat_max</strong> (<em>float</em><em>, </em><em>default=60</em>) – Maximum latitude for TC existence (degrees).</p></li>
-<li><p><strong>TC_deltaT_core</strong> (<em>float</em><em>, </em><em>default=0</em>) – Minimum core‐to‐environment temperature difference (K).</p></li>
-<li><p><strong>TC_T850min</strong> (<em>float</em><em>, </em><em>default=285</em>) – Minimum core temperature at 850 hPa for TCs (K).</p></li>
-<li><p><strong>(</strong><strong>MCS</strong><strong>)</strong> (<em>Mesoscale convective systems</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>MCS_Minsize</strong> (<em>float</em><em>, </em><em>default=5000</em>) – Minimum precipitation area size for MCS (km²).</p></li>
-<li><p><strong>MCS_minPR</strong> (<em>float</em><em>, </em><em>default=15</em>) – Precipitation threshold for MCS detection (mm h⁻¹).</p></li>
-<li><p><strong>CL_MaxT</strong> (<em>float</em><em>, </em><em>default=215</em>) – Maximum brightness temperature in ice shield for MCS (K).</p></li>
-<li><p><strong>CL_Area</strong> (<em>float</em><em>, </em><em>default=40000</em>) – Minimum cloud area for MCS detection (km²).</p></li>
-<li><p><strong>MCS_minTime</strong> (<em>int</em><em>, </em><em>default=4</em>) – Minimum lifetime of MCS (h).</p></li>
-<li><p><strong>Analyze_history</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to analyze the history of MCS objects.</p></li>
-<li><p><strong>waves</strong> (<em>Equatorial</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>js_min_anomaly</strong> (<em>float</em><em>, </em><em>default=37</em>) – Minimum jet‐stream anomaly (m/s).</p></li>
-<li><p><strong>MinTimeJS</strong> (<em>int</em><em>, </em><em>default=24</em>) – Minimum lifetime of jet streams (h).</p></li>
-<li><p><strong>breakup_jet</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for jet‐stream breakup.</p></li>
-<li><p><strong>tropwave_minTime</strong> (<em>int</em><em>, </em><em>default=48</em>) – Minimum lifetime of tropical waves (h).</p></li>
-<li><p><strong>breakup_mcs</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for MCS breakup.</p></li>
-<li><p><strong>cyclones/anticyclones</strong> (<em>500 hPa</em>)</p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>z500_low_anom</strong> (<em>float</em><em>, </em><em>default=-80</em>) – Minimum anomaly for 500 hPa cyclones (m).</p></li>
-<li><p><strong>z500_high_anom</strong> (<em>float</em><em>, </em><em>default=70</em>) – Minimum anomaly for 500 hPa anticyclones (m).</p></li>
-<li><p><strong>breakup_zcy</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for 500 hPa cyclone/anticyclone breakup.</p></li>
-<li><p><strong>waves</strong></p></li>
-<li><p><strong>-----------</strong></p></li>
-<li><p><strong>er_th</strong> (<em>float</em><em>, </em><em>default=0.05</em>) – Threshold for equatorial Rossby waves.</p></li>
-<li><p><strong>mrg_th</strong> (<em>float</em><em>, </em><em>default=0.05</em>) – Threshold for mixed Rossby‐gravity waves.</p></li>
-<li><p><strong>igw_th</strong> (<em>float</em><em>, </em><em>default=0.20</em>) – Threshold for inertia–gravity waves.</p></li>
-<li><p><strong>kel_th</strong> (<em>float</em><em>, </em><em>default=0.10</em>) – Threshold for Kelvin waves.</p></li>
-<li><p><strong>eig0_th</strong> (<em>float</em><em>, </em><em>default=0.10</em>) – Threshold for n≥1 inertia–gravity waves.</p></li>
-<li><p><strong>breakup_tw</strong> (<em>str</em><em>, </em><em>default='watershed'</em>) – Method for equatorial wave breakup.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Precipitation objects<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>SmoothSigmaP</strong> (<em>float, default=0</em>) – Gaussian σ for precipitation smoothing.</p></li>
+<li><p><strong>Pthreshold</strong> (<em>float, default=2</em>) – Precipitation threshold (mm h⁻¹).</p></li>
+<li><p><strong>MinTimePR</strong> (<em>int, default=4</em>) – Minimum lifetime of precipitation features (h).</p></li>
+<li><p><strong>MinAreaPR</strong> (<em>float, default=5000</em>) – Minimum area of precipitation features (km²).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Moisture streams<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>MinTimeMS</strong> (<em>int, default=9</em>) – Minimum lifetime of moisture stream features (h).</p></li>
+<li><p><strong>MinAreaMS</strong> (<em>float, default=100000</em>) – Minimum area of moisture stream features (km²).</p></li>
+<li><p><strong>MinMSthreshold</strong> (<em>float, default=0.11</em>) – Detection threshold for moisture streams (g·m/g·s).</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Cyclones &amp; anticyclones<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>MinTimeCY</strong> (<em>int, default=12</em>) – Minimum lifetime of cyclones (h).</p></li>
+<li><p><strong>MaxPresAnCY</strong> (<em>float, default=-8</em>) – Pressure anomaly threshold for cyclones (hPa).</p></li>
+<li><p><strong>breakup_cy</strong> (<em>str, default=’watershed’</em>) – Method for cyclone breakup.</p></li>
+<li><p><strong>MinTimeACY</strong> (<em>int, default=12</em>) – Minimum lifetime of anticyclones (h).</p></li>
+<li><p><strong>MinPresAnACY</strong> (<em>float, default=6</em>) – Pressure anomaly threshold for anticyclones (hPa).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Frontal zones<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>MinAreaFR</strong> (<em>float, default=50000</em>) – Minimum area of frontal zones (km²).</p></li>
+<li><p><strong>front_treshold</strong> (<em>float, default=1</em>) – Threshold for masking frontal zones.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Cloud tracking<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>SmoothSigmaC</strong> (<em>float, default=0</em>) – Gaussian σ for cloud‐shield smoothing.</p></li>
+<li><p><strong>Cthreshold</strong> (<em>float, default=241</em>) – Brightness temperature threshold for ice‐cloud shields (K).</p></li>
+<li><p><strong>MinTimeC</strong> (<em>int, default=4</em>) – Minimum lifetime of ice‐cloud shields (h).</p></li>
+<li><p><strong>MinAreaC</strong> (<em>float, default=40000</em>) – Minimum area of ice‐cloud shields (km²).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Atmospheric rivers (AR)<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>IVTtrheshold</strong> (<em>float, default=500</em>) – Integrated vapor transport threshold for AR detection (kg m⁻¹ s⁻¹).</p></li>
+<li><p><strong>MinTimeIVT</strong> (<em>int, default=12</em>) – Minimum lifetime of ARs (h).</p></li>
+<li><p><strong>breakup_ivt</strong> (<em>str, default=’watershed’</em>) – Method for AR breakup.</p></li>
+<li><p><strong>AR_MinLen</strong> (<em>float, default=2000</em>) – Minimum length of an AR (km).</p></li>
+<li><p><strong>AR_Lat</strong> (<em>float, default=20</em>) – Minimum centroid latitude for ARs (degrees N).</p></li>
+<li><p><strong>AR_width_lenght_ratio</strong> (<em>float, default=2</em>) – Minimum length‐to‐width ratio for ARs.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Tropical cyclone detection<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TC_Pmin</strong> (<em>float, default=995</em>) – Minimum central pressure for TC detection (hPa).</p></li>
+<li><p><strong>TC_lat_genesis</strong> (<em>float, default=35</em>) – Maximum latitude for TC genesis (degrees).</p></li>
+<li><p><strong>TC_lat_max</strong> (<em>float, default=60</em>) – Maximum latitude for TC existence (degrees).</p></li>
+<li><p><strong>TC_deltaT_core</strong> (<em>float, default=0</em>) – Minimum core‐to‐environment temperature difference (K).</p></li>
+<li><p><strong>TC_T850min</strong> (<em>float, default=285</em>) – Minimum core temperature at 850 hPa for TCs (K).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Mesoscale convective systems (MCS)<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>MCS_Minsize</strong> (<em>float, default=5000</em>) – Minimum precipitation area size for MCS (km²).</p></li>
+<li><p><strong>MCS_minPR</strong> (<em>float, default=15</em>) – Precipitation threshold for MCS detection (mm h⁻¹).</p></li>
+<li><p><strong>CL_MaxT</strong> (<em>float, default=215</em>) – Maximum brightness temperature in ice shield for MCS (K).</p></li>
+<li><p><strong>CL_Area</strong> (<em>float, default=40000</em>) – Minimum cloud area for MCS detection (km²).</p></li>
+<li><p><strong>MCS_minTime</strong> (<em>int, default=4</em>) – Minimum lifetime of MCS (h).</p></li>
+<li><p><strong>Analyze_history</strong> (<em>bool, default=False</em>) – Whether to analyze the history of MCS objects.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Jet streams &amp; tropical waves<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>js_min_anomaly</strong> (<em>float, default=37</em>) – Minimum jet‐stream anomaly (m/s).</p></li>
+<li><p><strong>MinTimeJS</strong> (<em>int, default=24</em>) – Minimum lifetime of jet streams (h).</p></li>
+<li><p><strong>breakup_jet</strong> (<em>str, default=’watershed’</em>) – Method for jet‐stream breakup.</p></li>
+<li><p><strong>tropwave_minTime</strong> (<em>int, default=48</em>) – Minimum lifetime of tropical waves (h).</p></li>
+<li><p><strong>breakup_mcs</strong> (<em>str, default=’watershed’</em>) – Method for MCS breakup.</p></li>
+<li><p><strong>**500 hPa cyclones/anticyclones**</strong></p></li>
+<li><p><strong>z500_low_anom</strong> (<em>float, default=-80</em>) – Minimum anomaly for 500 hPa cyclones (m).</p></li>
+<li><p><strong>z500_high_anom</strong> (<em>float, default=70</em>) – Minimum anomaly for 500 hPa anticyclones (m).</p></li>
+<li><p><strong>breakup_zcy</strong> (<em>str, default=’watershed’</em>) – Method for 500 hPa cyclone/anticyclone breakup.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Equatorial waves<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>er_th</strong> (<em>float, default=0.05</em>) – Threshold for equatorial Rossby waves.</p></li>
+<li><p><strong>mrg_th</strong> (<em>float, default=0.05</em>) – Threshold for mixed Rossby‐gravity waves.</p></li>
+<li><p><strong>igw_th</strong> (<em>float, default=0.20</em>) – Threshold for inertia–gravity waves.</p></li>
+<li><p><strong>kel_th</strong> (<em>float, default=0.10</em>) – Threshold for Kelvin waves.</p></li>
+<li><p><strong>eig0_th</strong> (<em>float, default=0.10</em>) – Threshold for n≥1 inertia–gravity waves.</p></li>
+<li><p><strong>breakup_tw</strong> (<em>str, default=’watershed’</em>) – Method for equatorial wave breakup.</p></li>
 </ul>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>

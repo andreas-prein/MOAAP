@@ -35,15 +35,15 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 napoleon_custom_sections = [
-    ('Precipitation Parameters', 'params_style'),
-    ('Moisture Stream Parameters', 'params_style'),
-    ('Cyclone & Anticyclone Parameters', 'params_style'),
-    ('Frontal Zone Parameters', 'params_style'),
-    ('Cloud Tracking Parameters', 'params_style'),
-    ('Atmospheric River Parameters', 'params_style'),
-    ('Tropical Cyclone Parameters', 'params_style'),
-    ('MCS Parameters', 'params_style'),
-    ('Jet Stream & Wave Parameters', 'params_style'),
-    ('500 hPa Cyclone Parameters', 'params_style'),
-    ('Equatorial Wave Parameters', 'params_style'),
+    ('Precipitation objects', 'params_style'),
+    ('Moisture streams', 'params_style'),
+    ('Cyclones & anticyclones', 'params_style'),
+    ('Frontal zones', 'params_style'),
+    ('Cloud tracking', 'params_style'),
+    ('Atmospheric rivers (AR)', 'params_style'),
+    ('Tropical cyclone detection', 'params_style'),
+    ('Mesoscale convective systems (MCS)', 'params_style'),
+    ('Jet streams & tropical waves', 'params_style'),
+    ('500 hPa cyclones/anticyclones', 'params_style'),
+    ('Equatorial waves', 'params_style'),
 ]
