@@ -96,15 +96,15 @@
 <li><p><strong>Algorithm Deep-Dive</strong>: Testing the core segmentation algorithm (Watershedding) on idealized synthetic data to understand how objects are defined in 2D vs 3D.</p></li>
 </ol>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># !pip install git+https://github.com/grafrap/Semester-thesis.git (only if the package is not already installed)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
@@ -135,20 +135,11 @@
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-The autoreload extension is already loaded. To reload it, use:
-  %reload_ext autoreload
-</pre></div></div>
-</div>
 <section id="Part-1:-Running-MOAAP-on-Real-Data">
 <h2>Part 1: Running MOAAP on Real Data<a class="headerlink" href="#Part-1:-Running-MOAAP-on-Real-Data" title="Link to this heading"></a></h2>
 <p>In this section, we load a sample dataset (24 hours of ERA5 data) and run the main <code class="docutils literal notranslate"><span class="pre">moaap</span></code> driver to identify atmospheric objects.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Load Data</span>
@@ -181,14 +172,19 @@ The autoreload extension is already loaded. To reload it, use:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Data loaded successfully.
+Downloading...
+From (original): https://drive.google.com/uc?id=1hD9hD3c9rBhcTN-c5FN87l0pHp_SCscE
+From (redirected): https://drive.google.com/uc?id=1hD9hD3c9rBhcTN-c5FN87l0pHp_SCscE&amp;confirm=t&amp;uuid=b7483cbc-3f62-4957-b729-49d9e3a87390
+To: /home/raphael/Documents/Studium/9.Semester/Semester_thesis/Semester-thesis/20210701-04_MOAAP-Input_24h.nc
+100%|██████████████████████████████████████| 2.41G/2.41G [03:47&lt;00:00, 10.6MB/s]
+Data downloaded and loaded successfully.
 </pre></div></div>
 </div>
 <section id="Run-the-Tracking">
 <h3>Run the Tracking<a class="headerlink" href="#Run-the-Tracking" title="Link to this heading"></a></h3>
 <p>We call the <code class="docutils literal notranslate"><span class="pre">moaap</span></code> function. Note that we are only passing <code class="docutils literal notranslate"><span class="pre">pr</span></code> (Precipitation) and <code class="docutils literal notranslate"><span class="pre">tb</span></code> (Brightness Temperature) for this example to detect MCSs (Mesoscale Convective Systems). Other variables are set to <code class="docutils literal notranslate"><span class="pre">None</span></code> to speed up this tutorial.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Clean up previous run</span>
@@ -252,7 +248,7 @@ The provided variables allow tracking the following phenomena
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-4284it [00:00, 8236.66it/s]
+4284it [00:00, 8344.58it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -262,7 +258,7 @@ The provided variables allow tracking the following phenomena
 <div class="highlight"><pre>
             Loop over 4284 objects
             Loop over 100 objects
-        00:00:06.84
+        00:00:07.43
 ======&gt; &#39;track high clouds in Tb field by excluding MCS objects
         track  clouds
         break up long living cloud shield objects with wathershedding
@@ -274,7 +270,7 @@ The provided variables allow tracking the following phenomena
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-878it [00:00, 11505.50it/s]
+878it [00:00, 11800.71it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -283,11 +279,11 @@ The provided variables allow tracking the following phenomena
 <div class="output_area docutils container">
 <div class="highlight"><pre>
             Loop over 878 objects
-        00:00:03.35
+        00:00:03.85
 
 Save the object masks into a joint netCDF
 Saved: moaap_output/202107_ERA5_ObjectMasks__dt-1h_MOAAP-masks.nc
-        00:00:05.04
+        00:00:05.48
 </pre></div></div>
 </div>
 </section>
@@ -295,7 +291,7 @@ Saved: moaap_output/202107_ERA5_ObjectMasks__dt-1h_MOAAP-masks.nc
 <h3>Visualize Results<a class="headerlink" href="#Visualize-Results" title="Link to this heading"></a></h3>
 <p>Let’s plot the identified MCS objects and their tracks on a map.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load the output</span>
@@ -350,7 +346,7 @@ Saved: moaap_output/202107_ERA5_ObjectMasks__dt-1h_MOAAP-masks.nc
 <p>In this section, we run MOAAP with the full set of atmospheric variables to identify a broader range of phenomena. We will then analyze the results, including object statistics and tracks. In the end, we will visualite some of the identified objects and generate a gif animation of their evolution over time.</p>
 <p>There will be a history diagram of the MCS objects showing their life cycles with merges and splits.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Running MOAAP with full dataset (this may take a moment)...&quot;</span><span class="p">)</span>
@@ -420,23 +416,23 @@ Auto-configured to 2 latitude chunks and 3 longitude chunks for parallel process
     Processing 6 chunks in parallel...
     Merging chunk results...
             Loop over 21 objects
-        00:01:29.00
+        00:01:37.82
 ======&gt; track moisture streams and atmospheric rivers (ARs)
             650 object found
         break up long living MS objects with watershed
             Loop over 13 objects
-        00:00:06.49
+        00:00:06.84
 ======&gt; track IVT streams and atmospheric rivers (ARs)
         149 object found
         break up long living IVT objects with watershed
             Loop over 11 objects
         check if MSs quallify as ARs
-        00:00:00.57
+        00:00:00.58
             Loop over 4 objects
-        00:00:03.96
+        00:00:04.16
 ======&gt; identify frontal zones
         56194 object found
-        00:00:03.04
+        00:00:03.13
 ======&gt; track cyclones from PSL
         track cyclones
             70 object found
@@ -446,7 +442,7 @@ Auto-configured to 2 latitude chunks and 3 longitude chunks for parallel process
             break up long living ACY objects that have many elements
             Loop over 34 objects
             Loop over 74 objects
-        00:00:16.19
+        00:00:18.20
 ======&gt; track cyclones from Z500
     track 500 hPa cyclones
             35 object found
@@ -455,17 +451,12 @@ Auto-configured to 2 latitude chunks and 3 longitude chunks for parallel process
     track 500 hPa anticyclones
             22 object found
         break up long living CY objects that heve many elements
-(24, 721, 1440)
-2 4
-Auto-configured to 2 latitude chunks and 3 longitude chunks for parallel processing.
-    Processing 6 chunks in parallel...
-    Merging chunk results...
         connect cyclones objects over date line
             Loop over 42 objects
             Loop over 38 objects
     Check if cyclones qualify as Cut Off Low (COL)
             Loop over 40 objects
-        00:00:14.62
+        00:00:12.69
 ======&gt; &#39;check if Tb objects qualify as MCS (or selected storm type)
         track  clouds
         8339 cloud object found
@@ -479,7 +470,7 @@ Auto-configured to 2 latitude chunks and 3 longitude chunks for parallel process
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-4284it [00:00, 5210.71it/s]
+4284it [00:02, 1936.02it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -494,7 +485,7 @@ Pre-calculating all label 2D centers at each time slice...
     Printing histories: {1: [1], 2: [2], 3: [3, 60], 4: [4], 5: [5], 6: [6], 7: [7], 8: [8], 9: [9], 10: [10], 11: [11], 81: [81, 99, 12], 13: [13], 14: [14], 73: [73, 15], 16: [16], 17: [17], 18: [18], 19: [19], 20: [20], 21: [21], 69: [69, 22], 23: [23], 24: [24], 25: [64, 25], 26: [26], 27: [27], 28: [28], 29: [29], 30: [30], 31: [31], 32: [32], 33: [33], 34: [34, 79, 71], 35: [35], 36: [36], 37: [37], 38: [38], 82: [82, 47, 39], 40: [40], 41: [41], 42: [42], 43: [43], 44: [44], 45: [45], 46: [46], 48: [48, 58, 77], 49: [49], 93: [50, 93], 51: [51], 52: [52], 53: [53], 54: [54], 78: [78, 84, 62, 55], 56: [56], 57: [57], 59: [59], 61: [61], 63: [63], 65: [88, 65, 100], 66: [66], 67: [67], 68: [68], 70: [70], 72: [72], 74: [74], 75: [75], 76: [76], 80: [80], 83: [83], 85: [85], 86: [86], 87: [87], 89: [89], 90: [90], 91: [91], 92: [92], 94: [94], 95: [95], 96: [96], 97: [97], 98: [98]}
             Loop over 4284 objects
             Loop over 100 objects
-        00:00:10.65
+        00:00:11.97
 ======&gt; &#39;track high clouds in Tb field by excluding MCS objects
         track  clouds
         break up long living cloud shield objects with wathershedding
@@ -506,7 +497,7 @@ Pre-calculating all label 2D centers at each time slice...
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-878it [00:00, 9685.39it/s]
+878it [00:00, 6494.64it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -515,7 +506,7 @@ Pre-calculating all label 2D centers at each time slice...
 <div class="output_area docutils container">
 <div class="highlight"><pre>
             Loop over 878 objects
-        00:00:03.55
+        00:00:03.39
 ======&gt; Check if cyclones qualify as TCs
 </pre></div></div>
 </div>
@@ -524,7 +515,7 @@ Pre-calculating all label 2D centers at each time slice...
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|██████████| 34/34 [00:00&lt;00:00, 169.87it/s]
+100%|██████████| 34/34 [00:00&lt;00:00, 190.04it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -532,11 +523,11 @@ Pre-calculating all label 2D centers at each time slice...
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-        00:00:01.24
+        00:00:01.12
 
 Save the object masks into a joint netCDF
 Saved: moaap_output/202107_ERA5_ObjectMasks__dt-1h_MOAAP-masks.nc
-        00:00:30.60
+        00:00:29.35
 Tracking complete.
 </pre></div></div>
 </div>
@@ -548,7 +539,7 @@ Tracking complete.
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate Frames and GIF</span>
@@ -664,7 +655,7 @@ Generating frames...
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-  0%|          | 0/24 [00:00&lt;?, ?it/s]100%|██████████| 24/24 [00:21&lt;00:00,  1.09it/s]
+100%|██████████| 24/24 [00:20&lt;00:00,  1.20it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -677,7 +668,7 @@ GIF saved to phenomenon.gif
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Display the GIF</span>
@@ -708,7 +699,7 @@ GIF saved to phenomenon.gif
 <li><p><strong>Parallel 3D Watershedding</strong>: Applied on the space-time cube using parallel processing for large datasets.</p></li>
 </ol>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">generate_synthetic_moving_cells</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">):</span>
@@ -789,7 +780,7 @@ Generated synthetic data shape: (24, 100, 100)
 <p>To run the parallel 3D code instead of the sequential version, set n_chunks_lat or n_chunks_lon to values greater than 1. The parallel code will also be called automatically if the memory overhead of the sequential code is larger than the available system memory.</p>
 <p>The parallel code divides the data into spatial chunks with some overlap to ensure continuity of objects across chunk boundaries. In the end, the chunks are merged back together, leading to a little slower performance compared to the sequential version.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Parameters</span>
@@ -858,8 +849,8 @@ Running 2D Watershedding...
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-  0%|          | 0/24 [00:00&lt;?, ?it/s]100%|██████████| 24/24 [00:00&lt;00:00, 213.92it/s]
-100%|██████████| 23/23 [00:00&lt;00:00, 4145.99it/s]
+100%|██████████| 24/24 [00:00&lt;00:00, 180.29it/s]
+100%|██████████| 23/23 [00:00&lt;00:00, 4393.54it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -896,7 +887,7 @@ Max Parallel 3D Objects: 11
 <h3>Visualization and Comparison<a class="headerlink" href="#Visualization-and-Comparison" title="Link to this heading"></a></h3>
 <p>We create a side-by-side animation to compare the raw input, the 2D result, and the 3D result.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">make_comparison_animation</span><span class="p">(</span><span class="n">raw_data</span><span class="p">,</span> <span class="n">objects_2d</span><span class="p">,</span> <span class="n">objects_3d</span><span class="p">,</span> <span class="n">objects_3d_pll</span><span class="p">):</span>
@@ -1145,42 +1136,42 @@ input[type=range].anim-slider {
 </style>
 
 <div class="animation">
-  <img id="_anim_imgf41b7d2ccf3a4b12837477fa3b6b0242">
+  <img id="_anim_img1a70d38bf992453084b38a15006ba13c">
   <div class="anim-controls">
-    <input id="_anim_sliderf41b7d2ccf3a4b12837477fa3b6b0242" type="range" class="anim-slider"
+    <input id="_anim_slider1a70d38bf992453084b38a15006ba13c" type="range" class="anim-slider"
            name="points" min="0" max="1" step="1" value="0"
-           oninput="animf41b7d2ccf3a4b12837477fa3b6b0242.set_frame(parseInt(this.value));">
+           oninput="anim1a70d38bf992453084b38a15006ba13c.set_frame(parseInt(this.value));">
     <div class="anim-buttons">
-      <button title="Decrease speed" aria-label="Decrease speed" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.slower()">
+      <button title="Decrease speed" aria-label="Decrease speed" onclick="anim1a70d38bf992453084b38a15006ba13c.slower()">
           <i class="fa fa-minus"></i></button>
-      <button title="First frame" aria-label="First frame" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.first_frame()">
+      <button title="First frame" aria-label="First frame" onclick="anim1a70d38bf992453084b38a15006ba13c.first_frame()">
         <i class="fa fa-fast-backward"></i></button>
-      <button title="Previous frame" aria-label="Previous frame" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.previous_frame()">
+      <button title="Previous frame" aria-label="Previous frame" onclick="anim1a70d38bf992453084b38a15006ba13c.previous_frame()">
           <i class="fa fa-step-backward"></i></button>
-      <button title="Play backwards" aria-label="Play backwards" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.reverse_animation()">
+      <button title="Play backwards" aria-label="Play backwards" onclick="anim1a70d38bf992453084b38a15006ba13c.reverse_animation()">
           <i class="fa fa-play fa-flip-horizontal"></i></button>
-      <button title="Pause" aria-label="Pause" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.pause_animation()">
+      <button title="Pause" aria-label="Pause" onclick="anim1a70d38bf992453084b38a15006ba13c.pause_animation()">
           <i class="fa fa-pause"></i></button>
-      <button title="Play" aria-label="Play" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.play_animation()">
+      <button title="Play" aria-label="Play" onclick="anim1a70d38bf992453084b38a15006ba13c.play_animation()">
           <i class="fa fa-play"></i></button>
-      <button title="Next frame" aria-label="Next frame" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.next_frame()">
+      <button title="Next frame" aria-label="Next frame" onclick="anim1a70d38bf992453084b38a15006ba13c.next_frame()">
           <i class="fa fa-step-forward"></i></button>
-      <button title="Last frame" aria-label="Last frame" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.last_frame()">
+      <button title="Last frame" aria-label="Last frame" onclick="anim1a70d38bf992453084b38a15006ba13c.last_frame()">
           <i class="fa fa-fast-forward"></i></button>
-      <button title="Increase speed" aria-label="Increase speed" onclick="animf41b7d2ccf3a4b12837477fa3b6b0242.faster()">
+      <button title="Increase speed" aria-label="Increase speed" onclick="anim1a70d38bf992453084b38a15006ba13c.faster()">
           <i class="fa fa-plus"></i></button>
     </div>
-    <form title="Repetition mode" aria-label="Repetition mode" action="#n" name="_anim_loop_selectf41b7d2ccf3a4b12837477fa3b6b0242"
+    <form title="Repetition mode" aria-label="Repetition mode" action="#n" name="_anim_loop_select1a70d38bf992453084b38a15006ba13c"
           class="anim-state">
-      <input type="radio" name="state" value="once" id="_anim_radio1_f41b7d2ccf3a4b12837477fa3b6b0242"
+      <input type="radio" name="state" value="once" id="_anim_radio1_1a70d38bf992453084b38a15006ba13c"
              >
-      <label for="_anim_radio1_f41b7d2ccf3a4b12837477fa3b6b0242">Once</label>
-      <input type="radio" name="state" value="loop" id="_anim_radio2_f41b7d2ccf3a4b12837477fa3b6b0242"
+      <label for="_anim_radio1_1a70d38bf992453084b38a15006ba13c">Once</label>
+      <input type="radio" name="state" value="loop" id="_anim_radio2_1a70d38bf992453084b38a15006ba13c"
              checked>
-      <label for="_anim_radio2_f41b7d2ccf3a4b12837477fa3b6b0242">Loop</label>
-      <input type="radio" name="state" value="reflect" id="_anim_radio3_f41b7d2ccf3a4b12837477fa3b6b0242"
+      <label for="_anim_radio2_1a70d38bf992453084b38a15006ba13c">Loop</label>
+      <input type="radio" name="state" value="reflect" id="_anim_radio3_1a70d38bf992453084b38a15006ba13c"
              >
-      <label for="_anim_radio3_f41b7d2ccf3a4b12837477fa3b6b0242">Reflect</label>
+      <label for="_anim_radio3_1a70d38bf992453084b38a15006ba13c">Reflect</label>
     </form>
   </div>
 </div>
@@ -1190,9 +1181,9 @@ input[type=range].anim-slider {
   /* Instantiate the Animation class. */
   /* The IDs given should match those used in the template above. */
   (function() {
-    var img_id = "_anim_imgf41b7d2ccf3a4b12837477fa3b6b0242";
-    var slider_id = "_anim_sliderf41b7d2ccf3a4b12837477fa3b6b0242";
-    var loop_select_id = "_anim_loop_selectf41b7d2ccf3a4b12837477fa3b6b0242";
+    var img_id = "_anim_img1a70d38bf992453084b38a15006ba13c";
+    var slider_id = "_anim_slider1a70d38bf992453084b38a15006ba13c";
+    var loop_select_id = "_anim_loop_select1a70d38bf992453084b38a15006ba13c";
     var frames = new Array(24);
 
   frames[0] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB9AAAAH0CAYAAABl1bZjAAAAOnRFWHRTb2Z0d2FyZQBNYXRwbG90\
@@ -22183,7 +22174,7 @@ AABIkv4fz7hLNbqbWocAAAAASUVORK5CYII=\
     /* set a timeout to make sure all the above elements are created before
        the object is initialized. */
     setTimeout(function() {
-        animf41b7d2ccf3a4b12837477fa3b6b0242 = new Animation(frames, img_id, slider_id, 200.0,
+        anim1a70d38bf992453084b38a15006ba13c = new Animation(frames, img_id, slider_id, 200.0,
                                  loop_select_id);
     }, 0);
   })()
