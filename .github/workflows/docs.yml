@@ -36,6 +36,9 @@ jobs:
           cd docs
           make html
 
+      - name: Create .nojekyll to disable Jekyll processing
+        run: touch docs/build/html/.nojekyll
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
