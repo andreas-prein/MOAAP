@@ -16,3 +16,4 @@ Shapely==2.1.2
 scikit-image
 tqdm==4.67.1
 xarray==2025.9.0
+gdown

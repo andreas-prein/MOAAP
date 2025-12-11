@@ -1,5 +1,0 @@
-- Test with other phenomena
-- Test the problem with memory on euler (maybe use better memory manager for this), and find out why usual watershed needs less memory but more time in total.
-- Split documents
-- Documentation
-
