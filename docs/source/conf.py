@@ -21,6 +21,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',  # Essential for specific docstring format!
     'sphinx.ext.viewcode',  # adds links to source code
+    'nbsphinx',            # to include Jupyter Notebooks
 ]
 
 templates_path = ['_templates']
@@ -47,3 +48,5 @@ napoleon_custom_sections = [
     ('500 hPa cyclones/anticyclones', 'params_style'),
     ('Equatorial waves', 'params_style'),
 ]
+
+nbsphinx_execute = 'never' # Do not execute notebooks during doc build
