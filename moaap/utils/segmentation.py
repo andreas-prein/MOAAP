@@ -682,6 +682,7 @@ def watershed_3d_overlap_parallel(
         Number of chunks to split longitude dimension
     overlap_cells : int, optional
         Number of overlapping cells between chunks. If None, uses min_dist * 2
+    
     Returns
     -------
     np.ndarray
@@ -892,6 +893,39 @@ def _process_watershed_chunk_no_return(
     max_treshold,
     min_dist
 ):
+    """
+    Process a single watershed chunk in shared memory without returning large arrays.
+
+    Parameters
+    ----------
+    meta : Dict
+        Metadata for the chunk (boundaries, halo shapes, offsets).
+    shm_input_name : str
+        Name of the shared memory for input data.
+    shm_output_name : str
+        Name of the shared memory for output data.
+    shm_halos_name : str
+        Name of the shared memory for halo data.
+    shape : Tuple[int]
+        Shape of the full data array.
+    dtype_in : np.dtype
+        Data type of the input data.
+    dtype_out : np.dtype
+        Data type of the output data.
+    object_threshold : float
+        Threshold to create binary object mask.
+    max_treshold : float
+        Threshold for identifying maximum points for spreading.
+    min_dist : int
+        Minimum distance (in grid cells) between maximum points.
+
+    Returns
+    -------
+    Dict
+        max_label : int
+            Maximum label found in this chunk.
+    """
+
     # Attach to shared memories
     shm_in = shared_memory.SharedMemory(name=shm_input_name)
     shm_out = shared_memory.SharedMemory(name=shm_output_name)
@@ -1002,7 +1036,7 @@ def _merge_watershed_chunks(chunk_results, merged_array, shm_halos, lat_chunks, 
     
     total_max_label = current_offset
 
-    # 2. Build Merge Map
+    # Build Merge Map
     global_map = _build_merge_map_shm(
         merged_array, 
         flat_halos,   # Pass flat buffer
@@ -1011,12 +1045,36 @@ def _merge_watershed_chunks(chunk_results, merged_array, shm_halos, lat_chunks, 
         total_max_label
     )
 
-    # 3. Apply Map In-Place
+    # Apply Map In-Place
     _apply_map_inplace(merged_array, chunk_results, chunk_offsets, global_map)
 
     return merged_array
 
 def _build_merge_map_shm(merged_array, flat_halos, chunk_results, chunk_offsets, total_max_label, overlap_match_threshold=0.5):
+    """
+    Build a merge map for watershed labels across chunk boundaries using shared memory halos. This is done using union-find on the lablels 
+    of the halo and its neighboring core region.
+    
+    Parameters
+    ----------
+    merged_array : np.ndarray
+        The full merged watershed array from all chunks.
+    flat_halos : np.ndarray
+        Flat array containing all halo data from chunks.
+    chunk_results : list of dict
+        Metadata for each chunk including halo offsets and shapes.
+    chunk_offsets : dict
+        Offsets for each chunk's labels in the global label space.
+    total_max_label : int
+        Total number of unique labels across all chunks.
+    overlap_match_threshold : float, optional
+        Threshold for considering a halo-core overlap as a match, by default 0.5.
+        
+    Returns
+    -------
+    list
+        A list mapping each label to its root label after merging.
+    """
     parent = list(range(total_max_label + 1))
     
     def find(i):
@@ -1040,29 +1098,21 @@ def _build_merge_map_shm(merged_array, flat_halos, chunk_results, chunk_offsets,
         # Reshape the flat halo slice back to 3D
         halo_data = halo_flat_slice.reshape(halo_shape)
         
-        # --- FIX FOR VALUE ERROR (Broadcasting mismatch) ---
-        # The halo extracted might be slightly larger than the neighbor's core 
-        # (e.g. at domain edges or if chunks are uneven).
-        # We must slice both arrays to the intersection of their shapes.
-        
-        # 1. Determine the common shape
+        # Determine the common shape
         d0 = min(halo_data.shape[0], core_slice_raw.shape[0])
         d1 = min(halo_data.shape[1], core_slice_raw.shape[1])
         d2 = min(halo_data.shape[2], core_slice_raw.shape[2])
         
         if d0 == 0 or d1 == 0 or d2 == 0: return
 
-        # 2. Slice both arrays to this common shape
-        # We assume alignment starts at 0,0,0 relative to the overlap interface
+        # Slice both arrays to this common shape
         h_cut = halo_data[:d0, :d1, :d2]
         c_cut = core_slice_raw[:d0, :d1, :d2]
 
         if d0 < halo_data.shape[0] or d1 < halo_data.shape[1] or d2 < halo_data.shape[2]:
             print(f"Warning: Clipping Halo overlap from {halo_data.shape} to {(d0, d1, d2)}")
 
-        # --- FIX FOR RATIO CALCULATION ---
-        # 1. Determine the full area of halo objects within this specific window
-        #    (independent of whether they overlap with the core)
+        # Determine the full area of halo objects within this specific window
         mask_halo_only = h_cut > 0
         if not np.any(mask_halo_only): return
 
@@ -1077,7 +1127,7 @@ def _build_merge_map_shm(merged_array, flat_halos, chunk_results, chunk_offsets,
         else:
             return
 
-        # 2. Determine Intersections
+        # Determine Intersections
         mask_intersect = mask_halo_only & (c_cut > 0)
         if not np.any(mask_intersect): return
 
@@ -1115,12 +1165,6 @@ def _build_merge_map_shm(merged_array, flat_halos, chunk_results, chunk_offsets,
                 start = res['lat_halo_offset']
                 end = start + np.prod(shape)
                 halo_view = flat_halos[start:end]
-                
-                # Neighbor Core
-                # FIX: We must be careful not to slice beyond the array bounds
-                # The neighbor is grid_map[(i+1, j)]
-                # The halo from 'res' corresponds to the BOTTOM of 'res'
-                # It should match the TOP of 'neighbor'
                 
                 neighbor_res = grid_map[(i+1, j)]
                 
@@ -1214,6 +1258,21 @@ def _calculate_chunk_boundaries(total_size, n_chunks, overlap):
 def _apply_map_inplace(merged_array, chunk_results, chunk_offsets, global_map):
     """
     Applies the global mapping to the shared array block-by-block.
+
+    Parameters
+    ----------
+    merged_array : np.ndarray
+        The shared array containing the merged watershed results.
+    chunk_results : list of dict
+        Metadata for each chunk processed.
+    chunk_offsets : dict
+        Offsets for each chunk's local labels in the global map.
+    global_map : np.ndarray
+        The global mapping array from local to global labels.
+    
+    Returns
+    -------
+    None
     """
     print("    Applying labels in-place...")
     
@@ -1225,20 +1284,18 @@ def _apply_map_inplace(merged_array, chunk_results, chunk_offsets, global_map):
         if max_local_label == 0:
             continue
 
-        # Create Local Lookup Table (LUT)
+        # Create Local Lookup Table
         # Size = max local label + 1 (to include 0)
         local_lut = np.zeros(max_local_label + 1, dtype=np.int32)
         
-        # FIX: Explicitly keep background 0 -> 0
+        # Explicitly keep background 0 -> 0
         local_lut[0] = 0
         
-        # FIX: Only map objects (indices 1..max)
         if max_local_label > 0:
             start_idx = offset + 1
             end_idx = offset + max_local_label + 1
             local_lut[1:] = global_map[start_idx : end_idx]
         
-        # --- FIX FOR KEY ERROR ---
         # Unpack the bounds from the metadata tuples
         # lat_bounds = (start, end, core_start, core_end)
         lat_core_start = res['lat_bounds'][2]
