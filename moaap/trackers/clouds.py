@@ -81,25 +81,25 @@ def mcs_tb_tracking(
     """
 
     print('        track  clouds')
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    # Csmooth=gaussian_filter(tb, sigma=(0,SmoothSigmaC,SmoothSigmaC))
-    Cmask = (tb <= Cthreshold)
-    rgiObjectsC, nr_objectsUD = ndimage.label(Cmask, structure=rgiObj_Struct)
-    print('        '+str(nr_objectsUD)+' cloud object found')
+    # rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
+    # # Csmooth=gaussian_filter(tb, sigma=(0,SmoothSigmaC,SmoothSigmaC))
+    # Cmask = (tb <= Cthreshold)
+    # rgiObjectsC, nr_objectsUD = ndimage.label(Cmask, structure=rgiObj_Struct)
+    # print('        '+str(nr_objectsUD)+' cloud object found')
 
-    # if connectLon == 1:
-    #     # connect objects over date line
-    #     rgiObjectsC = ConnectLon(rgiObjectsC)
+    # # if connectLon == 1:
+    # #     # connect objects over date line
+    # #     rgiObjectsC = ConnectLon(rgiObjectsC)
         
         
-    print('        fast way that removes obviously too small objects')
-    unique, counts = np.unique(rgiObjectsC, return_counts=True)
-    min_vol = np.round((CL_Area * (MCS_minTime/dT)) / ((Gridspacing / 1000.)**2)) # minimum grid cells requ. for MCS
-    remove = unique[counts < min_vol]
-    rgiObjectsC[np.isin(rgiObjectsC, remove)] = 0
+    # print('        fast way that removes obviously too small objects')
+    # unique, counts = np.unique(rgiObjectsC, return_counts=True)
+    # min_vol = np.round((CL_Area * (MCS_minTime/dT)) / ((Gridspacing / 1000.)**2)) # minimum grid cells requ. for MCS
+    # remove = unique[counts < min_vol]
+    # rgiObjectsC[np.isin(rgiObjectsC, remove)] = 0
     
-    C_objects, nr_objectsUD = ndimage.label(rgiObjectsC, structure=rgiObj_Struct)
-    print('        '+str(nr_objectsUD)+' cloud object remaining')
+    # C_objects, nr_objectsUD = ndimage.label(rgiObjectsC, structure=rgiObj_Struct)
+    # print('        '+str(nr_objectsUD)+' cloud object remaining')
     
 
     print('        break up long living cloud shield objects with '+breakup+' that have many elements')
@@ -112,7 +112,7 @@ def mcs_tb_tracking(
         #                6,  # at least six grid cells apart 
         #                1)
         threshold=1
-        min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
+        min_dist=int((np.sqrt(CL_Area/np.pi))/(Gridspacing/1000))*2
 
         C_objects = watershed_3d_overlap_parallel(
                 tb * -1,
