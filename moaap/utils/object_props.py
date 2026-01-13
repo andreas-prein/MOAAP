@@ -88,7 +88,7 @@ def calc_object_characteristics(
 
                 # Track lat/lon
                 obj_mass_center = \
-                np.array([ndimage.measurements.center_of_mass(object_slice[tt,:,:]==(iobj+1)) for tt in range(object_slice.shape[0])])
+                np.array([ndimage.center_of_mass(object_slice[tt,:,:]==(iobj+1)) for tt in range(object_slice.shape[0])])
 
                 obj_track = np.full([len(obj_mass_center), 2], np.nan)
                 iREAL = ~np.isnan(obj_mass_center[:,0])
