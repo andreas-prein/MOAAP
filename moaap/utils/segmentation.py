@@ -640,7 +640,6 @@ def watershed_3d_overlap(
 
     return watershed_results
 
-
 def watershed_3d_overlap_parallel(
     data,
     object_threshold,
@@ -650,9 +649,10 @@ def watershed_3d_overlap_parallel(
     mintime=24,
     connectLon=0,
     extend_size_ratio=0.25,
-    n_chunks_lat=2,
-    n_chunks_lon=2,
-    overlap_cells=None
+    n_chunks_lat=None,
+    n_chunks_lon=None,
+    overlap_cells=None,
+    mp_method='auto' # <--- NEW KEYWORD
 ):
     """
     Parallel version of watershed_3d_overlap using domain decomposition.
@@ -688,37 +688,20 @@ def watershed_3d_overlap_parallel(
     np.ndarray
         3D matrix with watershed labels
     """
-    # Add check for no parallelization, this should be called if no chunks are set, i.e. n_chunks_lat = n_chunks_lon = 1
-    # And if both are set to 1, check if enough memory is available to run the non-parallel version. 
-    # Based on numerical experiments, the memory requirement is roughly 4 bytes * sizeof(data) * 12
-    # watershed is depending on a threshold and therefore the data does not need to be stored in double precision
+
     data = np.asarray(data, dtype=np.float32) 
 
-    estimated_memory_bytes = data.size * 4 * 12 * 1.2 # Rough estimate for watershed processing + some buffer
-    # get available memory in bytes
-    available_memory = psutil.virtual_memory().free
-
-    if n_chunks_lat == 1 and n_chunks_lon == 1 and estimated_memory_bytes < available_memory:
-        return watershed_3d_overlap(
-            data,
-            object_threshold,
-            max_treshold,
-            min_dist,
-            dT,
-            mintime,
-            connectLon,
-            extend_size_ratio
-        )
-
-    if n_chunks_lat == 1 and n_chunks_lon == 1:
+    if n_chunks_lat == None and n_chunks_lon == None:
         num_proc = mp.cpu_count() - 1 # get one less for system processes
+        print(f"Auto-detecting number of processes: {num_proc}")
+        num_proc = min(12, num_proc) # limit to 16 processes max to avoid oversubscription
         lat = data.shape[1]
         lon = data.shape[2]
-        print(data.shape)
+        print(f"Shape of the data to watershed: {data.shape}")
         r = lon/lat
-        n_chunks_lon = int(np.ceil(np.sqrt(num_proc * r)))
-        n_chunks_lat = int(np.ceil(num_proc / n_chunks_lon))
-        print(n_chunks_lat, n_chunks_lon)
+        n_chunks_lon = int(np.floor(np.sqrt(num_proc * r)))
+        n_chunks_lat = int(np.floor(num_proc / n_chunks_lon))
+        # print(n_chunks_lat, n_chunks_lon)
         while n_chunks_lat * n_chunks_lon > num_proc:
             if n_chunks_lon > n_chunks_lat * r and n_chunks_lon > 1 or n_chunks_lat == 1:
                 n_chunks_lon -= 1
@@ -793,6 +776,19 @@ def watershed_3d_overlap_parallel(
     halo_bytes = total_halo_elements * np.dtype(out_dtype).itemsize
     shm_halos = shared_memory.SharedMemory(create=True, size=halo_bytes)
     # We don't create a single NDArray here because it's a flat buffer containing many arrays
+
+    # --- DECISION LOGIC (The "Smart Switch") ---
+    # This block decides the strategy if 'auto' is selected.
+    if mp_method == 'auto':
+        total_cells = data.size
+        # Example thresholds (to be calibrated):
+        FORK_LIMIT = 400000000     # Below 400M cells -> Parallel (Fork)
+                                   # Above -> Parallel (Spawn)
+        
+        if total_cells < FORK_LIMIT:
+            mp_method = 'fork'
+        else:
+            mp_method = 'spawn'
     
     try:
         print(f"    Processing {len(halo_metadata)} chunks with {halo_bytes / 1e9:.2f} GB halo buffer...")
@@ -813,9 +809,17 @@ def watershed_3d_overlap_parallel(
             ))
         
         # --- RUN PARALLEL ---
-        ctx = mp.get_context('spawn')
-        with ctx.Pool() as pool:
-            # Workers return tiny metadata only (max_label, etc.)
+        # Modified to use the selected method
+        if mp_method == 'spawn':
+            ctx = mp.get_context('spawn')
+            PoolClass = ctx.Pool
+        else:
+            # Default to 'fork' (standard mp.Pool)
+            # WARNING: 'fork' can deadlock with C-libs, but is faster for medium data
+            ctx = mp.get_context('fork')
+            PoolClass = ctx.Pool
+
+        with PoolClass() as pool:
             worker_results = pool.starmap(_process_watershed_chunk_no_return, chunk_args)
 
         print("    Merging chunk results...")
