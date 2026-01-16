@@ -3,7 +3,7 @@ from scipy import ndimage
 from moaap.utils.grid import DistanceCoord
 from moaap.utils.segmentation import watershed_3d_overlap_parallel
 from moaap.utils.profiling import timer
-from moaap.utils.object_props import minimum_bounding_rectangle, clean_up_objects, BreakupObjects
+from moaap.utils.object_props import minimum_bounding_rectangle, BreakupObjects
 import scipy
 from pdb import set_trace as stop
 import time
@@ -48,43 +48,6 @@ def ar_850hpa_tracking(
         Labeled moisture stream objects.
     """
     
-    potARs = (VapTrans > MinMSthreshold)
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    rgiObjectsAR, nr_objectsUD = ndimage.label(potARs, structure=rgiObj_Struct)
-    print('            '+str(nr_objectsUD)+' object found')
-
-    # sort the objects according to their size
-    Objects=ndimage.find_objects(rgiObjectsAR)
-    rgiAreaObj = []
-    for ob in range(nr_objectsUD):
-        try:
-            rgiAreaObj.append([np.sum(Area[Objects[ob][1:]][rgiObjectsAR[Objects[ob]][tt,:,:] == ob+1]) for tt in range(rgiObjectsAR[Objects[ob]].shape[0])])
-        except:
-            stop()
-        
-    # stop()
-    # rgiAreaObj = np.array([[np.sum(Area[Objects[ob][1:]][rgiObjectsAR[Objects[ob]][tt,:,:] == ob+1]) for tt in range(rgiObjectsAR[Objects[ob]].shape[0])] for ob in range(nr_objectsUD)])
-
-    # create final object array
-    MS_objectsTMP=np.copy(rgiObjectsAR); MS_objectsTMP[:]=0
-    ii = 1
-    for ob in range(len(rgiAreaObj)):
-        AreaTest = np.max(np.convolve(np.array(rgiAreaObj[ob]) >= MinAreaMS*1000**2, np.ones(int(MinTimeMS/dT)), mode='valid'))
-        if (AreaTest == int(MinTimeMS/dT)) & (len(rgiAreaObj[ob]) >= int(MinTimeMS/dT)):
-            MS_objectsTMP[rgiObjectsAR == (ob+1)] = ii
-            ii = ii + 1
-    # lable the objects from 1 to N
-    # MS_objects=np.copy(rgiObjectsAR); MS_objects[:]=0
-    # Unique = np.unique(MS_objectsTMP)[1:]
-    # ii = 1
-    # for ob in range(len(Unique)):
-    #     MS_objects[MS_objectsTMP == Unique[ob]] = ii
-    #     ii = ii + 1
-
-    MS_objects, _ = clean_up_objects(MS_objectsTMP,
-                                  dT,
-                                  min_tsteps=0)
-
     print('        break up long living MS objects with '+breakup)
     if breakup == 'breakup':
         MS_objects, object_split = BreakupObjects(MS_objects,
@@ -144,15 +107,6 @@ def ar_ivt_tracking(IVT,
     IVT_objects : np.ndarray
         Labeled array of tracked IVT objects.
     """
-
-    potIVTs = (IVT > IVTtrheshold)
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    rgiObjectsIVT, nr_objectsUD = ndimage.label(potIVTs, structure=rgiObj_Struct)
-    print('        '+str(nr_objectsUD)+' object found')
-
-    IVT_objects, _ = clean_up_objects(rgiObjectsIVT,
-                                    dT,
-                            min_tsteps=int(MinTimeIVT/dT))
 
     print('        break up long living IVT objects with '+breakup)
     if breakup == 'breakup':

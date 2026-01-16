@@ -40,29 +40,8 @@ def jetstream_tracking(
     object_split : dict
         History of object splitting/merging.
     """
-
-    uv200_smooth = smooth_uniform(uv200,
-                             1,
-                             int(500/(Gridspacing/1000.)))
-    uv200smoothAn = smooth_uniform(uv200,
-                                 int(78/dT),
-                                 int(int(5000/(Gridspacing/1000.))))
-
-    uv200_Anomaly = uv200_smooth - uv200smoothAn
-    jet = uv200_Anomaly[:,:,:] >= js_min_anomaly
-
-
-    #     Pressure_anomaly[np.isnan(Pressure_anomaly)] = 0
-    #     jet[:,Mask == 0] = 0
-    rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    rgiObjectsUD, nr_objectsUD = ndimage.label(jet, structure=rgiObj_Struct)
-    print('            '+str(nr_objectsUD)+' object found')
-
-    jet_objects, _ = clean_up_objects(rgiObjectsUD,
-                                min_tsteps=int(MinTimeJS/dT),
-                                 dT = dT)
-
     
+    print('    track jet streams')    
     print('        break up long living jety objects with the '+breakup+' method')
     if breakup == 'breakup':
         jet_objects, object_split = BreakupObjects(jet_objects,
@@ -79,12 +58,6 @@ def jetstream_tracking(
                                     extend_size_ratio = 0.25
                                     )
         object_split = None
-
-
-#     jet_objects, object_split = clean_up_objects(rgiObjectsUD,
-#                                 min_tsteps=int(MinTimeJS/dT),
-#                                 dT = dT,
-#                                 obj_splitmerge = object_split)
     
     # if connectLon == 1:
     #     print('        connect cyclones objects over date line')

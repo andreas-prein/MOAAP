@@ -67,8 +67,7 @@ def cy_acy_psl_tracking(
     slpsmoothAn[:,nan] = np.nan
     
     slp_Anomaly = slp_smooth-slpsmoothAn
-#     slp_Anomaly[:,Mask == 0] = np.nan
-    # plt.contour(slp_Anomaly[tt,:,:], levels=[-9990,-10,1100], colors='b')
+
     Pressure_anomaly = slp_Anomaly < MaxPresAnCY # 10 hPa depression | original setting was 12
 
     rgiObjectsUD, nr_objectsUD = ndimage.label(Pressure_anomaly, structure=rgiObj_Struct)
@@ -205,20 +204,9 @@ def cy_acy_z500_tracking(
     z500smoothAn[:,nan] = np.nan
     
     z500_Anomaly = z500_smooth - z500smoothAn
-#     z500_Anomaly[:,Mask == 0] = np.nan
-
-    z_low = z500_Anomaly < z500_low_anom
-    z_high = z500_Anomaly > z500_high_anom
 
     # -------------------------------------
     print('    track 500 hPa cyclones')
-#             z_low[:,Mask == 0] = 0
-    rgiObjectsUD, nr_objectsUD = ndimage.label(z_low, structure=rgiObj_Struct)
-    print('            '+str(nr_objectsUD)+' object found')
-
-    cy_z500_objects, _ = clean_up_objects(rgiObjectsUD,
-                                min_tsteps=int(MinTimeCY/dT),
-                                 dT = dT)
 
     print('        break up long living cyclones using the '+breakup+' method')
     if breakup == 'breakup':
@@ -226,10 +214,8 @@ def cy_acy_z500_tracking(
                                     int(MinTimeCY/dT),
                                     dT)
     elif breakup == 'watershed':
-        threshold=1
         min_dist=int((1000 * 10**3)/Gridspacing)
-        low_pres_an = np.copy(z500_Anomaly)
-        low_pres_an[cy_z500_objects == 0] = 0
+
         cy_z500_objects = watershed_3d_overlap_parallel(
                 z500_Anomaly * -1,
                 z500_low_anom*-1,
@@ -246,22 +232,15 @@ def cy_acy_z500_tracking(
 
     # -------------------------------------
     print('    track 500 hPa anticyclones')
-    rgiObjectsUD, nr_objectsUD = ndimage.label(z_high, structure=rgiObj_Struct)
-    print('            '+str(nr_objectsUD)+' object found')
-    acy_z500_objects, _ = clean_up_objects(rgiObjectsUD,
-                                min_tsteps=int(MinTimeCY/dT),
-                                 dT = dT)
-
     print('        break up long living CY objects that heve many elements')
     if breakup == 'breakup':
         acy_z500_objects, object_split = BreakupObjects(acy_z500_objects,
                                     int(MinTimeCY/dT),
                                     dT)
     elif breakup == 'watershed':
-        threshold=1
         min_dist=int((1000 * 10**3)/Gridspacing)
-        high_pres_an = np.copy(z500_Anomaly)
-        high_pres_an[acy_z500_objects == 0] = 0
+        # high_pres_an = np.copy(z500_Anomaly)
+        # high_pres_an[acy_z500_objects == 0] = 0
         acy_z500_objects = watershed_3d_overlap_parallel(
                 z500_Anomaly,
                 z500_high_anom,

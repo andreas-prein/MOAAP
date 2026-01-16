@@ -81,27 +81,6 @@ def mcs_tb_tracking(
     """
 
     print('        track  clouds')
-    # rgiObj_Struct=np.zeros((3,3,3)); rgiObj_Struct[:,:,:]=1
-    # # Csmooth=gaussian_filter(tb, sigma=(0,SmoothSigmaC,SmoothSigmaC))
-    # Cmask = (tb <= Cthreshold)
-    # rgiObjectsC, nr_objectsUD = ndimage.label(Cmask, structure=rgiObj_Struct)
-    # print('        '+str(nr_objectsUD)+' cloud object found')
-
-    # # if connectLon == 1:
-    # #     # connect objects over date line
-    # #     rgiObjectsC = ConnectLon(rgiObjectsC)
-        
-        
-    # print('        fast way that removes obviously too small objects')
-    # unique, counts = np.unique(rgiObjectsC, return_counts=True)
-    # min_vol = np.round((CL_Area * (MCS_minTime/dT)) / ((Gridspacing / 1000.)**2)) # minimum grid cells requ. for MCS
-    # remove = unique[counts < min_vol]
-    # rgiObjectsC[np.isin(rgiObjectsC, remove)] = 0
-    
-    # C_objects, nr_objectsUD = ndimage.label(rgiObjectsC, structure=rgiObj_Struct)
-    # print('        '+str(nr_objectsUD)+' cloud object remaining')
-    
-
     print('        break up long living cloud shield objects with '+breakup+' that have many elements')
     if breakup == 'breakup':
         C_objects, object_split = BreakupObjects(C_objects,
@@ -186,16 +165,12 @@ def mcs_tb_tracking(
         tb_object_act = np.array(tb_object_act).astype(int)
         tb_object_act[tb_object_act == 1] = iobj + 1
 
-#         window_length = int(MCS_minTime / dT)
-#         moving_averages = np.convolve(MCS_test, np.ones(window_length), 'valid') / window_length
-
         if MCS_test == 1:
             TMP = np.copy(MCS_objects_Tb[object_indices[iobj]])
             TMP = TMP + tb_object_act
             MCS_objects_Tb[object_indices[iobj]] = TMP
 
         else:
-            # print([tb_size_test,tb_overshoot_test,pr_peak_test,pr_area_test])
             continue
 
     MCS_objects_Tb, _ = clean_up_objects(MCS_objects_Tb,
@@ -266,11 +241,8 @@ def cloud_tracking(
     """
 
     CL_Area = min_dist * Gridspacing
-    breakup = 'watershed'
-    
-    print('        track  clouds')
-    Cmask = (tb <= tb_threshold)
-    
+   
+    print('        track  clouds')    
     print('        break up long living cloud shield objects with wathershedding')
     
     min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2

@@ -43,7 +43,7 @@ def track_tropwaves_tb(tb,
         Labeled object arrays for each wave type.
     """
 
-    tb = np.asarray(tb, dtype=np.float32)   # very first line in the function
+    tb = np.asarray(tb, dtype=np.float32)
 
     ew_mintime = 32
     
@@ -52,30 +52,11 @@ def track_tropwaves_tb(tb,
     tb_eq = tb.copy()
     tb_eq[tb_eq > 350] = np.nan
     tb_eq[tb_eq < 150] = np.nan
+
     # compute anomalies
     tb_eq = tb_eq - np.nanmean(tb_eq, axis=(1,2), keepdims=True)
     tb_eq = tb_eq * lat_mask[None,:]
     tb_eq[np.isnan(tb_eq)] = 0
-
-    """
-    valid = (tb_eq >= 150) & (tb_eq <= 350)                   # bool view
-    # mean over valid points only, without building a big masked array:
-    sum_ = np.sum(np.where(valid, tb_eq, 0.0), axis=(1,2), keepdims=True, dtype=np.float32)
-    cnt_ = np.sum(valid,                    axis=(1,2), keepdims=True, dtype=np.int32)
-    mean_ = sum_ / np.maximum(cnt_, 1)
-    
-    tb_eq -= mean_.astype(np.float32, copy=False)             # center
-    tb_eq *= valid.astype(np.float32)                         # zero outside valid, no NaNs
-    
-    # 3) apply & renormalize
-    w2 = np.mean(lat_mask**2)
-    tb_eq = (lat_mask * tb_eq) / np.sqrt(w2)
-    """
-
-    """
-    tb_eq = tb.copy()
-    tb_eq[:,np.abs(Lat[:,0]) > 20] = 0
-    """
     
     # pad the Tb to avoid boundary effects
     # temporal turkey tapping:
@@ -117,12 +98,6 @@ def track_tropwaves_tb(tb,
             threshold = eig0_th
 
         amplitude = amplitude[pad_size:-pad_size]
-        rgiObjectsUD, nr_objectsUD = ndimage.label(wave, structure=rgiObj_Struct)
-        print('                '+str(nr_objectsUD)+' object found')
-
-        wave_objects, _ = clean_up_objects(rgiObjectsUD,
-                              dT,
-                              min_tsteps=int(ew_mintime/dT))
 
         if breakup == 'breakup':
             print('                break up long tropical waves that have many elements')
@@ -130,10 +105,8 @@ def track_tropwaves_tb(tb,
                                     int(ew_mintime/dT),
                                     dT)
         elif breakup == 'watershed':
-            # threshold=0.1
             min_dist=int((1000 * 10**3)/Gridspacing)
             wave_amp = amplitude
-            #wave_amp[rgiObjectsUD == 0] = 0
             wave_objects = watershed_3d_overlap_parallel(
                     wave_amp *-1,
                     np.abs(threshold),
@@ -182,13 +155,6 @@ class KFfilter:
 
                       """
         ntim, nlat, nlon = datain.shape
-
-        #remove the lowest three harmonics of the seasonal cycle (WK99, WKW03)
-##         if ntim > 365*spd/3:
-##             rf = fftpack.rfft(datain,axis=0)
-##             freq = fftpack.rfftfreq(ntim*spd, d=1./float(spd))
-##             rf[(freq <= 3./365) & (freq >=1./365),:,:] = 0.0     #freq<=3./365 only??
-##             datain = fftpack.irfft(rf,axis=0)
 
         #remove dominal trend
         data = signal.detrend(datain, axis=0)
