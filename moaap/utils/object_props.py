@@ -457,55 +457,71 @@ def clean_up_objects(DATA,
         Updated split/merge history dictionary.
     """
     
-    object_indices = ndimage.find_objects(DATA)
-    MaxOb = np.max(DATA)
-    MinLif = int(24 / dT)  # min lifetime of object to be split
-    AVmax = 1.5
-
-    id_translate = np.zeros((len(object_indices),2))
-    objectsTMP = np.zeros_like(DATA)
-    ii = 1
-    for obj in range(len(object_indices)):
-        if object_indices[obj] != None:
-            if object_indices[obj][0].stop - object_indices[obj][0].start >= min_tsteps / dT:
-                Obj_tmp = np.copy(objectsTMP[object_indices[obj]])
-                Obj_tmp[DATA[object_indices[obj]] == obj+1] = ii
-                objectsTMP[object_indices[obj]] = Obj_tmp
-                id_translate[obj,0] = obj+1
-                id_translate[obj,1] = ii
-                ii = ii + 1
-            else:
-                id_translate[obj,0] = obj+1
-                id_translate[obj,1] = -1
-        else:
-            id_translate[obj,0] = obj+1
-            id_translate[obj,1] = -1
-
-    # adjust the directory strucutre accordingly
-    obj_splitmerge_clean = {}
-
-    if obj_splitmerge != None:
-        id_translate = id_translate.astype(int)  
-        keys = np.copy(list(obj_splitmerge.keys()))
-        for jj in range(len(keys)):
-            obj_loc = np.where(int(list(keys)[jj]) == id_translate[:,0])[0][0]
-            if id_translate[obj_loc,1] == -1:
-                del obj_splitmerge[list(keys)[jj]]
-
-        # loop over objects and relable their indices if nescessary
-        obj_splitmerge_clean = {}
-        keys = np.copy(list(obj_splitmerge.keys()))
-        core_translate = np.isin(id_translate[:,0], keys.astype(int))
-        id_translate = id_translate[core_translate,:]
-        for jj in range(len(keys)):
-            obj_loc = np.where(int(list(keys)[jj]) == id_translate[:,0])[0][0]
-            mergsplit = np.array(obj_splitmerge[keys[jj]])
-            for kk in range(id_translate.shape[0]):
-                mergsplit[np.isin(mergsplit, id_translate[kk,0])] = id_translate[kk,1]
-            obj_splitmerge_clean[str(int(id_translate[obj_loc,1]))] = mergsplit
+    # 1. Find object slices (fast C-level operation)
+    object_slices = ndimage.find_objects(DATA)
+    max_label = len(object_slices)
+    
+    # 2. Create a Lookup Table (LUT)
+    # Index = Old Label, Value = New Label
+    # We initialize with 0 (background)
+    lut = np.zeros(max_label + 1, dtype=DATA.dtype)
+    
+    min_duration = min_tsteps / dT
+    new_label_counter = 1
+    
+    # 3. Populate LUT (Pure metadata calculation, no array manipulation yet)
+    # We iterate over slices, which is fast because we aren't touching the heavy 3D data
+    for old_label_idx, slc in enumerate(object_slices):
+        old_label = old_label_idx + 1  # find_objects ignores 0, so index 0 is label 1
         
-    return objectsTMP, obj_splitmerge_clean
+        if slc is not None:
+            # Check duration (time is the first axis: index 0)
+            duration = slc[0].stop - slc[0].start
+            
+            if duration >= min_duration:
+                lut[old_label] = new_label_counter
+                new_label_counter += 1
+            # else: lut[old_label] remains 0 (deleted)
+        # else: lut[old_label] remains 0 (was missing)
 
+    # 4. Apply LUT to the entire 3D array in one shot
+    # This replaces the entire previous loop and masking logic
+    objects_cleaned = lut[DATA]
+
+    # 5. Handle Dictionary Optimization
+    obj_splitmerge_clean = {}
+    
+    if obj_splitmerge is not None:
+        # Vectorized update of the dictionary keys and values
+        for old_key_str, split_list in obj_splitmerge.items():
+            old_key = int(old_key_str)
+            
+            # Get the new ID for this object
+            if old_key <= max_label:
+                new_key = lut[old_key]
+            else:
+                new_key = 0 # Out of bounds
+            
+            # Only keep entry if the main object survived (new_key > 0)
+            if new_key > 0:
+                # Update the values in the list using the same LUT
+                # Filter out values that point to deleted objects (0) if desired, 
+                # or keep them. Here we update them.
+                split_arr = np.array(split_list, dtype=int)
+                
+                # We need to handle IDs in split_list that might be larger than our current max_label
+                # (though usually they shouldn't be). Clip or check bounds safe.
+                valid_indices = split_arr <= max_label
+                
+                new_split_list = split_arr.copy()
+                # Update valid IDs
+                new_split_list[valid_indices] = lut[split_arr[valid_indices]]
+                # Invalid/Deleted IDs become 0. You might want to filter 0s out:
+                # new_split_list = new_split_list[new_split_list > 0] 
+                
+                obj_splitmerge_clean[str(new_key)] = new_split_list.tolist()
+
+    return objects_cleaned, obj_splitmerge_clean
 
 # https://stackoverflow.com/questions/13542855/algorithm-to-find-the-minimum-area-rectangle-for-given-points-in-order-to-comput/33619018#33619018
 import numpy as np
