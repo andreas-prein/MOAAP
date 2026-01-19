@@ -52,3 +52,10 @@ data_cache/*
 Tracking_Functions_old.py
 
 docs/build/
+watershed_history*
+tracks/
+run_3d.py
+generate_shim.py
+logs/
+.vscode
+moaap.egg-info

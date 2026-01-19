@@ -663,7 +663,7 @@ def watershed_3d_overlap_parallel(
     n_chunks_lat=None,
     n_chunks_lon=None,
     overlap_cells=None,
-    mp_method='auto' # <--- NEW KEYWORD
+    mp_method='auto'
 ):
     """
     Parallel version of watershed_3d_overlap using domain decomposition.
