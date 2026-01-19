@@ -33,6 +33,7 @@ MOAAP_DEFAULTS = {
     "MinTimeMS": 9,            # minimum moisture stream lifetime [h]
     "MinAreaMS": 100000,       # minimum moisture stream area [km^2]
     "MinMSthreshold": 0.11,    # moisture stream threshold [g·m/g·s]
+    "analyze_ms_history": False, # analyze moisture stream history [bool]
 
     # cyclone tracking
     "MinTimeCY": 12,        # minimum cyclone lifetime [h]
