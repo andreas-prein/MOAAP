@@ -38,10 +38,13 @@ MOAAP_DEFAULTS = {
     "MinTimeCY": 12,        # minimum cyclone lifetime [h]
     "MaxPresAnCY": -8,      # cyclone pressure anomaly threshold [hPa]
     "breakup_cy": "watershed", # cyclone breakup method [str]
+    "analyze_cy_history": False, # analyze cyclone history [bool]
 
     # anticyclone tracking
     "MinTimeACY": 12,       # minimum anticyclone lifetime [h]
     "MinPresAnACY": 6,      # anticyclone pressure anomaly threshold [hPa]
+    "breakup_acy": "watershed", # anticyclone breakup method [str]
+    "analyze_psl_history": False, # analyze cyclone/anticyclone history [bool]
 
     # frontal zones
     "MinAreaFR": 50000,     # minimum frontal zone area [km^2]
@@ -53,6 +56,7 @@ MOAAP_DEFAULTS = {
     "MinTimeC": 4,          # minimum cloud shield lifetime [h]
     "MinAreaC": 40000,      # minimum cloud shield area [km^2]
     "cloud_overshoot":235,  # overshoot threshold for cloud objects [K]
+    "analyze_cloud_history": False, # analyze cloud history [bool]
 
     # atmospheric rivers (AR)
     "IVTtrheshold": 500,    # IVT threshold for AR detection [kg m^-1 s^-1]
@@ -61,6 +65,7 @@ MOAAP_DEFAULTS = {
     "AR_MinLen": 2000,      # minimum AR length [km]
     "AR_Lat": 20,           # AR centroid latitude threshold [°N]
     "AR_width_lenght_ratio": 2, # AR length/width ratio [unitless]
+    "analyze_ivt_history": False, # analyze atmospheric rivers history [bool]
 
     # tropical cyclone detection
     "TC_Pmin": 995,         # TC minimum pressure [hPa]
@@ -81,15 +86,18 @@ MOAAP_DEFAULTS = {
     "js_min_anomaly": 37,    # jet stream anomaly threshold [m/s]
     "MinTimeJS": 24,        # minimum jet lifetime [h]
     "breakup_jet": "watershed", # jet breakup method [str]
+    "analyze_jet_history": False, # analyze jet history [bool]
 
     # tropical waves
     "tropwave_minTime": 48, # minimum tropical wave lifetime [h]
     "breakup_mcs": "watershed", # MCS breakup method [str]
+    "analyze_twave_history": False, # analyze tropical wave history [bool]
 
     # 500 hPa cyclones/anticyclones
     "z500_low_anom": -80,    # 500 hPa cyclone anomaly threshold [m]
     "z500_high_anom": 70,    # 500 hPa anticyclone anomaly threshold [m]
     "breakup_zcy": "watershed", # 500 hPa cyclone CA breakup method [str]
+    "analyze_z500_history": False, # analyze 500 hPa cyclone/anticyclone history [bool]
 
     # equatorial waves
     "er_th": -0.5,           # equatorial Rossby wave threshold [unitless]
@@ -98,4 +106,5 @@ MOAAP_DEFAULTS = {
     "kel_th": -5,          # Kelvin wave threshold [unitless]
     "eig0_th": -4,         # n>=1 inertia-gravity wave threshold [unitless]
     "breakup_tw": "watershed", # equatorial wave breakup method [str]
+    "analyze_twave_history": False, # analyze tropical wave history [bool]
 }

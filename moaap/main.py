@@ -74,16 +74,6 @@ def moaap(
     OutputFolder : str, default=''
         Path to the output directory.
 
-    Precipitation objects
-    -----------        
-    SmoothSigmaP : float, default=0
-        Gaussian σ for precipitation smoothing.
-    Pthreshold : float, default=2
-        Precipitation threshold (mm h⁻¹).
-    MinTimePR : int, default=4
-        Minimum lifetime of precipitation features (h).
-    MinAreaPR : float, default=5000
-        Minimum area of precipitation features (km²).
 
     Moisture streams
     -----------
@@ -93,6 +83,10 @@ def moaap(
         Minimum area of moisture stream features (km²).
     MinMSthreshold : float, default=0.11
         Detection threshold for moisture streams (g·m/g·s).
+    breakup_ms : str, default='watershed'
+        Method for moisture stream breakup.
+    analyze_ms_history : bool, default=False
+        If True, computes watershed merge/split history for moisture streams.
 
     Cyclones & anticyclones
     -------------------
@@ -106,6 +100,8 @@ def moaap(
         Minimum lifetime of anticyclones (h).
     MinPresAnACY : float, default=6
         Pressure anomaly threshold for anticyclones (hPa).
+    analyze_psl_history : bool, default=False
+        If True, computes watershed merge/split history for cyclones/anticyclones.
 
     Frontal zones
     -------------------
@@ -124,6 +120,8 @@ def moaap(
         Minimum lifetime of ice‐cloud shields (h).
     MinAreaC : float, default=40000
         Minimum area of ice‐cloud shields (km²).
+    analyze_cloud_history : bool, default=False
+        If True, computes watershed merge/split history for cloud objects.
 
     Atmospheric rivers (AR)
     -----------
@@ -139,6 +137,8 @@ def moaap(
         Minimum centroid latitude for ARs (degrees N).
     AR_width_lenght_ratio : float, default=2
         Minimum length‐to‐width ratio for ARs.
+    analyze_ivt_history : bool, default=False
+        If True, computes watershed merge/split history for ARs.
 
     Tropical cyclone detection
     -----------
@@ -165,7 +165,7 @@ def moaap(
         Minimum cloud area for MCS detection (km²).
     MCS_minTime : int, default=4
         Minimum lifetime of MCS (h).
-    Analyze_history : bool, default=False
+    analyze_mcs_history : bool, default=False
         Whether to analyze the history of MCS objects.
 
     Jet streams & tropical waves
@@ -180,15 +180,21 @@ def moaap(
         Minimum lifetime of tropical waves (h).
     breakup_mcs : str, default='watershed'
         Method for MCS breakup.
+    analyze_jet_history : bool, default=False
+        If True, computes watershed merge/split history for jet streams.
+    analyze_twave_history : bool, default=False
+        If True, computes watershed merge/split history for tropical waves.
 
-    **500 hPa cyclones/anticyclones**
-
+    500 hPa cyclones/anticyclones
+    -----------
     z500_low_anom : float, default=-80
         Minimum anomaly for 500 hPa cyclones (m).
     z500_high_anom : float, default=70
         Minimum anomaly for 500 hPa anticyclones (m).
     breakup_zcy : str, default='watershed'
         Method for 500 hPa cyclone/anticyclone breakup.
+    analyze_z500_history : bool, default=False
+        If True, computes watershed merge/split history for 500 hPa cyclones/anticyclones.
 
     Equatorial waves
     -----------
@@ -419,7 +425,9 @@ def moaap(
                                       dT,
                                       Gridspacing,
                                       connectLon,
-                                      breakup = params["breakup_jet"])
+                                      breakup = params["breakup_jet"],
+                                      analyze_jet_history = params["analyze_jet_history"]
+                                      )
         jet_objects_characteristics = calc_object_characteristics(jet_objects, # feature object file
                                      uv200,         # original file used for feature detection
                                      params["OutputFolder"]+'jet_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
@@ -449,7 +457,8 @@ def moaap(
                        igw_th = params["igw_th"],  # threshold for inertia gravity waves
                        kel_th = params["kel_th"],  # threshold for Kelvin waves
                        eig0_th = params["eig0_th"], # threshold for n>=1 Inertio Gravirt Wave
-                       breakup = params["breakup_tw"]
+                       breakup = params["breakup_tw"],
+                       analyze_twave_history = params["analyze_twave_history"]
                         )
         end = time.perf_counter()
         timer(start, end)
@@ -520,7 +529,9 @@ def moaap(
                                         dT,
                                         connectLon,
                                         Gridspacing,
-                                        breakup = params["breakup_ivt"])
+                                        breakup = params["breakup_ivt"],
+                                        analyze_ms_history= params["analyze_ms_history"]
+                                        )
         
         grMSs = calc_object_characteristics(MS_objects, # feature object file
                                  VapTrans,         # original file used for feature detection
@@ -547,7 +558,8 @@ def moaap(
                                     dT,
                                     Gridspacing,
                                     connectLon,
-                                    breakup = params["breakup_ivt"])
+                                    breakup = params["breakup_ivt"],
+                                    analyze_ivt_history= params["analyze_ivt_history"])
 
         grIVTs = calc_object_characteristics(IVT_objects, # feature object file
                                      IVT,         # original file used for feature detection
@@ -629,6 +641,7 @@ def moaap(
                                                     Gridspacing,
                                                     connectLon,
                                                     breakup = params["breakup_cy"],
+                                                    analyze_psl_history= params["analyze_psl_history"]
                                                     )
 
         grCyclonesPT = calc_object_characteristics(CY_objects, # feature object file
@@ -666,6 +679,7 @@ def moaap(
                                             z500_low_anom = params["z500_low_anom"],
                                             z500_high_anom = params["z500_high_anom"],
                                             breakup = params["breakup_zcy"],
+                                            analyze_z500_history= params["analyze_z500_history"]
                                             )
         
         cy_z500_objects_characteristics = calc_object_characteristics(cy_z500_objects, # feature object file
@@ -776,7 +790,8 @@ def moaap(
                         tb_threshold = params["Cthreshold"],
                         tb_overshoot = params["cloud_overshoot"],
                         erosion_disk = 1.5,
-                        min_dist = 8
+                        min_dist = 8,
+                        analyze_cloud_history= params["analyze_cloud_history"]
                         )
 
         grclouds_Tb = calc_object_characteristics(

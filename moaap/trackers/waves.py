@@ -2,7 +2,7 @@ import numpy as np
 from scipy import fftpack, ndimage, signal
 from moaap.utils.constants import g, a, beta, pi, NA
 from moaap.utils.data_proc import tukey_latitude_mask, temporal_tukey_window, interpolate_temporal
-from moaap.utils.segmentation import watershed_3d_overlap_parallel
+from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_watershed_history
 from moaap.utils.object_props import clean_up_objects, BreakupObjects, ConnectLon_on_timestep
 import gc
 import sys
@@ -18,6 +18,7 @@ def track_tropwaves_tb(tb,
                    kel_th = 0.1,  
                    eig0_th = 0.1, 
                    breakup = 'watershed',
+                   analyze_twave_history = False
                    ):
     """
     Identifies and tracks tropical waves using wavenumber-frequency filtering 
@@ -36,6 +37,8 @@ def track_tropwaves_tb(tb,
         Inertia Gravity, Kelvin, and Eastward Inertia Gravity waves respectively.
     breakup : str
         Method to handle merging objects ('breakup' or 'watershed').
+    analyze_twave_history : bool, optional
+        If True, computes watershed merge/split history.
 
     Returns
     -------
@@ -134,6 +137,31 @@ def track_tropwaves_tb(tb,
             kelvin_objects = wave_objects.copy()
         if wa == 4:
             eig0_objects = wave_objects.copy()
+
+        if analyze_twave_history:
+            min_dist=int((1000 * 10**3)/Gridspacing)
+            print(f"    Minimum distance between {wave_names[wa]} maxima for watershed analysis: {min_dist} grid cells")
+            union_array, events, histories = analyze_watershed_history(
+                wave_objects, min_dist, wave_names[wa].lower()
+            )
+
+            union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+            events_clean = [
+            {
+                'type': e['type'],
+                'time': int(e['time']),
+                'from_label': int(e['from_label']),
+                'to_label': int(e['to_label']),
+                'distance': float(e['distance'])
+            }
+            for e in events
+            ]
+            histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+
+            print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+            print(f"    Printing events: {events_clean}")
+            print(f"    Printing histories: {dict(list(histories_clean.items()))}")
+
 
         del wave
         del wave_objects

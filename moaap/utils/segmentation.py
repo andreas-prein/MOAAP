@@ -214,13 +214,15 @@ def _find_nearest_neighbor(
 
     return nearest_label, min_distance
 
-def analyze_watershed_history(watershed_results, min_dist):
+def analyze_watershed_history(watershed_results, min_dist, object_type: str):
     """
     Analyze the history of watershed objects over time.
     The output is a union of all objects which merged or split over time, 
     along with a list of events (merges and splits) that occurred and the history array
     (dict of sets), where two labels are in one set if they are connected via merges/splits.
-    This is done via Euler-timestepping and comparing the overlap of objects
+    This is done via Euler-timestepping and comparing the overlap of objects.
+    This function also creates a plot of the history of all objects showing merges and splits of 
+    at most 40 objects (for better readability).
     
     Parameters
     ----------
@@ -228,6 +230,9 @@ def analyze_watershed_history(watershed_results, min_dist):
         3D array of watershed labels over time, shape (T, H, W).
     min_dist : float
         Minimum distance threshold to consider two objects as related (for merges/splits).
+    object_type : str
+        Type of object being analyzed (e.g., "mcs", "cloud").
+    
     Returns
     -------
     union_array : Dict[int, int]
@@ -387,6 +392,11 @@ def analyze_watershed_history(watershed_results, min_dist):
 
     # Plot setup (only for filtered labels, ordered)
     fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Limit to first 50 entries to keep plot readable
+    if len(ordered_labels) > 40:
+        ordered_labels = ordered_labels[:40]
+
     y_positions = {label: i for i, label in enumerate(ordered_labels)}
     ax.set_yticks(list(y_positions.values()))
     ax.set_yticklabels(list(y_positions.keys()), fontsize=12)
@@ -397,8 +407,9 @@ def analyze_watershed_history(watershed_results, min_dist):
 
     # Plot label lifetimes as horizontal lines (only for filtered labels)
     for label, (t_start, t_end) in filtered_label_times.items():
-        y = y_positions[label]
-        ax.plot([t_start, t_end], [y, y], 'b-', linewidth=2)
+        if label in y_positions:
+            y = y_positions[label]
+            ax.plot([t_start, t_end], [y, y], 'b-', linewidth=2)
 
     # Plot events (only for filtered labels)
     for event in events:
@@ -425,7 +436,7 @@ def analyze_watershed_history(watershed_results, min_dist):
     # save the plot in a pdf
     plt.tight_layout()
     os.makedirs('outputs', exist_ok=True)
-    plt.savefig('outputs/watershed_history.pdf')
+    plt.savefig('outputs/watershed_history_' + object_type + '.pdf')
     return union_array, events, histories
     
 
@@ -782,7 +793,7 @@ def watershed_3d_overlap_parallel(
     if mp_method == 'auto':
         total_cells = data.size
         # Example thresholds (to be calibrated):
-        FORK_LIMIT = 400000000     # Below 400M cells -> Parallel (Fork)
+        FORK_LIMIT = 600000000     # Below 600M cells -> Parallel (Fork)
                                    # Above -> Parallel (Spawn)
         
         if total_cells < FORK_LIMIT:

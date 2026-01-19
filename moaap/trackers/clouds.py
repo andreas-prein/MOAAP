@@ -182,7 +182,7 @@ def mcs_tb_tracking(
         min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
         print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
         union_array, events, histories = analyze_watershed_history(
-            MCS_objects_Tb, min_dist
+            MCS_objects_Tb, min_dist, "mcs"
         )
 
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
@@ -218,7 +218,8 @@ def cloud_tracking(
     tb_threshold = 241,
     tb_overshoot = 235,
     erosion_disk = 1.5,
-    min_dist = 8
+    min_dist = 8,
+    analyze_cloud_history = False
     ):
     
     """
@@ -228,13 +229,15 @@ def cloud_tracking(
     Parameters
     ----------
         tb (float): brightness temperature of dimension [time,lat,lon]
+        pr (float): precipitation rate of dimension [time,lat,lon]
         connectLon (bol): 1 means that clouds should be connected accross date line
         Gridspacing (float): average horizontal grid spacing in [m]
+        dT (int): time step of data in hours
         tb_threshold (float, optional): tb threshold to define cloud mask. Default is "241".
         tb_overshoot (float, optional): tb threshold to find local minima for watershedding. Default is "235".
         erosion_disk (float, optional): reduction of next timestep mask for temporal connection of features. Larger values result in more erosion and can remove smaller clouds. The default is "0.15".
         min_dist (int, optional): minimum distance in grid cells between two tb minima (overshoots). The default is "8".
-
+        analyze_cloud_history (bool, optional): If True, computes watershed merge/split history. Default is False.
     Returns
     -------
         cloud_objects (np.ndarray): labeled cloud objects of dimension [time,lat,lon]
@@ -246,6 +249,7 @@ def cloud_tracking(
     print('        break up long living cloud shield objects with wathershedding')
     
     min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
+    print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
 
     cloud_objects = watershed_3d_overlap_parallel(
             tb * -1,
@@ -273,6 +277,30 @@ def cloud_tracking(
         pr_act[~pr_object_act] = np.nan
         if np.nanmax(pr_act) < min_pr:
             cloud_objects[object_indices[iobj]][cloud_objects[object_indices[iobj]] == iobj+1] = 0
+
+    if analyze_cloud_history:
+        min_dist=8
+        print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
+        union_array, events, histories = analyze_watershed_history(
+            cloud_objects, min_dist, "cloud"
+        )
+
+        union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+        events_clean = [
+        {
+            'type': e['type'],
+            'time': int(e['time']),
+            'from_label': int(e['from_label']),
+            'to_label': int(e['to_label']),
+            'distance': float(e['distance'])
+        }
+        for e in events
+        ]
+        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+
+        print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+        print(f"    Printing events: {events_clean}")
+        print(f"    Printing histories: {dict(list(histories_clean.items()))}")
 
     return cloud_objects
 

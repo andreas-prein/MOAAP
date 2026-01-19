@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import ndimage
 from moaap.utils.grid import DistanceCoord
-from moaap.utils.segmentation import watershed_3d_overlap_parallel
+from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_watershed_history
 from moaap.utils.profiling import timer
 from moaap.utils.object_props import minimum_bounding_rectangle, BreakupObjects
 import scipy
@@ -18,7 +18,8 @@ def ar_850hpa_tracking(
                     dT,
                     connectLon,
                     Gridspacing,
-                    breakup = "watershed"
+                    breakup = "watershed",
+                    analyze_ms_history = False
                 ):
     """
     Tracks Moisture Streams (MS) based on 850 hPa moisture flux.
@@ -39,8 +40,12 @@ def ar_850hpa_tracking(
         Time step (hours).
     connectLon : int
         1 to connect across date line.
-    breakup : str
-        Method for object separation.
+    Gridspacing : float
+        Grid spacing (m).
+    breakup : str, optional
+        Method for object separation. Options: 'breakup' or 'watershed'. Default is 'watershed'.
+    analyze_ms_history : bool, optional
+        If True, computes watershed merge/split history.
 
     Returns
     -------
@@ -69,6 +74,29 @@ def ar_850hpa_tracking(
     # if connectLon == 1:
     #     print('        connect MS objects over date line')
     #     MS_objects = ConnectLon_on_timestep(MS_objects)
+    if analyze_ms_history:
+        min_dist=int((4000 * 10**3)/Gridspacing)
+        print(f"    Minimum distance between VapTrans maxima for watershed analysis: {min_dist} grid cells")
+        union_array, events, histories = analyze_watershed_history(
+            MS_objects, min_dist, "ms"
+        )
+
+        union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+        events_clean = [
+        {
+            'type': e['type'],
+            'time': int(e['time']),
+            'from_label': int(e['from_label']),
+            'to_label': int(e['to_label']),
+            'distance': float(e['distance'])
+        }
+        for e in events
+        ]
+        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+
+        print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+        print(f"    Printing events: {events_clean}")
+        print(f"    Printing histories: {dict(list(histories_clean.items()))}")
     
     return MS_objects
 
@@ -80,7 +108,9 @@ def ar_ivt_tracking(IVT,
                     dT,
                     Gridspacing,
                     connectLon,
-                    breakup = "watershed"):
+                    breakup = "watershed",
+                    analyze_ivt_history = False
+                    ):
 
     """
     Tracks Atmospheric Rivers (ARs) based on Integrated Vapor Transport (IVT).
@@ -99,8 +129,11 @@ def ar_ivt_tracking(IVT,
         Grid spacing in meters.
     connectLon : int
         1 to connect objects across the date line, 0 otherwise.
-    breakup : str
-        Method to handle merging objects ('breakup' or 'watershed').
+    breakup : str, optional
+        Method to handle merging objects ('breakup' or 'watershed'). Default is 'watershed'.
+    analyze_ivt_history : bool, optional
+        If True, computes watershed merge/split history. Default is False.
+    
 
     Returns
     -------
@@ -129,7 +162,29 @@ def ar_ivt_tracking(IVT,
     # if connectLon == 1:
     #     print('        connect IVT objects over date line')
     #     IVT_objects = ConnectLon_on_timestep(IVT_objects)
+    if analyze_ivt_history:
+        min_dist=int((4000 * 10**3)/Gridspacing)
+        print(f"    Minimum distance between IVT maxima for watershed analysis: {min_dist} grid cells")
+        union_array, events, histories = analyze_watershed_history(
+            IVT_objects, min_dist, "ivt"
+        )
 
+        union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+        events_clean = [
+        {
+            'type': e['type'],
+            'time': int(e['time']),
+            'from_label': int(e['from_label']),
+            'to_label': int(e['to_label']),
+            'distance': float(e['distance'])
+        }
+        for e in events
+        ]
+        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+
+        print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+        print(f"    Printing events: {events_clean}")
+        print(f"    Printing histories: {dict(list(histories_clean.items()))}")
     return IVT_objects
   
 

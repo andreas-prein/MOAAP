@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import ndimage
 from moaap.utils.data_proc import smooth_uniform
-from moaap.utils.segmentation import watershed_3d_overlap_parallel
+from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_watershed_history
 from moaap.utils.object_props import clean_up_objects, BreakupObjects
 
 def jetstream_tracking(
@@ -12,6 +12,7 @@ def jetstream_tracking(
                       Gridspacing,
                       connectLon,
                       breakup = 'breakup',
+                      analyze_jet_history = False
                       ):
     """
     Identifies and tracks Jet Stream objects based on 200hPa wind speed anomalies.
@@ -30,8 +31,10 @@ def jetstream_tracking(
         Grid spacing (m).
     connectLon : int
         1 to connect across the date line.
-    breakup : str
+    breakup : str, optional
         Method to split merged objects ('breakup' or 'watershed').
+    analyze_jet_history : bool, optional
+        If True, computes watershed merge/split history.
 
     Returns
     -------
@@ -62,5 +65,28 @@ def jetstream_tracking(
     # if connectLon == 1:
     #     print('        connect cyclones objects over date line')
     #     jet_objects = ConnectLon_on_timestep(jet_objects)
+    if analyze_jet_history:
+        min_dist=int(3000*10**3/Gridspacing)
+        print(f"    Minimum distance between js minima for watershed analysis: {min_dist} grid cells")
+        union_array, events, histories = analyze_watershed_history(
+            jet_objects, min_dist, "jet"
+        )
+
+        union_array_clean = {int(k): int(v) for k, v in union_array.items()}
+        events_clean = [
+        {
+            'type': e['type'],
+            'time': int(e['time']),
+            'from_label': int(e['from_label']),
+            'to_label': int(e['to_label']),
+            'distance': float(e['distance'])
+        }
+        for e in events
+        ]
+        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}
+
+        print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
+        print(f"    Printing events: {events_clean}")
+        print(f"    Printing histories: {dict(list(histories_clean.items()))}")
 
     return jet_objects, object_split
