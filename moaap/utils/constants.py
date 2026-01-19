@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 #physical constants
 gravitational_constant = 6.673e-11 #Nm^2/kg^2
@@ -16,8 +16,8 @@ specific_heat_volume = 717
 ratio_gamma = specific_heat_pressure/specific_heat_volume
 
 
-NA = numpy.newaxis
-pi = numpy.pi
+NA = np.newaxis
+pi = np.pi
 g = gravity_earth
 a = radius_earth
 beta = 2.0*omega_earth/radius_earth
