@@ -39,7 +39,7 @@ MOAAP_DEFAULTS = {
     "MinTimeCY": 12,        # minimum cyclone lifetime [h]
     "MaxPresAnCY": -8,      # cyclone pressure anomaly threshold [hPa]
     "breakup_cy": "watershed", # cyclone breakup method [str]
-    "analyze_cy_history": False, # analyze cyclone history [bool]
+    "analyze_psl_history": False, # analyze cyclone history [bool]
 
     # anticyclone tracking
     "MinTimeACY": 12,       # minimum anticyclone lifetime [h]

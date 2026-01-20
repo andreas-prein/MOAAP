@@ -673,7 +673,7 @@ def watershed_3d_overlap_parallel(
     data : np.ndarray
         3D matrix with data for watershedding
     object_threshold : float
-        Float to create binary object mast
+        Float to create binary object mask
     max_treshold : float
         Value for identifying max. points for spreading
     min_dist : int
@@ -701,6 +701,19 @@ def watershed_3d_overlap_parallel(
     """
 
     data = np.asarray(data, dtype=np.float32) 
+
+    if n_chunks_lat == 1 and n_chunks_lon == 1:
+        print("Only one chunk specified, running serial version.")
+        return watershed_3d_overlap(
+            data,
+            object_threshold,
+            max_treshold,
+            min_dist,
+            dT,
+            mintime,
+            connectLon,
+            extend_size_ratio
+        )
 
     if n_chunks_lat == None and n_chunks_lon == None:
         num_proc = mp.cpu_count() - 1 # get one less for system processes

@@ -11,7 +11,7 @@ def jetstream_tracking(
                       dT,               
                       Gridspacing,
                       connectLon,
-                      breakup = 'breakup',
+                      breakup = 'watershed',
                       analyze_jet_history = False
                       ):
     """
@@ -43,7 +43,6 @@ def jetstream_tracking(
     object_split : dict
         History of object splitting/merging.
     """
-    
     print('    track jet streams')    
     print('        break up long living jety objects with the '+breakup+' method')
     if breakup == 'breakup':
@@ -53,7 +52,7 @@ def jetstream_tracking(
     elif breakup == 'watershed':
         jet_objects = watershed_3d_overlap_parallel(uv200,
                                     js_min_anomaly,
-                                    js_min_anomaly * 1.05,
+                                    js_min_anomaly * 1.1,
                                     int(3000 * 10**3/Gridspacing), # this setting sets the size of jet objects
                                     dT,
                                     mintime = MinTimeJS,
