@@ -687,12 +687,14 @@ def watershed_3d_overlap_parallel(
     extend_size_ratio : float, optional
         If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. 
         This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25
-    n_chunks_lat : int
-        Number of chunks to split latitude dimension
-    n_chunks_lon : int
+    n_chunks_lat : int, default=None
+        Number of chunks to split latitude dimension, if None, auto-detects based on CPU count
+    n_chunks_lon : int, default=None
         Number of chunks to split longitude dimension
     overlap_cells : int, optional
         Number of overlapping cells between chunks. If None, uses min_dist * 2
+    mp_method : str, optional
+        Multiprocessing method: 'fork', 'spawn', or 'auto' (default). 'auto' chooses based on data size and system memory.
     
     Returns
     -------
