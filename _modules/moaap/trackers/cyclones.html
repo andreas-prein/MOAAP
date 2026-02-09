@@ -173,12 +173,12 @@
         <span class="n">CY_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
                 <span class="n">low_pres_an</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
                 <span class="n">MaxPresAnCY</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-                <span class="n">MaxPresAnCY</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">MaxPresAnCY</span> <span class="o">*</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">,</span>
                 <span class="n">min_dist</span><span class="p">,</span>
                 <span class="n">dT</span><span class="p">,</span>
                 <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
                 <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>
-                <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.15</span>
+                <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.25</span>
                 <span class="p">)</span>
         
         
@@ -324,7 +324,7 @@
         <span class="n">cy_z500_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
                 <span class="n">z500_Anomaly</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
                 <span class="n">z500_low_anom</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span>
-                <span class="n">z500_low_anom</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">z500_low_anom</span><span class="o">*-</span><span class="mf">1.5</span><span class="p">,</span>
                 <span class="n">min_dist</span><span class="p">,</span>
                 <span class="n">dT</span><span class="p">,</span>
                 <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
@@ -373,10 +373,11 @@
         <span class="n">acy_z500_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
                 <span class="n">z500_Anomaly</span><span class="p">,</span>
                 <span class="n">z500_high_anom</span><span class="p">,</span>
-                <span class="n">z500_high_anom</span><span class="p">,</span>
+                <span class="n">z500_high_anom</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">,</span>
                 <span class="n">min_dist</span><span class="p">,</span>
                 <span class="n">dT</span><span class="p">,</span>
                 <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
+                <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.25</span>
                 <span class="p">)</span>
     
     <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>

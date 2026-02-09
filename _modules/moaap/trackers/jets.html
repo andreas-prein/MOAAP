@@ -125,10 +125,20 @@
                                     <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeJS</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
                                     <span class="n">dT</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
-        <span class="n">jet_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+        <span class="c1">#smoothed_data = smooth_spatial_gaussian(uv200, 80, Gridspacing)</span>
+
+        <span class="n">uv200_smooth</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+                                 <span class="mi">1</span><span class="p">,</span>
+                                 <span class="nb">int</span><span class="p">(</span><span class="mi">250</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)))</span>
+        <span class="n">uv200smoothAn</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+                                     <span class="nb">int</span><span class="p">(</span><span class="mi">78</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                     <span class="nb">int</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">5000</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">))))</span>
+
+        <span class="n">uv200_Anomaly</span> <span class="o">=</span> <span class="n">uv200_smooth</span> <span class="o">-</span> <span class="n">uv200smoothAn</span>
+        <span class="n">jet_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span><span class="n">uv200_Anomaly</span><span class="p">,</span>
                                     <span class="n">js_min_anomaly</span><span class="p">,</span>
                                     <span class="n">js_min_anomaly</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">,</span>
-                                    <span class="nb">int</span><span class="p">(</span><span class="mi">3000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">),</span> <span class="c1"># this setting sets the size of jet objects</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="mi">2500</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">),</span> <span class="c1"># this setting sets the size of jet objects</span>
                                     <span class="n">dT</span><span class="p">,</span>
                                     <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeJS</span><span class="p">,</span>
                                     <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>

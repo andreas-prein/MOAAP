@@ -226,10 +226,13 @@
                                 <span class="n">dT</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">4000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+        <span class="n">IVT_smooth</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">IVT</span><span class="p">,</span>
+                                    <span class="mi">1</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="mi">250</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)))</span>
         <span class="n">IVT_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
-                <span class="n">IVT</span><span class="p">,</span>
+                <span class="n">IVT_smooth</span><span class="p">,</span>
                 <span class="n">IVTtrheshold</span><span class="p">,</span>
-                <span class="n">IVTtrheshold</span><span class="o">*</span><span class="mf">1.05</span><span class="p">,</span>
+                <span class="n">IVTtrheshold</span><span class="o">*</span><span class="mf">1.1</span><span class="p">,</span>
                 <span class="n">min_dist</span><span class="p">,</span>
                 <span class="n">dT</span><span class="p">,</span>
                 <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeIVT</span><span class="p">,</span>
