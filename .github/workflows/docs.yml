@@ -1,0 +1,46 @@
+name: Build and Deploy Docs
+
+on:
+  push:
+    branches:
+      - main  # Or 'master', depending on your default branch name
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Pandoc # Required for nbsphinx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc libgeos-dev libproj-dev proj-data
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme nbsphinx
+          pip install .  # Installs your 'moaap' package so Sphinx can import it
+
+      - name: Build HTML
+        run: |
+          cd docs
+          make html
+
+      - name: Create .nojekyll to disable Jekyll processing
+        run: touch docs/build/html/.nojekyll
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build/html
