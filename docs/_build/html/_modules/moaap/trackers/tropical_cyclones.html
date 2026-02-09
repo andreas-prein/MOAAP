@@ -1,0 +1,265 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moaap.trackers.tropical_cyclones &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">MOAAP Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial.html">MOAAP: Multi-Object Analysis of Atmospheric Phenomena - Tutorial</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">moaap.trackers.tropical_cyclones</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for moaap.trackers.tropical_cyclones</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_grid_distance_area</span><span class="p">,</span> <span class="n">haversine</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_land</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">fill_small_gaps</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span> <span class="c1"># pyright: ignore[reportMissingModuleSource]</span>
+
+
+<div class="viewcode-block" id="tc_tracking">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.tropical_cyclones.tc_tracking">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tc_tracking</span><span class="p">(</span><span class="n">CY_objects</span><span class="p">,</span>
+                <span class="n">slp</span><span class="p">,</span>
+                <span class="n">t850</span><span class="p">,</span>
+                <span class="n">tb</span><span class="p">,</span>
+                <span class="n">uv850</span><span class="p">,</span>
+                <span class="n">uv200</span><span class="p">,</span>
+                <span class="n">Lon</span><span class="p">,</span>
+                <span class="n">Lat</span><span class="p">,</span>
+                <span class="n">TC_lat_genesis</span><span class="p">,</span>
+                <span class="n">TC_t_core</span><span class="p">,</span>
+               <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filters tracked surface cyclones to identify Tropical Cyclones (TCs).</span>
+<span class="sd">    Checks for warm core, genesis latitude, low pressure, and wind structure.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    CY_objects : np.ndarray</span>
+<span class="sd">        Labeled surface cyclone objects.</span>
+<span class="sd">    slp : np.ndarray</span>
+<span class="sd">        Sea Level Pressure.</span>
+<span class="sd">    t850 : np.ndarray</span>
+<span class="sd">        Temperature at 850hPa (for warm core check).</span>
+<span class="sd">    tb : np.ndarray</span>
+<span class="sd">        Brightness Temperature (for cloud shield check).</span>
+<span class="sd">    uv850, uv200 : np.ndarray</span>
+<span class="sd">        Wind speed magnitudes at 850hPa and 200hPa.</span>
+<span class="sd">    TC_lat_genesis : float</span>
+<span class="sd">        Maximum latitude for TC genesis.</span>
+<span class="sd">    TC_t_core : float</span>
+<span class="sd">        Minimum core temperature threshold.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TC_obj : np.ndarray</span>
+<span class="sd">        Labeled Tropical Cyclone objects.</span>
+<span class="sd">    TC_Tracks : dict</span>
+<span class="sd">        Dictionary containing Lat/Lon tracks for each TC ID.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+    
+    <span class="n">TC_Tracks</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">TC_obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">CY_objects</span><span class="p">);</span> <span class="n">TC_obj</span><span class="p">[:]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">Objects</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">CY_objects</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+    <span class="n">_</span><span class="p">,</span><span class="n">_</span><span class="p">,</span><span class="n">grid_cell_area</span><span class="p">,</span><span class="n">grid_spacing</span> <span class="o">=</span> <span class="n">calc_grid_distance_area</span><span class="p">(</span><span class="n">Lon</span><span class="p">,</span><span class="n">Lat</span><span class="p">)</span>
+    <span class="n">grid_cell_area</span><span class="p">[</span><span class="n">grid_cell_area</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Objects</span><span class="p">))):</span>
+        <span class="k">if</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">:</span>
+            <span class="c1"># some cycloens life too long</span>
+            <span class="k">continue</span>
+        <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">CY_objects</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span> <span class="o">==</span> <span class="n">ii</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="mi">8</span><span class="p">:</span>
+            <span class="k">continue</span>
+    
+        <span class="n">slp_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">slp</span><span class="p">[:,:,:][</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]])</span><span class="o">/</span><span class="mf">100.</span>
+        <span class="n">t850_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">t850</span><span class="p">[:,:,:][</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]])</span>
+        <span class="n">tb_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">tb</span><span class="p">[:,:,:][</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]])</span>
+        <span class="n">uv850_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">uv850</span><span class="p">[:,:,:][</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]])</span>
+        <span class="n">uv200_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">uv200</span><span class="p">[:,:,:][</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]])</span>
+        <span class="n">LonObj</span> <span class="o">=</span> <span class="n">Lon</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">2</span><span class="p">]]</span>
+        <span class="n">LatObj</span> <span class="o">=</span> <span class="n">Lat</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">2</span><span class="p">]]</span>
+        <span class="n">slp_ACT</span><span class="p">[</span><span class="n">ObjACT</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">999999999.</span>
+        <span class="n">slp_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">slp_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">][</span><span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">]])</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">])</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                            <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                        <span class="p">])</span>
+    
+        <span class="n">Track_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">slp_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">slp_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]))[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+        <span class="n">LatLonTrackAct</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">LatObj</span><span class="p">[</span><span class="n">Track_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">Track_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span><span class="n">LonObj</span><span class="p">[</span><span class="n">Track_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">Track_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span> <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">LatLonTrackAct</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&gt;</span> <span class="n">TC_lat_genesis</span><span class="p">:</span>
+            <span class="c1"># cyclone does not originate in the tropics</span>
+            <span class="n">ObjACT</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+    
+            <span class="c1"># Check if the cyclone core is warm enough</span>
+            <span class="n">t850_core</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]));</span> <span class="n">t850_core</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">tb_core</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">t850_core</span><span class="p">)</span>
+            <span class="n">uv850_core</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">t850_core</span><span class="p">)</span>
+            <span class="n">uv200_core</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">t850_core</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">slp_min</span><span class="p">[</span><span class="n">tt</span><span class="p">]</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">99999</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                    
+                <span class="c1"># sample T850 in core</span>
+                <span class="c1">## could be potentially sped up by just selecting the temp. at the center of the storm</span>
+                <span class="n">tc_disctance</span> <span class="o">=</span> <span class="n">haversine</span><span class="p">(</span><span class="n">LonObj</span><span class="p">,</span> <span class="n">LatObj</span><span class="p">,</span> <span class="n">LatLonTrackAct</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">LatLonTrackAct</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">t850_core</span><span class="p">[</span><span class="n">tt</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">t850_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:][</span><span class="n">tc_disctance</span> <span class="o">&lt;</span> <span class="n">grid_spacing</span><span class="o">/</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">3</span><span class="p">])</span>
+                <span class="n">tb_core</span><span class="p">[</span><span class="n">tt</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">tb_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:][</span><span class="n">tc_disctance</span> <span class="o">&lt;</span> <span class="n">grid_spacing</span><span class="o">/</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">3</span><span class="p">])</span>
+                <span class="n">uv850_core</span><span class="p">[</span><span class="n">tt</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">uv850_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:][</span><span class="n">tc_disctance</span> <span class="o">&lt;</span> <span class="mi">150</span><span class="p">])</span>
+                <span class="n">uv200_core</span><span class="p">[</span><span class="n">tt</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">uv200_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:][</span><span class="n">tc_disctance</span> <span class="o">&lt;</span> <span class="mi">150</span><span class="p">])</span>
+    
+            <span class="n">lat_act</span> <span class="o">=</span> <span class="n">LatLonTrackAct</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">lon_act</span> <span class="o">=</span> <span class="n">LatLonTrackAct</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+        
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">lat_act</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&gt;</span> <span class="n">TC_lat_genesis</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Check if core is warm enough</span>
+            <span class="n">t_test</span> <span class="o">=</span> <span class="p">(</span><span class="n">t850_core</span> <span class="o">&gt;=</span> <span class="n">TC_t_core</span><span class="p">)</span> <span class="c1"># &amp; (slp_min &lt;= 1002)</span>
+
+            <span class="c1"># check if there is a cold cloud shield over the TC</span>
+            <span class="n">anvil_test</span> <span class="o">=</span> <span class="p">(</span><span class="n">tb_core</span> <span class="o">&lt;=</span> <span class="mi">241</span><span class="p">)</span> <span class="c1"># &amp; (slp_min &lt;= 1002)</span>
+
+            <span class="c1"># check if the cyclone has strong enough wind speed</span>
+            <span class="n">speed_test</span> <span class="o">=</span> <span class="p">(</span><span class="n">uv850_core</span> <span class="o">&gt;</span> <span class="mi">15</span><span class="p">)</span>
+
+            <span class="c1"># check if cyclone has strong low level winds compared to outflow</span>
+            <span class="n">rmax_test</span> <span class="o">=</span> <span class="p">(</span><span class="n">uv850_core</span><span class="o">/</span><span class="n">uv200_core</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+
+            <span class="n">tc_sel_act</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_test</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">anvil_test</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">speed_test</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">rmax_test</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tc_sel_act</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="c1"># check if TC genesis occurs in low latitudes and over the ocean</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">lat_act</span><span class="p">[</span><span class="n">tc_sel_act</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">TC_lat_genesis</span><span class="p">:</span>
+                <span class="k">continue</span>
+        
+            <span class="k">if</span> <span class="n">is_land</span><span class="p">(</span><span class="n">lon_act</span><span class="p">[</span><span class="n">tc_sel_act</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">lat_act</span><span class="p">[</span><span class="n">tc_sel_act</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="c1"># fill up gaps in tc detection if they are shorter than 12 hours</span>
+            <span class="n">tc_sel_act</span> <span class="o">=</span> <span class="n">fill_small_gaps</span><span class="p">(</span><span class="n">tc_sel_act</span><span class="p">,</span> <span class="n">gap_threshold</span> <span class="o">=</span> <span class="mi">12</span><span class="p">)</span>
+
+            <span class="c1"># check if TC re-genesis occurrence is below TC_lat_genesis and not over land</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+            <span class="n">labeled_array</span><span class="p">,</span> <span class="n">num_features</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">tc_sel_act</span><span class="p">)</span>
+            <span class="n">slices</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">labeled_array</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">tt</span><span class="p">,</span> <span class="n">slice_tuple</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">slices</span><span class="p">):</span>
+                <span class="c1"># For 1D, slice_tuple is a tuple with one slice object.</span>
+                <span class="n">block</span> <span class="o">=</span> <span class="n">tc_sel_act</span><span class="p">[</span><span class="n">slice_tuple</span><span class="p">]</span>
+            
+                <span class="n">start_index</span> <span class="o">=</span> <span class="n">slice_tuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
+                <span class="n">stop_index</span> <span class="o">=</span> <span class="n">slice_tuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">lat_act</span><span class="p">[</span><span class="n">start_index</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">TC_lat_genesis</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">is_land</span><span class="p">(</span><span class="n">lon_act</span><span class="p">[</span><span class="n">start_index</span><span class="p">],</span> <span class="n">lat_act</span><span class="p">[</span><span class="n">start_index</span><span class="p">])</span> <span class="o">==</span> <span class="kc">True</span><span class="p">):</span>
+                    <span class="n">tc_sel_act</span><span class="p">[</span><span class="n">start_index</span><span class="p">:</span><span class="n">stop_index</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">LatLonTrackAct</span><span class="p">[</span><span class="n">tc_sel_act</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">ObjACT</span><span class="p">[</span><span class="n">tc_sel_act</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,:]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">ObjACT</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int&quot;</span><span class="p">)</span>
+        <span class="n">ObjACT</span><span class="p">[</span><span class="n">ObjACT</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">TC_obj</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span> <span class="o">=</span> <span class="n">ObjACT</span>
+        <span class="n">TC_Tracks</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">LatLonTrackAct</span>
+    
+    <span class="k">return</span> <span class="n">TC_obj</span><span class="p">,</span> <span class="n">TC_Tracks</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

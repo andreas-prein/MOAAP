@@ -1,0 +1,24 @@
+;; This buffer is for text that is not saved, and for Lisp evaluation.
+;; To create a file, visit it with C-x C-f and enter text in its buffer.
+
+# Credits
+
+This repository includes substantial contributions from **Raphael Graf (ETH Zürich)**.
+
+Raphael Graf developed a major refactoring and extension of the MOAAP code base as part of his student work at ETH Zürich. His contributions include, in particular:
+
+- Reorganization of the code into a structured Python package (`moaap`)
+- Significant extensions and improvements to the tracking and analysis functionality
+- Development of comprehensive project documentation (Sphinx-based)
+- Addition of example workflows and tutorial material
+- Improvements to code maintainability and usability
+
+His work was originally developed in a separate repository and has since been integrated into this repository as part of the continued development of MOAAP.
+
+I gratefully acknowledge Raphael Graf’s contributions to the evolution of the MOAAP tracker.
+
+## Authorship and License
+
+MOAAP is maintained by Andreas Prein and contributors and is distributed under the **GNU General Public License v3.0 (GPL-3.0)**.  
+All contributions are incorporated under this license, with appropriate attribution.
+

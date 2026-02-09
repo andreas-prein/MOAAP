@@ -1,0 +1,315 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moaap.utils.data_proc &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">MOAAP Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial.html">MOAAP: Multi-Object Analysis of Atmospheric Phenomena - Tutorial</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">moaap.utils.data_proc</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for moaap.utils.data_proc</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+
+<div class="viewcode-block" id="smooth_uniform">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.data_proc.smooth_uniform">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">smooth_uniform</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">t_smoot</span><span class="p">,</span> <span class="n">xy_smooth</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies a uniform (box) smoothing filter in time and space, handling NaNs </span>
+<span class="sd">    by separating valid data from masks.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : np.ndarray</span>
+<span class="sd">        Input array [time, lat, lon].</span>
+<span class="sd">    t_smoot : int</span>
+<span class="sd">        Size of the smoothing window in the time dimension.</span>
+<span class="sd">    xy_smooth : int</span>
+<span class="sd">        Size of the smoothing window in spatial dimensions.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    smooth_data : np.ndarray</span>
+<span class="sd">        The smoothed data array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">smooth_data</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">uniform_filter</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> 
+                                      <span class="n">size</span><span class="o">=</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">t_smoot</span><span class="p">),</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">xy_smooth</span><span class="p">),</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">xy_smooth</span><span class="p">)])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># smoothing with missing values</span>
+        <span class="n">U</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">V</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">V</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">U</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">VV</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">uniform_filter</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">t_smoot</span><span class="p">),</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">xy_smooth</span><span class="p">),</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">xy_smooth</span><span class="p">)])</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="mi">0</span><span class="o">*</span><span class="n">U</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">+</span><span class="mi">1</span>
+        <span class="n">W</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">U</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">WW</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">uniform_filter</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">t_smoot</span><span class="p">),</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">xy_smooth</span><span class="p">),</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">xy_smooth</span><span class="p">)])</span>
+        <span class="n">smooth_data</span> <span class="o">=</span> <span class="n">VV</span><span class="o">/</span><span class="n">WW</span>
+    <span class="k">return</span> <span class="n">smooth_data</span></div>
+
+
+
+<div class="viewcode-block" id="interpolate_temporal">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.data_proc.interpolate_temporal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">interpolate_temporal</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fill missing (np.nan) values along axis-0 (time) by linear interpolation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr : ndarray, shape (ntime, nlat, nlon)</span>
+<span class="sd">        Input brightness‐temperature (or any) data, with np.nan marking missing.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    result : ndarray, shape (ntime, nlat, nlon), dtype float64</span>
+<span class="sd">        Same as `arr` but with NaNs replaced via 1D linear interpolation in time.</span>
+<span class="sd">        If an entire time series is NaN, it remains NaN.  Leading/trailing NaNs</span>
+<span class="sd">        become constant at the first/last valid value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>            <span class="c1"># ensure float</span>
+    <span class="n">nt</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>                     <span class="c1"># initialize output</span>
+
+    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nt</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ny</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nx</span><span class="p">):</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="c1"># no missing: skip</span>
+                <span class="k">continue</span>
+
+            <span class="n">valid</span> <span class="o">=</span> <span class="o">~</span><span class="n">mask</span>
+            <span class="k">if</span> <span class="n">valid</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># all missing: leave as NaN</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># np.interp: for out‐of‐bounds it uses the first/last valid y</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
+                <span class="n">t</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>   <span class="c1"># times to fill</span>
+                <span class="n">t</span><span class="p">[</span><span class="n">valid</span><span class="p">],</span>  <span class="c1"># times with valid data</span>
+                <span class="n">ts</span><span class="p">[</span><span class="n">valid</span><span class="p">]</span>  <span class="c1"># corresponding values</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+
+<span class="c1"># Loop over all cyclones and identiy TCs</span>
+<div class="viewcode-block" id="fill_small_gaps">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.data_proc.fill_small_gaps">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fill_small_gaps</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">gap_threshold</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Replace gaps (sequences of zeros) with ones if the gap length is</span>
+<span class="sd">    less than the specified gap_threshold. Only gaps that are flanked</span>
+<span class="sd">    by ones are filled.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    data : list or np.ndarray</span>
+<span class="sd">        Time series of zeros and ones.</span>
+<span class="sd">    gap_threshold : int, optional</span>
+<span class="sd">        Maximum number of zeros allowed in a gap to be filled with ones.</span>
+<span class="sd">        (Default value is 12)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        The modified time series with small gaps filled.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure the input is a numpy array.</span>
+    <span class="n">data_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="c1"># Get the indices of the ones.</span>
+    <span class="n">ones_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">data_arr</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># If less than two ones are found, no gap exists.</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ones_indices</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">data_arr</span>
+    
+    <span class="c1"># Loop over pairs of consecutive one indices.</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ones_indices</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">ones_indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">ones_indices</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">gap_length</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">-</span> <span class="mi">1</span>
+        
+        <span class="c1"># If the gap is positive and smaller than the gap_threshold, fill with ones.</span>
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">gap_length</span> <span class="o">&lt;</span> <span class="n">gap_threshold</span><span class="p">:</span>
+            <span class="n">data_arr</span><span class="p">[</span><span class="n">start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    
+    <span class="k">return</span> <span class="n">data_arr</span></div>
+
+
+
+<div class="viewcode-block" id="tukey_latitude_mask">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.data_proc.tukey_latitude_mask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tukey_latitude_mask</span><span class="p">(</span><span class="n">lat_matrix</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                        <span class="n">lat_start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                        <span class="n">lat_stop</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build a latitude-dependent Tukey taper mask.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lat_matrix : np.ndarray</span>
+<span class="sd">        2D array of center-point latitudes (degrees), shape (ny, nx).</span>
+<span class="sd">    lat_start : float</span>
+<span class="sd">        Latitude (in degrees) where the taper begins (``|lat| &lt;= lat_start`` =&gt; weight=1).</span>
+<span class="sd">    lat_stop : float</span>
+<span class="sd">        Latitude (in degrees) where the taper ends (``|lat| &gt;= lat_stop`` =&gt; weight=0).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mask : np.ndarray</span>
+<span class="sd">        2D taper mask of same shape as lat_matrix, with values in [0,1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">lat_stop</span> <span class="o">&lt;=</span> <span class="n">lat_start</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`lat_stop` must be larger than `lat_start`.&quot;</span><span class="p">)</span>
+
+    <span class="n">abs_lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">lat_matrix</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">lat_matrix</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># Inner region (full weight)</span>
+    <span class="n">inner</span> <span class="o">=</span> <span class="n">abs_lat</span> <span class="o">&lt;=</span> <span class="n">lat_start</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">inner</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="c1"># Transition region (raised cosine)</span>
+    <span class="n">transition</span> <span class="o">=</span> <span class="p">(</span><span class="n">abs_lat</span> <span class="o">&gt;</span> <span class="n">lat_start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">abs_lat</span> <span class="o">&lt;</span> <span class="n">lat_stop</span><span class="p">)</span>
+    <span class="n">frac</span> <span class="o">=</span> <span class="p">(</span><span class="n">abs_lat</span><span class="p">[</span><span class="n">transition</span><span class="p">]</span> <span class="o">-</span> <span class="n">lat_start</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">lat_stop</span> <span class="o">-</span> <span class="n">lat_start</span><span class="p">)</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">transition</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frac</span><span class="p">))</span>
+
+    <span class="c1"># Outside region remains zero</span>
+    <span class="k">return</span> <span class="n">mask</span></div>
+
+
+
+
+<div class="viewcode-block" id="temporal_tukey_window">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.data_proc.temporal_tukey_window">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">temporal_tukey_window</span><span class="p">(</span><span class="n">nt</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a Tukey window for temporal tapering.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nt    : int</span>
+<span class="sd">        number of time steps</span>
+<span class="sd">    alpha : float</span>
+<span class="sd">        fraction of the window length to taper (e.g. 0.1 → 10% on each end)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    w : np.ndarray</span>
+<span class="sd">        Tukey window of length nt</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># nt points from 0 to 1</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nt</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nt</span><span class="p">)</span>
+    <span class="n">edge</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">nt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># build the half‐cosine edges</span>
+    <span class="n">ramp</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span><span class="p">[:</span><span class="n">edge</span><span class="p">]</span> <span class="o">/</span> <span class="n">edge</span><span class="p">)))</span>
+    <span class="n">w</span><span class="p">[:</span><span class="n">edge</span><span class="p">]</span>      <span class="o">=</span> <span class="n">ramp</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># left taper</span>
+    <span class="n">w</span><span class="p">[</span><span class="o">-</span><span class="n">edge</span><span class="p">:]</span>     <span class="o">=</span> <span class="n">ramp</span>       <span class="c1"># right taper</span>
+    <span class="k">return</span> <span class="n">w</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

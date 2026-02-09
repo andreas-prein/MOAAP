@@ -1,0 +1,635 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moaap.trackers.cyclones &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">MOAAP Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial.html">MOAAP: Multi-Object Analysis of Atmospheric Phenomena - Tutorial</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">moaap.trackers.cyclones</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for moaap.trackers.cyclones</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">smooth_uniform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">,</span> <span class="n">analyze_watershed_history</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">BreakupObjects</span><span class="p">,</span> <span class="n">ConnectLon_on_timestep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">radialdistance</span>
+
+
+
+<div class="viewcode-block" id="cy_acy_psl_tracking">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.cyclones.cy_acy_psl_tracking">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cy_acy_psl_tracking</span><span class="p">(</span>
+                    <span class="n">slp</span><span class="p">,</span>
+                    <span class="n">MaxPresAnCY</span><span class="p">,</span>
+                    <span class="n">MinTimeCY</span><span class="p">,</span>
+                    <span class="n">MinPresAnACY</span><span class="p">,</span>
+                    <span class="n">MinTimeACY</span><span class="p">,</span>
+                    <span class="n">dT</span><span class="p">,</span>
+                    <span class="n">Gridspacing</span><span class="p">,</span>
+                    <span class="n">connectLon</span><span class="p">,</span>
+                    <span class="n">breakup</span> <span class="o">=</span> <span class="s1">&#39;watershed&#39;</span><span class="p">,</span>
+                    <span class="n">analyze_psl_history</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tracks Cyclones (CY) and Anticyclones (ACY) based on Sea Level Pressure (SLP) anomalies.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    slp : np.ndarray</span>
+<span class="sd">        Sea Level Pressure data [Pa].</span>
+<span class="sd">    MaxPresAnCY : float</span>
+<span class="sd">        Maximum anomaly threshold for Cyclones.</span>
+<span class="sd">    MinTimeCY : int</span>
+<span class="sd">        Minimum lifetime for Cyclones (hours).</span>
+<span class="sd">    MinPresAnACY : float</span>
+<span class="sd">        Minimum anomaly threshold for Anticyclones.</span>
+<span class="sd">    MinTimeACY : int</span>
+<span class="sd">        Minimum lifetime for Anticyclones (hours).</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Time step (hours).</span>
+<span class="sd">    Gridspacing : float</span>
+<span class="sd">        Average grid spacing (m).</span>
+<span class="sd">    connectLon : int</span>
+<span class="sd">        1 to connect across date line.</span>
+<span class="sd">    breakup : str</span>
+<span class="sd">        Method for object separation (&#39;breakup&#39; or &#39;watershed&#39;).</span>
+<span class="sd">    analyze_psl_history : bool, optional</span>
+<span class="sd">        If True, computes watershed merge/split history. Default is False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    CY_objects : np.ndarray</span>
+<span class="sd">        Labeled Cyclone objects.</span>
+<span class="sd">    ACY_objects : np.ndarray</span>
+<span class="sd">        Labeled Anticyclone objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        track cyclones&#39;</span><span class="p">)</span>
+    <span class="n">rgiObj_Struct</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">));</span> <span class="n">rgiObj_Struct</span><span class="p">[:,:,:]</span><span class="o">=</span><span class="mi">1</span>
+
+    <span class="n">slp</span> <span class="o">=</span> <span class="n">slp</span><span class="o">/</span><span class="mf">100.</span>
+    <span class="n">slp_smooth</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">slp</span><span class="p">,</span>
+                               <span class="mi">1</span><span class="p">,</span>
+                               <span class="nb">int</span><span class="p">(</span><span class="mi">100</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)))</span>
+    <span class="n">slpsmoothAn</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">slp</span><span class="p">,</span>
+                                <span class="nb">int</span><span class="p">(</span><span class="mi">78</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                <span class="nb">int</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">3000</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">))))</span>
+    <span class="c1"># set NaNs in smoothed fields</span>
+    <span class="n">nan</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">slp</span><span class="p">[</span><span class="mi">0</span><span class="p">,:])</span>
+    <span class="n">slp_smooth</span><span class="p">[:,</span><span class="n">nan</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">slpsmoothAn</span><span class="p">[:,</span><span class="n">nan</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    
+    <span class="n">slp_Anomaly</span> <span class="o">=</span> <span class="n">slp_smooth</span><span class="o">-</span><span class="n">slpsmoothAn</span>
+
+    <span class="n">Pressure_anomaly</span> <span class="o">=</span> <span class="n">slp_Anomaly</span> <span class="o">&lt;</span> <span class="n">MaxPresAnCY</span> <span class="c1"># 10 hPa depression | original setting was 12</span>
+
+    <span class="n">rgiObjectsUD</span><span class="p">,</span> <span class="n">nr_objectsUD</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">Pressure_anomaly</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">rgiObj_Struct</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;            &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">nr_objectsUD</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39; object found&#39;</span><span class="p">)</span>
+
+    <span class="n">CY_objects</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">rgiObjectsUD</span><span class="p">,</span>
+                          <span class="n">dT</span><span class="p">,</span>
+                    <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">MinTimeCY</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;            break up long living CY objects using the &#39;</span><span class="o">+</span><span class="n">breakup</span><span class="o">+</span><span class="s1">&#39; method&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;breakup&#39;</span><span class="p">:</span>
+        <span class="n">CY_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">BreakupObjects</span><span class="p">(</span><span class="n">CY_objects</span><span class="p">,</span>
+                                <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeCY</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                <span class="n">dT</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;            connect cyclones objects over date line&#39;</span><span class="p">)</span>
+            <span class="n">CY_objects</span> <span class="o">=</span> <span class="n">ConnectLon_on_timestep</span><span class="p">(</span><span class="n">CY_objects</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">1600</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+        <span class="n">low_pres_an</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">slp_Anomaly</span><span class="p">)</span>
+        <span class="n">low_pres_an</span><span class="p">[</span><span class="n">CY_objects</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">low_pres_an</span><span class="p">[</span><span class="n">low_pres_an</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">999999999</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">low_pres_an</span><span class="p">[</span><span class="n">low_pres_an</span> <span class="o">&gt;</span> <span class="mi">999999999</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">CY_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
+                <span class="n">low_pres_an</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">MaxPresAnCY</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">MaxPresAnCY</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">min_dist</span><span class="p">,</span>
+                <span class="n">dT</span><span class="p">,</span>
+                <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
+                <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>
+                <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.15</span>
+                <span class="p">)</span>
+        
+        
+        <span class="c1"># CY_objects = watershed_field(anom_sel*-1,</span>
+        <span class="c1">#                            Gridspacing,</span>
+        <span class="c1">#                            min_dist,</span>
+        <span class="c1">#                            threshold,</span>
+        <span class="c1">#                             smooth_t,</span>
+        <span class="c1">#                            smooth_xy)</span>
+    
+        
+    
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        track anti-cyclones&#39;</span><span class="p">)</span>
+    <span class="n">HighPressure_annomaly</span> <span class="o">=</span> <span class="n">slp_Anomaly</span> <span class="o">&gt;</span> <span class="n">MinPresAnACY</span> <span class="c1"># 12</span>
+    <span class="n">rgiObjectsUD</span><span class="p">,</span> <span class="n">nr_objectsUD</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">HighPressure_annomaly</span><span class="p">,</span><span class="n">structure</span><span class="o">=</span><span class="n">rgiObj_Struct</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">nr_objectsUD</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39; object found&#39;</span><span class="p">)</span>
+    
+    <span class="n">ACY_objects</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">rgiObjectsUD</span><span class="p">,</span>
+                                   <span class="n">dT</span><span class="p">,</span>
+                            <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">MinTimeACY</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;            break up long living ACY objects that have many elements&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;breakup&#39;</span><span class="p">:</span>
+        <span class="n">ACY_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">BreakupObjects</span><span class="p">(</span><span class="n">ACY_objects</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeCY</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                    <span class="n">dT</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># connect objects over date line</span>
+            <span class="n">ACY_objects</span> <span class="o">=</span> <span class="n">ConnectLon_on_timestep</span><span class="p">(</span><span class="n">ACY_objects</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+        <span class="n">high_pres_an</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">slp_Anomaly</span><span class="p">)</span>
+        <span class="n">high_pres_an</span><span class="p">[</span><span class="n">ACY_objects</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ACY_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
+                                            <span class="n">high_pres_an</span><span class="p">,</span>
+                                            <span class="n">MinPresAnACY</span><span class="p">,</span>
+                                            <span class="n">MinPresAnACY</span><span class="p">,</span>
+                                            <span class="n">min_dist</span><span class="p">,</span>
+                                            <span class="n">dT</span><span class="p">,</span>
+                                            <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
+                                            <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>
+                                            <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.15</span>
+                                            <span class="p">)</span>
+    <span class="k">if</span> <span class="n">analyze_psl_history</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="mi">8</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between high_pres_anomaly maxima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+            <span class="n">ACY_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;cy_acy_psl&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
+        <span class="p">]</span>
+        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">CY_objects</span><span class="p">,</span> <span class="n">ACY_objects</span></div>
+
+
+
+<div class="viewcode-block" id="cy_acy_z500_tracking">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.cyclones.cy_acy_z500_tracking">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cy_acy_z500_tracking</span><span class="p">(</span>
+                    <span class="n">z500</span><span class="p">,</span>
+                    <span class="n">MinTimeCY</span><span class="p">,</span>
+                    <span class="n">dT</span><span class="p">,</span>
+                    <span class="n">Gridspacing</span><span class="p">,</span>
+                    <span class="n">connectLon</span><span class="p">,</span>
+                    <span class="n">z500_low_anom</span> <span class="o">=</span> <span class="o">-</span><span class="mi">80</span><span class="p">,</span>
+                    <span class="n">z500_high_anom</span> <span class="o">=</span> <span class="mi">70</span><span class="p">,</span>
+                    <span class="n">breakup</span> <span class="o">=</span> <span class="s1">&#39;breakup&#39;</span><span class="p">,</span>
+                    <span class="n">analyze_z500_history</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tracks mid-tropospheric cyclones and anticyclones based on Z500 anomalies.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    z500 : np.ndarray</span>
+<span class="sd">        Geopotential height at 500 hPa [m or gpm].</span>
+<span class="sd">    MinTimeCY : int</span>
+<span class="sd">        Minimum lifetime (hours).</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Time step (hours).</span>
+<span class="sd">    Gridspacing : float</span>
+<span class="sd">        Grid spacing (m).</span>
+<span class="sd">    connectLon : int</span>
+<span class="sd">        1 to connect across date line.</span>
+<span class="sd">    z500_low_anom : float</span>
+<span class="sd">        Anomaly threshold for cyclones (e.g., -80 m).</span>
+<span class="sd">    z500_high_anom : float</span>
+<span class="sd">        Anomaly threshold for anticyclones (e.g., +70 m).</span>
+<span class="sd">    breakup : str</span>
+<span class="sd">        Method for object separation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cy_z500_objects : np.ndarray</span>
+<span class="sd">        Labeled Z500 cyclone objects.</span>
+<span class="sd">    acy_z500_objects : np.ndarray</span>
+<span class="sd">        Labeled Z500 anticyclone objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">rgiObj_Struct</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">));</span> <span class="n">rgiObj_Struct</span><span class="p">[:,:,:]</span><span class="o">=</span><span class="mi">1</span>
+    <span class="n">z500</span> <span class="o">=</span> <span class="n">z500</span> <span class="o">/</span> <span class="mf">9.81</span>
+    <span class="n">z500_smooth</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">z500</span><span class="p">,</span>
+                                <span class="mi">1</span><span class="p">,</span>
+                                <span class="nb">int</span><span class="p">(</span><span class="mi">100</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)))</span>
+    <span class="n">z500smoothAn</span> <span class="o">=</span> <span class="n">smooth_uniform</span><span class="p">(</span><span class="n">z500</span><span class="p">,</span>
+                                <span class="nb">int</span><span class="p">(</span><span class="mi">78</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                <span class="nb">int</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">3000</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mf">1000.</span><span class="p">))))</span>
+    
+    <span class="c1"># set NaNs in smoothed fields</span>
+    <span class="n">nan</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">z500</span><span class="p">[</span><span class="mi">0</span><span class="p">,:])</span>
+    <span class="n">z500_smooth</span><span class="p">[:,</span><span class="n">nan</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">z500smoothAn</span><span class="p">[:,</span><span class="n">nan</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    
+    <span class="n">z500_Anomaly</span> <span class="o">=</span> <span class="n">z500_smooth</span> <span class="o">-</span> <span class="n">z500smoothAn</span>
+
+    <span class="c1"># -------------------------------------</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    track 500 hPa cyclones&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        break up long living cyclones using the &#39;</span><span class="o">+</span><span class="n">breakup</span><span class="o">+</span><span class="s1">&#39; method&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;breakup&#39;</span><span class="p">:</span>
+        <span class="n">cy_z500_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">BreakupObjects</span><span class="p">(</span><span class="n">cy_z500_objects</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeCY</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                    <span class="n">dT</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+
+        <span class="n">cy_z500_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
+                <span class="n">z500_Anomaly</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">z500_low_anom</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">z500_low_anom</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">min_dist</span><span class="p">,</span>
+                <span class="n">dT</span><span class="p">,</span>
+                <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
+                <span class="p">)</span>
+        
+    <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        connect cyclones objects over date line&#39;</span><span class="p">)</span>
+        <span class="n">cy_z500_objects</span> <span class="o">=</span> <span class="n">ConnectLon_on_timestep</span><span class="p">(</span><span class="n">cy_z500_objects</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">analyze_z500_history</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between z500_Anomaly minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+            <span class="n">cy_z500_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;cy_z500&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
+        <span class="p">]</span>
+        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+    <span class="c1"># -------------------------------------</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    track 500 hPa anticyclones&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        break up long living CY objects that heve many elements&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;breakup&#39;</span><span class="p">:</span>
+        <span class="n">acy_z500_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">BreakupObjects</span><span class="p">(</span><span class="n">acy_z500_objects</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeCY</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                    <span class="n">dT</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+        <span class="c1"># high_pres_an = np.copy(z500_Anomaly)</span>
+        <span class="c1"># high_pres_an[acy_z500_objects == 0] = 0</span>
+        <span class="n">acy_z500_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
+                <span class="n">z500_Anomaly</span><span class="p">,</span>
+                <span class="n">z500_high_anom</span><span class="p">,</span>
+                <span class="n">z500_high_anom</span><span class="p">,</span>
+                <span class="n">min_dist</span><span class="p">,</span>
+                <span class="n">dT</span><span class="p">,</span>
+                <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeCY</span><span class="p">,</span>
+                <span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        connect cyclones objects over date line&#39;</span><span class="p">)</span>
+        <span class="n">acy_z500_objects</span> <span class="o">=</span> <span class="n">ConnectLon_on_timestep</span><span class="p">(</span><span class="n">acy_z500_objects</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">analyze_z500_history</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">1000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between z500_Anomaly minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+            <span class="n">acy_z500_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;acy_z500&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
+        <span class="p">]</span>
+        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">cy_z500_objects</span><span class="p">,</span> <span class="n">acy_z500_objects</span></div>
+
+
+
+<div class="viewcode-block" id="col_identification">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.cyclones.col_identification">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">col_identification</span><span class="p">(</span><span class="n">cy_z500_objects</span><span class="p">,</span>
+                       <span class="n">z500</span><span class="p">,</span>
+                       <span class="n">u200</span><span class="p">,</span>
+                       <span class="n">Frontal_Diagnostic</span><span class="p">,</span>
+                       <span class="n">MinTimeC</span><span class="p">,</span>
+                       <span class="n">dx</span><span class="p">,</span>
+                       <span class="n">dy</span><span class="p">,</span>
+                       <span class="n">Lon</span><span class="p">,</span>
+                       <span class="n">Lat</span>
+                      <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identifies Cut-Off Lows (COLs) from tracked upper-level cyclones.</span>
+<span class="sd">    Checks for isolation (Z500 gradient), flow reversal (poleward easterlies), </span>
+<span class="sd">    and frontal separation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cy_z500_objects : np.ndarray</span>
+<span class="sd">        Labeled 500hPa cyclone objects.</span>
+<span class="sd">    z500 : np.ndarray</span>
+<span class="sd">        Geopotential height at 500hPa.</span>
+<span class="sd">    u200 : np.ndarray</span>
+<span class="sd">        Zonal wind at 200hPa.</span>
+<span class="sd">    Frontal_Diagnostic : np.ndarray</span>
+<span class="sd">        Frontal parameter field.</span>
+<span class="sd">    MinTimeC : int</span>
+<span class="sd">        Minimum lifetime required.</span>
+<span class="sd">    dx, dy : np.ndarray</span>
+<span class="sd">        Grid spacing arrays.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    col_obj : np.ndarray</span>
+<span class="sd">        Labeled Cut-Off Low objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># area arround cyclone</span>
+    <span class="n">col_buffer</span> <span class="o">=</span> <span class="mi">500000</span> <span class="c1"># m</span>
+
+    <span class="c1"># check if cyclone is COL</span>
+    <span class="n">Objects</span><span class="o">=</span><span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">cy_z500_objects</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+    <span class="n">col_obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">cy_z500_objects</span><span class="p">);</span> <span class="n">col_obj</span><span class="p">[:]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Objects</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">cy_z500_objects</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span> <span class="o">==</span> <span class="n">ii</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">MinTimeC</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">dxObj</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dx</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">2</span><span class="p">]]))</span>
+        <span class="n">dyObj</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dy</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">2</span><span class="p">]]))</span>
+        <span class="n">col_buffer_obj_lo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">col_buffer</span><span class="o">/</span><span class="n">dxObj</span><span class="p">)</span>
+        <span class="n">col_buffer_obj_la</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">col_buffer</span><span class="o">/</span><span class="n">dyObj</span><span class="p">)</span>
+
+        <span class="c1"># add buffer to object slice</span>
+        <span class="n">tt_start</span> <span class="o">=</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
+        <span class="n">tt_stop</span> <span class="o">=</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span>
+        <span class="n">lo_start</span> <span class="o">=</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">col_buffer_obj_lo</span> 
+        <span class="n">lo_stop</span> <span class="o">=</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span>
+        <span class="n">la_start</span> <span class="o">=</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">col_buffer_obj_la</span> 
+        <span class="n">la_stop</span> <span class="o">=</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span>
+        <span class="k">if</span> <span class="n">lo_start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">lo_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">lo_stop</span> <span class="o">&gt;=</span> <span class="n">Lon</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">lo_stop</span> <span class="o">=</span> <span class="n">Lon</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">la_start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">la_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">la_stop</span> <span class="o">&gt;=</span> <span class="n">Lon</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">la_stop</span> <span class="o">=</span> <span class="n">Lon</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">LonObj</span> <span class="o">=</span> <span class="n">Lon</span><span class="p">[</span><span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span>
+        <span class="n">LatObj</span> <span class="o">=</span> <span class="n">Lat</span><span class="p">[</span><span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span>
+
+        <span class="n">z500_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">z500</span><span class="p">[</span><span class="n">tt_start</span><span class="p">:</span><span class="n">tt_stop</span><span class="p">,</span> <span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">])</span>
+        <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">cy_z500_objects</span><span class="p">[</span><span class="n">tt_start</span><span class="p">:</span><span class="n">tt_stop</span><span class="p">,</span> <span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span> <span class="o">==</span> <span class="n">ii</span><span class="o">+</span><span class="mi">1</span>
+        <span class="n">u200_ob</span> <span class="o">=</span> <span class="n">u200</span><span class="p">[</span><span class="n">tt_start</span><span class="p">:</span><span class="n">tt_stop</span><span class="p">,</span> <span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span>
+        <span class="n">front_ob</span> <span class="o">=</span> <span class="n">Frontal_Diagnostic</span><span class="p">[</span><span class="n">tt_start</span><span class="p">:</span><span class="n">tt_stop</span><span class="p">,</span> <span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">LonObj</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">LonObj</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">358</span><span class="p">:</span>
+            <span class="n">sift_lo</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+            <span class="c1"># object crosses the date line</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">LonObj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">LonObj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">LonObj</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">LatObj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">LatObj</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">z500_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">z500_ACT</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">ObjACT</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">u200_ob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">u200_ob</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">front_ob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">front_ob</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sift_lo</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
+
+        <span class="c1"># find location of z500 minimum</span>
+        <span class="n">z500_ACT_obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">z500_ACT</span><span class="p">)</span>
+        <span class="n">z500_ACT_obj</span><span class="p">[</span><span class="n">ObjACT</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">999999999999.</span>
+
+        <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">z500_ACT_obj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">min_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">z500_ACT_obj</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">z500_ACT_obj</span><span class="p">[</span><span class="n">tt</span><span class="p">]))</span>
+            <span class="n">min_la</span> <span class="o">=</span> <span class="n">min_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">min_lo</span> <span class="o">=</span> <span class="n">min_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">la_0</span> <span class="o">=</span> <span class="n">min_la</span> <span class="o">-</span> <span class="n">col_buffer_obj_la</span>
+            <span class="k">if</span> <span class="n">la_0</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">la_0</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">lo_0</span> <span class="o">=</span> <span class="n">min_lo</span> <span class="o">-</span> <span class="n">col_buffer_obj_lo</span>
+            <span class="k">if</span> <span class="n">lo_0</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">lo_0</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">lat_reg</span> <span class="o">=</span> <span class="n">LatObj</span><span class="p">[</span><span class="n">la_0</span><span class="p">:</span><span class="n">min_la</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                             <span class="n">lo_0</span><span class="p">:</span><span class="n">min_lo</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lon_reg</span> <span class="o">=</span> <span class="n">LonObj</span><span class="p">[</span><span class="n">la_0</span><span class="p">:</span><span class="n">min_la</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                             <span class="n">lo_0</span><span class="p">:</span><span class="n">min_lo</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">col_region</span> <span class="o">=</span> <span class="n">z500_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span>
+                                  <span class="n">la_0</span><span class="p">:</span><span class="n">min_la</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">lo_0</span><span class="p">:</span><span class="n">min_lo</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">obj_col_region</span> <span class="o">=</span> <span class="n">z500_ACT_obj</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span>
+                                  <span class="n">la_0</span><span class="p">:</span><span class="n">min_la</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">lo_0</span><span class="p">:</span><span class="n">min_lo</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">min_z500_obj</span> <span class="o">=</span> <span class="n">z500_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span><span class="n">min_la</span><span class="p">,</span><span class="n">min_lo</span><span class="p">]</span>
+            <span class="n">u200_ob_region</span> <span class="o">=</span> <span class="n">u200_ob</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span>
+                                  <span class="n">la_0</span><span class="p">:</span><span class="n">min_la</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">lo_0</span><span class="p">:</span><span class="n">min_lo</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">front_ob_region</span> <span class="o">=</span> <span class="n">front_ob</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span>
+                                  <span class="n">la_0</span><span class="p">:</span><span class="n">min_la</span> <span class="o">+</span> <span class="n">col_buffer_obj_la</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">lo_0</span><span class="p">:</span><span class="n">min_lo</span> <span class="o">+</span> <span class="n">col_buffer_obj_lo</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+
+            <span class="c1"># check if 350 km radius arround center has higher Z</span>
+            <span class="n">min_loc_tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">obj_col_region</span><span class="p">[:,:]</span> <span class="o">==</span> 
+                                  <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">z500_ACT_obj</span><span class="p">[</span><span class="n">tt</span><span class="p">]))</span>
+            <span class="n">min_la_tt</span> <span class="o">=</span> <span class="n">min_loc_tt</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">min_lo_tt</span> <span class="o">=</span> <span class="n">min_loc_tt</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">rdist</span> <span class="o">=</span> <span class="n">radialdistance</span><span class="p">(</span><span class="n">lat_reg</span><span class="p">[</span><span class="n">min_la_tt</span><span class="p">,</span><span class="n">min_lo_tt</span><span class="p">],</span>
+                                   <span class="n">lon_reg</span><span class="p">[</span><span class="n">min_la_tt</span><span class="p">,</span><span class="n">min_lo_tt</span><span class="p">],</span>
+                                   <span class="n">lat_reg</span><span class="p">,</span>
+                                   <span class="n">lon_reg</span><span class="p">)</span>
+
+            <span class="c1"># COL should only occure between 20 and 70 degrees</span>
+            <span class="c1"># https://journals.ametsoc.org/view/journals/clim/33/6/jcli-d-19-0497.1.xml</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">lat_reg</span><span class="p">[</span><span class="n">min_la_tt</span><span class="p">,</span><span class="n">min_lo_tt</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">lat_reg</span><span class="p">[</span><span class="n">min_la_tt</span><span class="p">,</span><span class="n">min_lo_tt</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">70</span><span class="p">):</span>
+                <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># remove cyclones that are close to the poles</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">lat_reg</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">88</span><span class="p">:</span>
+                <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">z500_ACT_obj</span><span class="p">[</span><span class="n">tt</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">100000</span><span class="p">:</span>
+                <span class="c1"># there is no object to process</span>
+                <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># CRITERIA 1) at least 75 % of grid cells in ring have have 10 m higher Z than center</span>
+            <span class="n">ring</span> <span class="o">=</span> <span class="p">(</span><span class="n">rdist</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">350</span> <span class="o">-</span> <span class="p">(</span><span class="n">dxObj</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>  <span class="o">&amp;</span> <span class="p">(</span><span class="n">rdist</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="mi">350</span> <span class="o">+</span> <span class="p">(</span><span class="n">dxObj</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">min_z500_obj</span> <span class="o">-</span> <span class="n">col_region</span><span class="p">[</span><span class="n">ring</span><span class="p">])</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">10</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ring</span><span class="p">)</span><span class="o">*</span><span class="mf">0.75</span><span class="p">:</span>
+                <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># CRITERIA 2) check if 200 hPa wind speed is eastward in the poleward direction of the cyclone</span>
+            <span class="k">if</span> <span class="n">lat_reg</span><span class="p">[</span><span class="n">min_la_tt</span><span class="p">,</span><span class="n">min_lo_tt</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">east_flow</span> <span class="o">=</span> <span class="n">u200_ob_region</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="n">min_la_tt</span><span class="p">,</span>
+                                    <span class="n">min_lo_tt</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">east_flow</span> <span class="o">=</span> <span class="n">u200_ob_region</span><span class="p">[</span><span class="n">min_la_tt</span> <span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">min_lo_tt</span><span class="p">]</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">east_flow</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">continue</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Criteria 3) frontal zone in eastern flank of COL</span>
+            <span class="n">front_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">front_ob_region</span><span class="p">[:,</span> <span class="n">min_lo_tt</span><span class="p">:])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">front_test</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">sift_lo</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
+            <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">ObjACT</span><span class="p">,</span> <span class="o">-</span><span class="n">shift</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">ObjACT</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+        <span class="n">ObjACT</span><span class="p">[</span><span class="n">ObjACT</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span><span class="o">+</span><span class="mi">1</span>
+        <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">ObjACT</span> <span class="o">+</span> <span class="n">col_obj</span><span class="p">[</span><span class="n">tt_start</span><span class="p">:</span><span class="n">tt_stop</span><span class="p">,</span> <span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span>
+        <span class="n">col_obj</span><span class="p">[</span><span class="n">tt_start</span><span class="p">:</span><span class="n">tt_stop</span><span class="p">,</span> <span class="n">la_start</span><span class="p">:</span><span class="n">la_stop</span><span class="p">,</span> <span class="n">lo_start</span><span class="p">:</span><span class="n">lo_stop</span><span class="p">]</span> <span class="o">=</span> <span class="n">ObjACT</span>
+
+    <span class="k">return</span> <span class="n">col_obj</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,415 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moaap.trackers.clouds &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">MOAAP Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial.html">MOAAP: Multi-Object Analysis of Atmospheric Phenomena - Tutorial</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">moaap.trackers.clouds</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for moaap.trackers.clouds</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">watershed_3d_overlap_parallel</span><span class="p">,</span>
+    <span class="n">analyze_watershed_history</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">smooth_uniform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">BreakupObjects</span><span class="p">,</span> <span class="n">is_land</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+
+<span class="c1">#from memory_profiler import profile</span>
+<span class="c1"># @profile_</span>
+<div class="viewcode-block" id="mcs_tb_tracking">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.clouds.mcs_tb_tracking">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mcs_tb_tracking</span><span class="p">(</span>
+                    <span class="n">tb</span><span class="p">,</span>
+                    <span class="n">pr</span><span class="p">,</span>
+                    <span class="n">SmoothSigmaC</span><span class="p">,</span>
+                    <span class="n">Pthreshold</span><span class="p">,</span>
+                    <span class="n">CL_Area</span><span class="p">,</span>
+                    <span class="n">CL_MaxT</span><span class="p">,</span>
+                    <span class="n">Cthreshold</span><span class="p">,</span>
+                    <span class="n">MinAreaC</span><span class="p">,</span>
+                    <span class="n">MinTimeC</span><span class="p">,</span>
+                    <span class="n">MCS_minPR</span><span class="p">,</span>
+                    <span class="n">MCS_minTime</span><span class="p">,</span>
+                    <span class="n">MCS_Minsize</span><span class="p">,</span>
+                    <span class="n">dT</span><span class="p">,</span>
+                    <span class="n">Area</span><span class="p">,</span>
+                    <span class="n">connectLon</span><span class="p">,</span>
+                    <span class="n">Gridspacing</span><span class="p">,</span>
+                    <span class="n">breakup</span> <span class="o">=</span> <span class="s1">&#39;watershed&#39;</span><span class="p">,</span> 
+                    <span class="n">analyze_mcs_history</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                   <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tracks Mesoscale Convective Systems (MCS) using Brightness Temperature (Tb).</span>
+<span class="sd">    Verifies candidates using precipitation criteria.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tb : np.ndarray</span>
+<span class="sd">        Brightness temperature [K].</span>
+<span class="sd">    pr : np.ndarray</span>
+<span class="sd">        Precipitation [mm/h].</span>
+<span class="sd">    SmoothSigmaC : float</span>
+<span class="sd">        Smoothing factor for Tb.</span>
+<span class="sd">    Pthreshold : float</span>
+<span class="sd">        Precipitation threshold.</span>
+<span class="sd">    CL_Area, CL_MaxT : float</span>
+<span class="sd">        Cloud shield area and max temp thresholds.</span>
+<span class="sd">    Cthreshold : float</span>
+<span class="sd">        Tb threshold for initial cloud detection.</span>
+<span class="sd">    MinAreaC : float</span>
+<span class="sd">        Minimum cloud area for initial detection.</span>
+<span class="sd">    MinTimeC : int</span>
+<span class="sd">        Minimum cloud duration.</span>
+<span class="sd">    MCS_minPR : float</span>
+<span class="sd">        Minimum peak precipitation for MCS verification.</span>
+<span class="sd">    MCS_minTime : int</span>
+<span class="sd">        Minimum MCS duration.</span>
+<span class="sd">    MCS_Minsize : float</span>
+<span class="sd">        Minimum precipitation area for MCS verification.</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Data timestep (hours).</span>
+<span class="sd">    Area : np.ndarray</span>
+<span class="sd">        Grid cell area array.</span>
+<span class="sd">    connectLon : int</span>
+<span class="sd">        1 to connect objects across date line.</span>
+<span class="sd">    Gridspacing : float</span>
+<span class="sd">        Grid spacing in meters.</span>
+<span class="sd">    breakup : str</span>
+<span class="sd">        Method to handle merging objects (&#39;breakup&#39; or &#39;watershed&#39;).</span>
+<span class="sd">    analyze_mcs_history : bool</span>
+<span class="sd">        If True, computes watershed merge/split history.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    MCS_objects_Tb : np.ndarray</span>
+<span class="sd">        Labeled MCS objects based on Tb.</span>
+<span class="sd">    C_objects : np.ndarray</span>
+<span class="sd">        Labeled cloud objects (all clouds, not just MCS).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        track  clouds&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        break up long living cloud shield objects with &#39;</span><span class="o">+</span><span class="n">breakup</span><span class="o">+</span><span class="s1">&#39; that have many elements&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;breakup&#39;</span><span class="p">:</span>
+        <span class="n">C_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">BreakupObjects</span><span class="p">(</span><span class="n">C_objects</span><span class="p">,</span>
+                                    <span class="nb">int</span><span class="p">(</span><span class="n">MinTimeC</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                    <span class="n">dT</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">breakup</span> <span class="o">==</span> <span class="s1">&#39;watershed&#39;</span><span class="p">:</span>
+        <span class="c1"># C_objects = watersheding(C_objects,</span>
+        <span class="c1">#                6,  # at least six grid cells apart </span>
+        <span class="c1">#                1)</span>
+        <span class="n">threshold</span><span class="o">=</span><span class="mi">1</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">CL_Area</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mi">1000</span><span class="p">))</span><span class="o">*</span><span class="mi">2</span>
+
+        <span class="n">C_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
+                <span class="n">tb</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">Cthreshold</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">Cthreshold</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="c1">#CL_MaxT * -1,</span>
+                <span class="n">min_dist</span><span class="p">,</span>
+                <span class="n">dT</span><span class="p">,</span>
+                <span class="n">mintime</span> <span class="o">=</span> <span class="n">MinTimeC</span><span class="p">,</span>
+                <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>
+                <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.10</span>
+                <span class="p">)</span>
+        
+
+
+    <span class="c1"># check if precipitation object is from an MCS</span>
+    <span class="n">object_indices</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">C_objects</span><span class="p">)</span>
+    <span class="n">MCS_objects_Tb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">C_objects</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">iobj</span><span class="p">,</span><span class="n">_</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">object_indices</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">time_slice</span> <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">lat_slice</span>  <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">lon_slice</span>  <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="n">tb_object_slice</span><span class="o">=</span> <span class="n">C_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span>
+        <span class="n">tb_object_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">tb_object_slice</span><span class="o">==</span><span class="n">iobj</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tb_object_act</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">MCS_minTime</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">tb_slice</span> <span class="o">=</span>  <span class="n">tb</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span>
+        <span class="n">tb_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">tb_slice</span><span class="p">)</span>
+        <span class="n">tb_act</span><span class="p">[</span><span class="o">~</span><span class="n">tb_object_act</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">bt_object_slice</span> <span class="o">=</span> <span class="n">C_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span>
+        <span class="n">bt_object_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">bt_object_slice</span><span class="p">)</span>
+        <span class="n">bt_object_act</span><span class="p">[</span><span class="o">~</span><span class="n">tb_object_act</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">area_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">Area</span><span class="p">[</span><span class="n">lat_slice</span><span class="p">,</span> <span class="n">lon_slice</span><span class="p">],</span> <span class="p">(</span><span class="n">tb_act</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">area_act</span><span class="p">[</span><span class="o">~</span><span class="n">tb_object_act</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1">### Calculate cloud properties</span>
+        <span class="n">tb_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">area_act</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="n">tb_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">tb_act</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+
+        <span class="c1">### Calculate precipitation properties</span>
+        <span class="n">pr_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">pr</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]])</span>
+        <span class="n">pr_act</span><span class="p">[</span><span class="n">tb_object_act</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">pr_peak_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">pr_act</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+
+        <span class="n">pr_region_act</span> <span class="o">=</span> <span class="n">pr_act</span> <span class="o">&gt;=</span> <span class="n">Pthreshold</span> <span class="c1">#*dT</span>
+        <span class="n">area_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">Area</span><span class="p">[</span><span class="n">lat_slice</span><span class="p">,</span> <span class="n">lon_slice</span><span class="p">],</span> <span class="p">(</span><span class="n">tb_act</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">area_act</span><span class="p">[</span><span class="o">~</span><span class="n">pr_region_act</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">pr_under_cloud</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">area_act</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span><span class="o">/</span><span class="mi">1000</span><span class="o">**</span><span class="mi">2</span> 
+
+        <span class="c1"># Test if object classifies as MCS</span>
+        <span class="n">tb_size_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">((</span><span class="n">tb_size</span> <span class="o">/</span> <span class="mi">1000</span><span class="o">**</span><span class="mi">2</span> <span class="o">&gt;=</span> <span class="n">CL_Area</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">MCS_minTime</span><span class="p">),</span> <span class="s1">&#39;valid&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">MCS_minTime</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">tb_overshoot_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">((</span><span class="n">tb_min</span>  <span class="o">&lt;=</span> <span class="n">CL_MaxT</span> <span class="p">))</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">pr_peak_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">((</span><span class="n">pr_peak_act</span> <span class="o">&gt;=</span> <span class="n">MCS_minPR</span> <span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">MCS_minTime</span><span class="p">),</span> <span class="s1">&#39;valid&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">MCS_minTime</span><span class="p">)</span> <span class="o">==</span><span class="mi">1</span>
+        <span class="n">pr_area_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">((</span><span class="n">pr_under_cloud</span> <span class="o">&gt;=</span> <span class="n">MCS_Minsize</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">MCS_test</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">tb_size_test</span>
+                    <span class="o">&amp;</span> <span class="n">tb_overshoot_test</span>
+                    <span class="o">&amp;</span> <span class="n">pr_peak_test</span>
+                    <span class="o">&amp;</span> <span class="n">pr_area_test</span>
+        <span class="p">)</span>
+
+        <span class="c1"># assign unique object numbers</span>
+        <span class="n">tb_object_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tb_object_act</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">tb_object_act</span><span class="p">[</span><span class="n">tb_object_act</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">MCS_test</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">TMP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">MCS_objects_Tb</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]])</span>
+            <span class="n">TMP</span> <span class="o">=</span> <span class="n">TMP</span> <span class="o">+</span> <span class="n">tb_object_act</span>
+            <span class="n">MCS_objects_Tb</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span> <span class="o">=</span> <span class="n">TMP</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+    <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">MCS_objects_Tb</span><span class="p">,</span>
+                                           <span class="n">dT</span><span class="p">,</span>
+                                           <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">MCS_minTime</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>
+
+    <span class="c1"># analyze MCS history with watershed method</span>
+    <span class="k">if</span> <span class="n">analyze_mcs_history</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">(((</span><span class="n">CL_Area</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mi">1000</span><span class="p">))</span><span class="o">*</span><span class="mi">2</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between TB minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+            <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;mcs&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
+        <span class="p">]</span>
+        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">C_objects</span></div>
+
+
+
+
+<span class="c1">#from memory_profiler import profile</span>
+<span class="c1"># @profile_</span>
+<div class="viewcode-block" id="cloud_tracking">
+<a class="viewcode-back" href="../../../modules.html#moaap.trackers.clouds.cloud_tracking">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cloud_tracking</span><span class="p">(</span>
+    <span class="n">tb</span><span class="p">,</span>
+    <span class="n">pr</span><span class="p">,</span>
+    <span class="c1"># MCS_obj,</span>
+    <span class="n">connectLon</span><span class="p">,</span>
+    <span class="n">Gridspacing</span><span class="p">,</span>
+    <span class="n">dT</span><span class="p">,</span>
+    <span class="n">tb_threshold</span> <span class="o">=</span> <span class="mi">241</span><span class="p">,</span>
+    <span class="n">tb_overshoot</span> <span class="o">=</span> <span class="mi">235</span><span class="p">,</span>
+    <span class="n">erosion_disk</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">,</span>
+    <span class="n">min_dist</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+    <span class="n">analyze_cloud_history</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tracks clouds from hourly or sub-hourly brightness temperature data.</span>
+<span class="sd">    Calculates cloud statistics, including their precipitation (pr) properties if pr is provided.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">        tb (float): brightness temperature of dimension [time,lat,lon]</span>
+<span class="sd">        pr (float): precipitation rate of dimension [time,lat,lon]</span>
+<span class="sd">        connectLon (bol): 1 means that clouds should be connected accross date line</span>
+<span class="sd">        Gridspacing (float): average horizontal grid spacing in [m]</span>
+<span class="sd">        dT (int): time step of data in hours</span>
+<span class="sd">        tb_threshold (float, optional): tb threshold to define cloud mask. Default is &quot;241&quot;.</span>
+<span class="sd">        tb_overshoot (float, optional): tb threshold to find local minima for watershedding. Default is &quot;235&quot;.</span>
+<span class="sd">        erosion_disk (float, optional): reduction of next timestep mask for temporal connection of features. Larger values result in more erosion and can remove smaller clouds. The default is &quot;0.15&quot;.</span>
+<span class="sd">        min_dist (int, optional): minimum distance in grid cells between two tb minima (overshoots). The default is &quot;8&quot;.</span>
+<span class="sd">        analyze_cloud_history (bool, optional): If True, computes watershed merge/split history. Default is False.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        cloud_objects (np.ndarray): labeled cloud objects of dimension [time,lat,lon]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">CL_Area</span> <span class="o">=</span> <span class="n">min_dist</span> <span class="o">*</span> <span class="n">Gridspacing</span>
+   
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        track  clouds&#39;</span><span class="p">)</span>    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        break up long living cloud shield objects with wathershedding&#39;</span><span class="p">)</span>
+    
+    <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">(((</span><span class="n">CL_Area</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mi">1000</span><span class="p">))</span><span class="o">*</span><span class="mi">2</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between TB minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
+
+    <span class="n">cloud_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
+            <span class="n">tb</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">tb_threshold</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">tb_overshoot</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="c1">#CL_MaxT * -1,</span>
+            <span class="n">min_dist</span><span class="p">,</span>
+            <span class="n">dT</span><span class="p">,</span>
+            <span class="n">mintime</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">connectLon</span> <span class="o">=</span> <span class="n">connectLon</span><span class="p">,</span>
+            <span class="n">extend_size_ratio</span> <span class="o">=</span> <span class="mf">0.10</span><span class="p">,</span>
+            <span class="c1"># erosion_disk = erosion_disk</span>
+            <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        make sure that each object has at least one grid cell with more than min_pr threshold of precipitation&quot;</span><span class="p">)</span>
+    <span class="n">min_pr</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">dT</span> <span class="c1"># minimum precipitation in [mm/h]</span>
+    <span class="n">object_indices</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">cloud_objects</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">iobj</span><span class="p">,</span><span class="n">_</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">object_indices</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">pr_object_slice</span><span class="o">=</span> <span class="n">cloud_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span>
+        <span class="n">pr_object_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">pr_object_slice</span><span class="o">==</span><span class="n">iobj</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">)</span>
+            
+        <span class="n">pr_slice</span> <span class="o">=</span>  <span class="n">pr</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span>
+        <span class="n">pr_act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">pr_slice</span><span class="p">)</span>
+        <span class="n">pr_act</span><span class="p">[</span><span class="o">~</span><span class="n">pr_object_act</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">pr_act</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">min_pr</span><span class="p">:</span>
+            <span class="n">cloud_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]][</span><span class="n">cloud_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span> <span class="o">==</span> <span class="n">iobj</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="n">analyze_cloud_history</span><span class="p">:</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="mi">8</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between TB minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+            <span class="n">cloud_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;cloud&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
+        <span class="p">]</span>
+        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">cloud_objects</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
