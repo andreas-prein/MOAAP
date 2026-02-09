@@ -1,0 +1,61 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# debug information files
+*.dwo
+
+__pycache__/
+*.pyc
+
+20210701-04_MOAAP-Input_24h.nc
+moaap_output/
+images/
+outputs/synthetic_cells.nc
+data_cache/*
+
+Tracking_Functions_old.py
+
+docs/build/
+watershed_history*
+tracks/
+run_3d.py
+generate_shim.py
+logs/
+.vscode
+moaap.egg-info
