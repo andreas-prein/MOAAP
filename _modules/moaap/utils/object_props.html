@@ -1,0 +1,737 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moaap.utils.object_props &mdash; MOAAP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MOAAP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">MOAAP Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial.html">MOAAP: Multi-Object Analysis of Atmospheric Phenomena - Tutorial</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MOAAP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">moaap.utils.object_props</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for moaap.utils.object_props</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span> <span class="c1"># pyright: ignore[reportMissingModuleSource]</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.profiling</span><span class="w"> </span><span class="kn">import</span> <span class="n">timer</span>
+
+<div class="viewcode-block" id="calc_object_characteristics">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.calc_object_characteristics">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_object_characteristics</span><span class="p">(</span>
+    <span class="n">var_objects</span><span class="p">,</span>  <span class="c1"># feature object file</span>
+    <span class="n">var_data</span><span class="p">,</span>     <span class="c1"># original file used for feature detection</span>
+    <span class="n">filename_out</span><span class="p">,</span> <span class="c1"># output file name and locaiton</span>
+    <span class="n">times</span><span class="p">,</span>        <span class="c1"># timesteps of the data</span>
+    <span class="n">Lat</span><span class="p">,</span>          <span class="c1"># 2D latidudes</span>
+    <span class="n">Lon</span><span class="p">,</span>          <span class="c1"># 2D Longitudes</span>
+    <span class="n">grid_spacing</span><span class="p">,</span> <span class="c1"># average grid spacing</span>
+    <span class="n">grid_cell_area</span><span class="p">,</span>
+    <span class="n">min_tsteps</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>       <span class="c1"># minimum lifetime in data timesteps</span>
+    <span class="n">split_merge</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># dict containing information of splitting and merging of objects</span>
+    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates comprehensive statistics for tracked objects, including size, </span>
+<span class="sd">    intensity, velocity, and trajectory.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    var_objects : np.ndarray</span>
+<span class="sd">        3D labeled object array.</span>
+<span class="sd">    var_data : np.ndarray</span>
+<span class="sd">        Original data field used for detection (e.g., precipitation, pressure).</span>
+<span class="sd">    filename_out : str</span>
+<span class="sd">        Path to save the resulting dictionary as a pickle file.</span>
+<span class="sd">    times : np.ndarray</span>
+<span class="sd">        Array of datetime objects corresponding to the time axis.</span>
+<span class="sd">    Lat, Lon : np.ndarray</span>
+<span class="sd">        Latitude and Longitude grids.</span>
+<span class="sd">    grid_spacing : float</span>
+<span class="sd">        Average grid spacing (m).</span>
+<span class="sd">    grid_cell_area : np.ndarray</span>
+<span class="sd">        Area of grid cells.</span>
+<span class="sd">    min_tsteps : int, optional</span>
+<span class="sd">        Minimum timesteps an object must exist to be processed.</span>
+<span class="sd">    split_merge : dict, optional</span>
+<span class="sd">        Dictionary containing lineage info (split/merge history).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    objects_charac : dict</span>
+<span class="sd">        Dictionary where keys are object IDs and values are dictionaries containing:</span>
+<span class="sd">        &#39;mass_center_loc&#39;, &#39;speed&#39;, &#39;tot&#39;, &#39;min&#39;, &#39;max&#39;, &#39;mean&#39;, &#39;size&#39;, &#39;times&#39;, &#39;track&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># ========</span>
+
+    <span class="n">num_objects</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">var_objects</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+<span class="c1">#     num_objects = len(np.unique(var_objects))-1</span>
+    <span class="n">object_indices</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">var_objects</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">num_objects</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">objects_charac</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;            Loop over &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_objects</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; objects&quot;</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">iobj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_objects</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">object_slice</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">var_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]])</span>
+            <span class="n">data_slice</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">var_data</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]])</span>
+
+            <span class="n">time_idx_slice</span> <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">lat_idx_slice</span>  <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lon_idx_slice</span>  <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">object_slice</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">min_tsteps</span><span class="p">:</span>
+                <span class="n">data_slice</span><span class="p">[</span><span class="n">object_slice</span> <span class="o">!=</span> <span class="p">(</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                <span class="n">grid_cell_area_slice</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">grid_cell_area</span><span class="p">[</span><span class="n">lat_idx_slice</span><span class="p">,</span> <span class="n">lon_idx_slice</span><span class="p">],</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data_slice</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="n">grid_cell_area_slice</span><span class="p">[</span><span class="n">object_slice</span> <span class="o">!=</span> <span class="p">(</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                <span class="n">lat_slice</span> <span class="o">=</span> <span class="n">Lat</span><span class="p">[</span><span class="n">lat_idx_slice</span><span class="p">,</span> <span class="n">lon_idx_slice</span><span class="p">]</span>
+                <span class="n">lon_slice</span> <span class="o">=</span> <span class="n">Lon</span><span class="p">[</span><span class="n">lat_idx_slice</span><span class="p">,</span> <span class="n">lon_idx_slice</span><span class="p">]</span>
+
+
+                <span class="c1"># calculate statistics</span>
+                <span class="n">obj_times</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="n">time_idx_slice</span><span class="p">]</span>
+                <span class="n">obj_size</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">grid_cell_area_slice</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">obj_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">data_slice</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">obj_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">data_slice</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">obj_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">data_slice</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">obj_tot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">data_slice</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+
+                <span class="c1"># Track lat/lon</span>
+                <span class="n">obj_mass_center</span> <span class="o">=</span> \
+                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ndimage</span><span class="o">.</span><span class="n">center_of_mass</span><span class="p">(</span><span class="n">object_slice</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span><span class="o">==</span><span class="p">(</span><span class="n">iobj</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">object_slice</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+
+                <span class="n">obj_track</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">obj_mass_center</span><span class="p">),</span> <span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                <span class="n">iREAL</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">obj_mass_center</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">obj_track</span><span class="p">[</span><span class="n">iREAL</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lat_slice</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">obj_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">obj_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]))]</span>    <span class="k">for</span> <span class="n">tstep</span><span class="p">,</span> <span class="n">obj_loc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">obj_mass_center</span><span class="p">[</span><span class="n">iREAL</span><span class="p">,:])</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">obj_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">])</span>
+                    <span class="n">obj_track</span><span class="p">[</span><span class="n">iREAL</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lon_slice</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">obj_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">obj_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]))]</span>    <span class="k">for</span> <span class="n">tstep</span><span class="p">,</span> <span class="n">obj_loc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">obj_mass_center</span><span class="p">[</span><span class="n">iREAL</span><span class="p">,:])</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">obj_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">])</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">stop</span><span class="p">()</span>
+                    
+                    
+<span class="c1">#                 obj_track = np.full([len(obj_mass_center), 2], np.nan)</span>
+<span class="c1">#                 try:</span>
+<span class="c1">#                     obj_track[:,0]=np.array([lat_slice[int(round(obj_loc[0])),int(round(obj_loc[1]))]    for tstep, obj_loc in enumerate(obj_mass_center[:,:]) if np.isnan(obj_loc[0]) != True])</span>
+<span class="c1">#                     obj_track[:,1]=np.array([lon_slice[int(round(obj_loc[0])),int(round(obj_loc[1]))]    for tstep, obj_loc in enumerate(obj_mass_center[:,:]) if np.isnan(obj_loc[0]) != True])</span>
+<span class="c1">#                 except:</span>
+<span class="c1">#                     stop()</span>
+                    
+<span class="c1">#                 if np.any(np.isnan(obj_track)):</span>
+<span class="c1">#                     raise ValueError(&quot;track array contains NaNs&quot;)</span>
+
+                <span class="n">obj_speed</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">obj_mass_center</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">grid_spacing</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">)</span>
+                
+                <span class="n">this_object_charac</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;mass_center_loc&quot;</span><span class="p">:</span> <span class="n">obj_mass_center</span><span class="p">,</span>
+                    <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">obj_speed</span><span class="p">,</span>
+                    <span class="s2">&quot;tot&quot;</span><span class="p">:</span> <span class="n">obj_tot</span><span class="p">,</span>
+                    <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">obj_min</span><span class="p">,</span>
+                    <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">obj_max</span><span class="p">,</span>
+                    <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">obj_mean</span><span class="p">,</span>
+                    <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">obj_size</span><span class="p">,</span>
+                    <span class="c1">#                        &#39;rgrAccumulation&#39;:rgrAccumulation,</span>
+                    <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="n">obj_times</span><span class="p">,</span>
+                    <span class="s2">&quot;track&quot;</span><span class="p">:</span> <span class="n">obj_track</span><span class="p">,</span>
+                <span class="p">}</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">objects_charac</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">this_object_charac</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span> <span class="p">(</span><span class="s2">&quot;Error asigning properties to final dictionary&quot;</span><span class="p">)</span>
+
+
+        <span class="k">if</span> <span class="n">filename_out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename_out</span><span class="o">+</span><span class="s1">&#39;.pkl&#39;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">objects_charac</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">objects_charac</span></div>
+
+
+    
+
+
+<div class="viewcode-block" id="ConnectLon_on_timestep">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.ConnectLon_on_timestep">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ConnectLon_on_timestep</span><span class="p">(</span><span class="n">object_indices</span><span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    This function connects objects over the date line on a time-step by</span>
+<span class="sd">    time-step basis, which makes it different from the ConnectLon function.</span>
+<span class="sd">    This function is needed when long-living objects are first split into</span>
+<span class="sd">    smaller objects using the BreakupObjects function.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    object_indices : np.ndarray</span>
+<span class="sd">        Array of object indices from ndimage.find_objects</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    object_indices : np.ndarray</span>
+<span class="sd">        Updated array of object indices with connected objects across the date line.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">object_indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="n">EDGE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">object_indices</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">)</span>
+        <span class="n">iEDGE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">EDGE</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="n">OBJ_Left</span> <span class="o">=</span> <span class="n">EDGE</span><span class="p">[</span><span class="n">iEDGE</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">OBJ_Right</span> <span class="o">=</span> <span class="n">EDGE</span><span class="p">[</span><span class="n">iEDGE</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">OBJ_joint_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">OBJ_Left</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">OBJ_Left</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">OBJ_Right</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">joint_val</span> <span class="o">=</span> <span class="n">OBJ_Left</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">OBJ_Right</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+                    <span class="n">OBJ_joint_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">joint_val</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="c1"># Skip the pair if an error occurs during conversion or concatenation</span>
+                    <span class="k">continue</span>
+        <span class="n">OBJ_joint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">OBJ_joint_list</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        OBJ_joint = np.array(</span>
+<span class="sd">            [</span>
+<span class="sd">                OBJ_Left[ii].astype(str) + &quot;_&quot; + OBJ_Right[ii].astype(str)</span>
+<span class="sd">                for ii,_ in enumerate(OBJ_Left)</span>
+<span class="sd">            ]</span>
+<span class="sd">        )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">NotSame</span> <span class="o">=</span> <span class="n">OBJ_Left</span> <span class="o">!=</span> <span class="n">OBJ_Right</span>        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">OBJ_joint</span> <span class="o">=</span> <span class="n">OBJ_joint</span><span class="p">[</span><span class="n">NotSame</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">OBJ_unique</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">OBJ_joint</span><span class="p">)</span>
+        <span class="c1"># if len(OBJ_unique) &gt;1:</span>
+        <span class="c1">#     stop()</span>
+        <span class="c1"># set the eastern object to the number of the western object in all timesteps</span>
+        <span class="k">for</span> <span class="n">obj</span><span class="p">,</span><span class="n">_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">OBJ_unique</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            ObE = int(OBJ_unique[obj].split(&quot;_&quot;)[1].split()[0])</span>
+<span class="sd">            ObW = int(OBJ_unique[obj].split(&quot;_&quot;)[0].split()[0])</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ObE</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">OBJ_unique</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">ObW</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">OBJ_unique</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">object_indices</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span><span class="n">object_indices</span><span class="p">[</span><span class="n">tt</span><span class="p">,:]</span> <span class="o">==</span> <span class="n">ObE</span><span class="p">]</span> <span class="o">=</span> <span class="n">ObW</span>
+    <span class="k">return</span> <span class="n">object_indices</span></div>
+
+
+
+
+<span class="c1">### Break up long living objects by extracting the biggest object at each time</span>
+<div class="viewcode-block" id="BreakupObjects">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.BreakupObjects">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">BreakupObjects</span><span class="p">(</span>
+    <span class="n">DATA</span><span class="p">,</span>  <span class="c1"># 3D matrix [time,lat,lon] containing the objects</span>
+    <span class="n">min_tsteps</span><span class="p">,</span>  <span class="c1"># minimum lifetime in data timesteps</span>
+    <span class="n">dT</span><span class="p">,</span><span class="c1"># time step in hours</span>
+    <span class="n">obj_history</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># calculates how object start and end</span>
+    <span class="p">):</span>  
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Splits long-living objects that may be artificially merged (e.g., distinct </span>
+<span class="sd">    storms merging for one timestep). It analyzes the 2D connectivity over time </span>
+<span class="sd">    and keeps the largest consistent overlap.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    DATA : np.ndarray</span>
+<span class="sd">        3D matrix [time, lat, lon] containing labeled objects.</span>
+<span class="sd">    min_tsteps : int</span>
+<span class="sd">        Minimum lifetime (in timesteps) required to keep an object.</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Time resolution of the data in hours.</span>
+<span class="sd">    obj_history : bool, optional</span>
+<span class="sd">        If True, calculates how objects start and end (merges/splits).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    DATA_fin : np.ndarray</span>
+<span class="sd">        The re-labeled 3D object array.</span>
+<span class="sd">    object_split : dict or None</span>
+<span class="sd">        Dictionary containing splitting/merging history if obj_history is True.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+    <span class="n">object_indices</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
+    <span class="n">MaxOb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
+    <span class="n">MinLif</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">min_tsteps</span> <span class="o">/</span> <span class="n">dT</span><span class="p">)</span>  <span class="c1"># min lifetime of object to be split</span>
+    <span class="n">AVmax</span> <span class="o">=</span> <span class="mf">1.5</span>
+
+    <span class="n">obj_structure_2D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">obj_structure_2D</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">rgiObjects2D</span><span class="p">,</span> <span class="n">nr_objects2D</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">DATA</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">obj_structure_2D</span><span class="p">)</span>
+
+    <span class="n">rgiObjNrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">DATA</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">TT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">MaxOb</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">MaxOb</span><span class="p">):</span>  
+        <span class="k">if</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">TT</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">=</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">obj</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
+    <span class="n">TT</span> <span class="o">=</span> <span class="n">TT</span><span class="p">[</span><span class="n">rgiObjNrs</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">TT</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+    <span class="c1"># Sel_Obj = rgiObjNrs[TT &gt; MinLif]</span>
+
+    <span class="c1"># Average 2D objects in 3D objects?</span>
+    <span class="n">Av_2Dob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">rgiObjNrs</span><span class="p">)))</span>
+    <span class="n">Av_2Dob</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">ii</span> <span class="o">=</span> <span class="mi">1</span>
+    
+    <span class="n">object_split</span> <span class="o">=</span> <span class="p">{}</span> <span class="c1"># this directory holds information about splitting and merging of objects</span>
+    <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rgiObjNrs</span><span class="p">))):</span>
+        <span class="n">iOb</span> <span class="o">=</span> <span class="n">rgiObjNrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">TT</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">MinLif</span><span class="p">:</span>
+            <span class="c1"># ignore short lived objects</span>
+            <span class="n">DATA</span><span class="p">[</span><span class="n">DATA</span> <span class="o">==</span> <span class="n">iOb</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">continue</span>
+        <span class="n">SelOb</span> <span class="o">=</span> <span class="n">rgiObjNrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">DATA_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">DATA</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">SelOb</span><span class="p">]])</span>
+        <span class="n">rgiObjects2D_ACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">rgiObjects2D</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">SelOb</span><span class="p">]])</span>
+        <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">DATA_ACT</span> <span class="o">!=</span> <span class="n">iOb</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">Av_2Dob</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]))</span> <span class="o">-</span> <span class="mi">1</span>
+                    <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">DATA_ACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">Av_2Dob</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">AVmax</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obj_history</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># this is a signle[ object</span>
+                <span class="n">object_split</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">iOb</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">TT</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">SelOb</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># object starts when tracking starts</span>
+                    <span class="n">object_split</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">iOb</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">if</span> <span class="n">object_indices</span><span class="p">[</span><span class="n">SelOb</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span> <span class="o">==</span> <span class="n">DATA</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># object stops when tracking stops</span>
+                    <span class="n">object_split</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">iOb</span><span class="p">)][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rgiObAct</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">rgiObActCP</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">rgiObAct</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">ob1</span> <span class="ow">in</span> <span class="n">rgiObAct</span><span class="p">:</span>
+                    <span class="n">tt1_obj</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span>
+                            <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">ob1</span><span class="p">]</span>
+                        <span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tt1_obj</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="c1"># this object ends here</span>
+                        <span class="n">rgiObActCP</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">ob1</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">tt1_obj</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">rgiObjects2D_ACT</span><span class="p">[</span>
+                            <span class="n">tt</span><span class="p">,</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">tt1_obj</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="p">]</span> <span class="o">=</span> <span class="n">ob1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">VOL</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">tt1_obj</span><span class="p">[</span><span class="n">jj</span><span class="p">])</span>
+                            <span class="k">for</span> <span class="n">jj</span><span class="p">,</span><span class="n">_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tt1_obj</span><span class="p">)</span>
+                        <span class="p">]</span>
+                        <span class="n">rgiObjects2D_ACT</span><span class="p">[</span>
+                            <span class="n">tt</span><span class="p">,</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">tt1_obj</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">VOL</span><span class="p">)]</span>
+                        <span class="p">]</span> <span class="o">=</span> <span class="n">ob1</span>
+                        <span class="n">tt1_obj</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tt1_obj</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">VOL</span><span class="p">)])</span>
+                        <span class="n">rgiObActCP</span> <span class="o">=</span> <span class="n">rgiObActCP</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">tt1_obj</span><span class="p">)</span>
+
+                <span class="c1"># make sure that mergers are assigned the largest object</span>
+                <span class="k">for</span> <span class="n">ob2</span> <span class="ow">in</span> <span class="n">rgiObActCP</span><span class="p">:</span>
+                    <span class="n">ttm1_obj</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span>
+                            <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">ob2</span><span class="p">]</span>
+                        <span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ttm1_obj</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">VOL</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">ttm1_obj</span><span class="p">[</span><span class="n">jj</span><span class="p">])</span>
+                            <span class="k">for</span> <span class="n">jj</span><span class="p">,</span><span class="n">_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ttm1_obj</span><span class="p">)</span>
+                        <span class="p">]</span>
+                        <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">ob2</span><span class="p">]</span> <span class="o">=</span> <span class="n">ttm1_obj</span><span class="p">[</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">VOL</span><span class="p">)</span>
+                        <span class="p">]</span>
+
+                <span class="c1"># are there new object?</span>
+                <span class="n">NewObj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="n">NewObj</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">NewObj</span><span class="p">,</span> <span class="n">rgiObAct</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">NewObj</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">rgiObActCP</span> <span class="o">=</span> <span class="n">rgiObActCP</span> <span class="o">+</span> <span class="n">NewObj</span>
+                <span class="n">rgiObActCP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">rgiObActCP</span><span class="p">)</span>
+                <span class="n">rgiObAct</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">rgiObActCP</span><span class="p">)</span>
+
+            <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">rgiObjects2D_ACT</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span>
+                <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">rgiObjects2D_ACT</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">MaxOb</span>
+            <span class="p">)</span>
+            <span class="n">MaxOb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
+
+            <span class="c1"># save the new objects to the original object array</span>
+            <span class="n">TMP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">DATA</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">SelOb</span><span class="p">]])</span>
+            <span class="n">TMP</span><span class="p">[</span><span class="n">rgiObjects2D_ACT</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">rgiObjects2D_ACT</span><span class="p">[</span><span class="n">rgiObjects2D_ACT</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">DATA</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">SelOb</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">TMP</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">obj_history</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># ----------------------------------</span>
+                <span class="c1"># remember how objects start and end</span>
+                <span class="n">temp_obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">TMP</span><span class="p">[</span><span class="n">DATA_ACT</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">==</span> <span class="n">iOb</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">ob_ms</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">temp_obj</span><span class="p">)):</span>
+                    <span class="n">t1_obj</span> <span class="o">=</span> <span class="n">temp_obj</span><span class="p">[</span><span class="n">ob_ms</span><span class="p">]</span>
+                    <span class="n">sel_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">TMP</span> <span class="o">==</span> <span class="n">t1_obj</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">obj_charac</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">sel_time</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">kk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sel_time</span><span class="p">)):</span>
+                        <span class="k">if</span> <span class="n">sel_time</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="c1"># object starts when tracking starts</span>
+                            <span class="n">obj_charac</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                        <span class="k">elif</span> <span class="n">sel_time</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span> <span class="o">==</span> <span class="n">TMP</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="c1"># object ends when tracking ends</span>
+                            <span class="n">obj_charac</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+                        <span class="c1"># check if system starts from splitting</span>
+                        <span class="n">t0_ob</span> <span class="o">=</span> <span class="n">TMP</span><span class="p">[</span><span class="n">sel_time</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,:,:][</span><span class="n">TMP</span><span class="p">[</span><span class="n">sel_time</span><span class="p">[</span><span class="n">kk</span><span class="p">],:,:]</span> <span class="o">==</span> <span class="n">t1_obj</span><span class="p">]</span>
+                        <span class="n">unique_t0</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">t0_ob</span><span class="p">))</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">unique_t0</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">unique_t0</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">t1_obj</span><span class="p">)</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_t0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="c1"># object has pure start or continues without interactions</span>
+                            <span class="k">continue</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c1"># Object merges with other object</span>
+                            <span class="n">obj_charac</span><span class="p">[</span><span class="n">kk</span><span class="p">]</span> <span class="o">=</span> <span class="n">unique_t0</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                    <span class="c1"># check if object ends by merging</span>
+                    <span class="k">if</span> <span class="n">obj_charac</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">sel_time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span> <span class="o">==</span> <span class="n">TMP</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="n">obj_charac</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">t2_ob</span> <span class="o">=</span> <span class="n">TMP</span><span class="p">[</span><span class="n">sel_time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,:,:][</span><span class="n">TMP</span><span class="p">[</span><span class="n">sel_time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],:,:]</span> <span class="o">==</span> <span class="n">t1_obj</span><span class="p">]</span>
+                            <span class="n">unique_t2</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">t2_ob</span><span class="p">))</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">unique_t2</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                            <span class="k">except</span><span class="p">:</span>
+                                <span class="k">pass</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">unique_t2</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">t1_obj</span><span class="p">)</span>
+                            <span class="k">except</span><span class="p">:</span>
+                                <span class="k">pass</span>
+                            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_t2</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="n">obj_charac</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">unique_t2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                    <span class="n">object_split</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">t1_obj</span><span class="p">)]</span> <span class="o">=</span> <span class="n">obj_charac</span>
+
+    <span class="c1"># clean up object matrix</span>
+    <span class="k">if</span> <span class="n">obj_history</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">DATA_fin</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span>    <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">DATA</span><span class="p">,</span>
+                                    <span class="n">dT</span><span class="p">,</span>
+                                    <span class="n">min_tsteps</span><span class="p">,</span> 
+                                    <span class="n">obj_splitmerge</span> <span class="o">=</span> <span class="n">object_split</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">DATA_fin</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span>    <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">DATA</span><span class="p">,</span>
+                                    <span class="n">dT</span><span class="p">,</span>
+                                    <span class="n">min_tsteps</span><span class="p">)</span>
+
+    <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">DATA_fin</span><span class="p">,</span> <span class="n">object_split</span></div>
+
+
+<span class="c1"># from memory_profiler import profile</span>
+<span class="c1"># @profile_</span>
+<div class="viewcode-block" id="clean_up_objects">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.clean_up_objects">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">clean_up_objects</span><span class="p">(</span><span class="n">DATA</span><span class="p">,</span>
+                     <span class="n">dT</span><span class="p">,</span>
+                     <span class="n">min_tsteps</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                     <span class="n">obj_splitmerge</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Function to remove objects that are too short lived</span>
+<span class="sd">    and to numerrate the object from 1...N</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    DATA : np.ndarray</span>
+<span class="sd">        Labeled object array [time, lat, lon].</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Time step (hours).</span>
+<span class="sd">    min_tsteps : int</span>
+<span class="sd">        Minimum lifetime of objects to keep (hours).</span>
+<span class="sd">    obj_splitmerge : dict, optional</span>
+<span class="sd">        Dictionary tracking object splits/merges. Default is None.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    objectsTMP : np.ndarray</span>
+<span class="sd">        Cleaned labeled object array.</span>
+<span class="sd">    obj_splitmerge_clean : dict</span>
+<span class="sd">        Updated split/merge history dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># 1. Find object slices (fast C-level operation)</span>
+    <span class="n">object_slices</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">DATA</span><span class="p">)</span>
+    <span class="n">max_label</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">object_slices</span><span class="p">)</span>
+    
+    <span class="c1"># 2. Create a Lookup Table (LUT)</span>
+    <span class="c1"># Index = Old Label, Value = New Label</span>
+    <span class="c1"># We initialize with 0 (background)</span>
+    <span class="n">lut</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">max_label</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DATA</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    
+    <span class="n">min_duration</span> <span class="o">=</span> <span class="n">min_tsteps</span> <span class="o">/</span> <span class="n">dT</span>
+    <span class="n">new_label_counter</span> <span class="o">=</span> <span class="mi">1</span>
+    
+    <span class="c1"># 3. Populate LUT (Pure metadata calculation, no array manipulation yet)</span>
+    <span class="c1"># We iterate over slices, which is fast because we aren&#39;t touching the heavy 3D data</span>
+    <span class="k">for</span> <span class="n">old_label_idx</span><span class="p">,</span> <span class="n">slc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">object_slices</span><span class="p">):</span>
+        <span class="n">old_label</span> <span class="o">=</span> <span class="n">old_label_idx</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># find_objects ignores 0, so index 0 is label 1</span>
+        
+        <span class="k">if</span> <span class="n">slc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Check duration (time is the first axis: index 0)</span>
+            <span class="n">duration</span> <span class="o">=</span> <span class="n">slc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">slc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
+            
+            <span class="k">if</span> <span class="n">duration</span> <span class="o">&gt;=</span> <span class="n">min_duration</span><span class="p">:</span>
+                <span class="n">lut</span><span class="p">[</span><span class="n">old_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_label_counter</span>
+                <span class="n">new_label_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># else: lut[old_label] remains 0 (deleted)</span>
+        <span class="c1"># else: lut[old_label] remains 0 (was missing)</span>
+
+    <span class="c1"># 4. Apply LUT to the entire 3D array in one shot</span>
+    <span class="c1"># This replaces the entire previous loop and masking logic</span>
+    <span class="n">objects_cleaned</span> <span class="o">=</span> <span class="n">lut</span><span class="p">[</span><span class="n">DATA</span><span class="p">]</span>
+
+    <span class="c1"># 5. Handle Dictionary Optimization</span>
+    <span class="n">obj_splitmerge_clean</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="k">if</span> <span class="n">obj_splitmerge</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Vectorized update of the dictionary keys and values</span>
+        <span class="k">for</span> <span class="n">old_key_str</span><span class="p">,</span> <span class="n">split_list</span> <span class="ow">in</span> <span class="n">obj_splitmerge</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">old_key</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">old_key_str</span><span class="p">)</span>
+            
+            <span class="c1"># Get the new ID for this object</span>
+            <span class="k">if</span> <span class="n">old_key</span> <span class="o">&lt;=</span> <span class="n">max_label</span><span class="p">:</span>
+                <span class="n">new_key</span> <span class="o">=</span> <span class="n">lut</span><span class="p">[</span><span class="n">old_key</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_key</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># Out of bounds</span>
+            
+            <span class="c1"># Only keep entry if the main object survived (new_key &gt; 0)</span>
+            <span class="k">if</span> <span class="n">new_key</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># Update the values in the list using the same LUT</span>
+                <span class="c1"># Filter out values that point to deleted objects (0) if desired, </span>
+                <span class="c1"># or keep them. Here we update them.</span>
+                <span class="n">split_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">split_list</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+                
+                <span class="c1"># We need to handle IDs in split_list that might be larger than our current max_label</span>
+                <span class="c1"># (though usually they shouldn&#39;t be). Clip or check bounds safe.</span>
+                <span class="n">valid_indices</span> <span class="o">=</span> <span class="n">split_arr</span> <span class="o">&lt;=</span> <span class="n">max_label</span>
+                
+                <span class="n">new_split_list</span> <span class="o">=</span> <span class="n">split_arr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="c1"># Update valid IDs</span>
+                <span class="n">new_split_list</span><span class="p">[</span><span class="n">valid_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">lut</span><span class="p">[</span><span class="n">split_arr</span><span class="p">[</span><span class="n">valid_indices</span><span class="p">]]</span>
+                <span class="c1"># Invalid/Deleted IDs become 0. You might want to filter 0s out:</span>
+                <span class="c1"># new_split_list = new_split_list[new_split_list &gt; 0] </span>
+                
+                <span class="n">obj_splitmerge_clean</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">new_key</span><span class="p">)]</span> <span class="o">=</span> <span class="n">new_split_list</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">objects_cleaned</span><span class="p">,</span> <span class="n">obj_splitmerge_clean</span></div>
+
+
+<span class="c1"># https://stackoverflow.com/questions/13542855/algorithm-to-find-the-minimum-area-rectangle-for-given-points-in-order-to-comput/33619018#33619018</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConvexHull</span>
+
+<div class="viewcode-block" id="minimum_bounding_rectangle">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.minimum_bounding_rectangle">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">minimum_bounding_rectangle</span><span class="p">(</span><span class="n">points</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the smallest bounding rectangle for a set of points.</span>
+<span class="sd">    Returns a set of points representing the corners of the bounding box.</span>
+
+<span class="sd">    :param points: an nx2 matrix of coordinates</span>
+<span class="sd">    :rval: an nx2 matrix of coordinates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">rotate</span>
+    <span class="n">pi2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mf">2.</span>
+
+    <span class="c1"># get the convex hull for the points</span>
+    <span class="n">hull_points</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">ConvexHull</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">vertices</span><span class="p">]</span>
+
+    <span class="c1"># calculate edge angles</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">hull_points</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">hull_points</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">hull_points</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">)))</span>
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">edges</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">edges</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">angles</span><span class="p">,</span> <span class="n">pi2</span><span class="p">))</span>
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+
+    <span class="c1"># find rotation matrices</span>
+    <span class="c1"># XXX both work</span>
+    <span class="n">rotations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="o">-</span><span class="n">pi2</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="o">+</span><span class="n">pi2</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="n">rotations</span> <span class="o">=</span> <span class="n">rotations</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># apply rotations to the hull</span>
+    <span class="n">rot_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rotations</span><span class="p">,</span> <span class="n">hull_points</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="c1"># find the bounding points</span>
+    <span class="n">min_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">rot_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">max_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">rot_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">min_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">rot_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">max_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">rot_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># find the box with the best area</span>
+    <span class="n">areas</span> <span class="o">=</span> <span class="p">(</span><span class="n">max_x</span> <span class="o">-</span> <span class="n">min_x</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_y</span> <span class="o">-</span> <span class="n">min_y</span><span class="p">)</span>
+    <span class="n">best_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">areas</span><span class="p">)</span>
+
+    <span class="c1"># return the best box</span>
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">max_x</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="n">min_x</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">max_y</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">min_y</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">rotations</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span>
+
+    <span class="n">rval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">rval</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">([</span><span class="n">x1</span><span class="p">,</span> <span class="n">y2</span><span class="p">],</span> <span class="n">r</span><span class="p">)</span>
+    <span class="n">rval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">([</span><span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">],</span> <span class="n">r</span><span class="p">)</span>
+    <span class="n">rval</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">([</span><span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">],</span> <span class="n">r</span><span class="p">)</span>
+    <span class="n">rval</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">([</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">],</span> <span class="n">r</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rval</span></div>
+
+
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cartopy.io.shapereader</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">shpreader</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sgeom</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.prepared</span><span class="w"> </span><span class="kn">import</span> <span class="n">prep</span>
+
+<span class="n">land_shp_fname</span> <span class="o">=</span> <span class="n">shpreader</span><span class="o">.</span><span class="n">natural_earth</span><span class="p">(</span><span class="n">resolution</span><span class="o">=</span><span class="s1">&#39;50m&#39;</span><span class="p">,</span>
+                                       <span class="n">category</span><span class="o">=</span><span class="s1">&#39;physical&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;land&#39;</span><span class="p">)</span>
+
+<span class="c1"># land_geom = unary_union(list(shpreader.Reader(land_shp_fname).geometries()))</span>
+<span class="n">land_geom</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_ensure_land_geom</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">land_geom</span>
+    <span class="k">if</span> <span class="n">land_geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">cartopy.io.shapereader</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">shpreader</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
+
+        <span class="n">land_shp</span> <span class="o">=</span> <span class="n">shpreader</span><span class="o">.</span><span class="n">natural_earth</span><span class="p">(</span>
+            <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;110m&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;physical&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;land&quot;</span>
+        <span class="p">)</span>
+        <span class="n">land_geom</span> <span class="o">=</span> <span class="n">unary_union</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shpreader</span><span class="o">.</span><span class="n">Reader</span><span class="p">(</span><span class="n">land_shp</span><span class="p">)</span><span class="o">.</span><span class="n">geometries</span><span class="p">()))</span>
+<span class="n">land</span> <span class="o">=</span> <span class="n">prep</span><span class="p">(</span><span class="n">land_geom</span><span class="p">)</span>
+
+<div class="viewcode-block" id="is_land">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.is_land">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_land</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">land</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">sgeom</span><span class="o">.</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Andreas F. Prein, Raphael Graf.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
