@@ -598,7 +598,18 @@ from shapely.prepared import prep
 land_shp_fname = shpreader.natural_earth(resolution='50m',
                                        category='physical', name='land')
 
-land_geom = unary_union(list(shpreader.Reader(land_shp_fname).geometries()))
+# land_geom = unary_union(list(shpreader.Reader(land_shp_fname).geometries()))
+land_geom = None
+def _ensure_land_geom():
+    global land_geom
+    if land_geom is None:
+        import cartopy.io.shapereader as shpreader
+        from shapely.ops import unary_union
+
+        land_shp = shpreader.natural_earth(
+            resolution="110m", category="physical", name="land"
+        )
+        land_geom = unary_union(list(shpreader.Reader(land_shp).geometries()))
 land = prep(land_geom)
 
 def is_land(x, y):
