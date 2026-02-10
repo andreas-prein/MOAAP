@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import ndimage
+from moaap.utils.data_proc import smooth_uniform
 from moaap.utils.grid import DistanceCoord
 from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_watershed_history
 from moaap.utils.profiling import timer
