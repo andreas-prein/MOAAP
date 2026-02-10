@@ -73,6 +73,7 @@
   <h1>Source code for moaap.trackers.atmospheric_rivers</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">smooth_uniform</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistanceCoord</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">,</span> <span class="n">analyze_watershed_history</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.profiling</span><span class="w"> </span><span class="kn">import</span> <span class="n">timer</span>
