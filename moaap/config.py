@@ -43,7 +43,7 @@ MOAAP_DEFAULTS = {
 
     # anticyclone tracking
     "MinTimeACY": 12,       # minimum anticyclone lifetime [h]
-    "MinPresAnACY": 6,      # anticyclone pressure anomaly threshold [hPa]
+    "MinPresAnACY": 8,      # anticyclone pressure anomaly threshold [hPa]
     "breakup_acy": "watershed", # anticyclone breakup method [str]
     "analyze_psl_history": False, # analyze cyclone/anticyclone history [bool]
 
@@ -96,12 +96,12 @@ MOAAP_DEFAULTS = {
 
     # 500 hPa cyclones/anticyclones
     "z500_low_anom": -120,    # 500 hPa cyclone anomaly threshold [m]
-    "z500_high_anom": 105,    # 500 hPa anticyclone anomaly threshold [m]
+    "z500_high_anom": 80, #80,     # 500 hPa anticyclone anomaly threshold [m]
     "breakup_zcy": "watershed", # 500 hPa cyclone CA breakup method [str]
     "analyze_z500_history": False, # analyze 500 hPa cyclone/anticyclone history [bool]
 
     # equatorial waves
-    "er_th": -0.5,           # equatorial Rossby wave threshold [unitless]
+    "er_th": -1.25, #-0.5,           # equatorial Rossby wave threshold [unitless]
     "mrg_th": -3,          # mixed Rossby-gravity wave threshold [unitless]
     "igw_th": -5,          # inertia-gravity wave threshold [unitless]
     "kel_th": -5,          # Kelvin wave threshold [unitless]

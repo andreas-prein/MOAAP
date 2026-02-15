@@ -135,7 +135,7 @@ def cy_acy_psl_tracking(
             # connect objects over date line
             ACY_objects = ConnectLon_on_timestep(ACY_objects)
     elif breakup == 'watershed':
-        min_dist=int((1000 * 10**3)/Gridspacing)
+        min_dist=int((1000 * 10**3 * 2)/Gridspacing)
         high_pres_an = np.copy(slp_Anomaly)
         high_pres_an[ACY_objects == 0] = 0
         ACY_objects = watershed_3d_overlap_parallel(
@@ -236,17 +236,16 @@ def cy_acy_z500_tracking(
     print('    track 500 hPa cyclones')
 
     print('        break up long living cyclones using the '+breakup+' method')
+    min_dist=int((1600 * 10**3)/Gridspacing)
     if breakup == 'breakup':
         cy_z500_objects, object_split = BreakupObjects(cy_z500_objects,
                                     int(MinTimeCY/dT),
                                     dT)
     elif breakup == 'watershed':
-        min_dist=int((1000 * 10**3)/Gridspacing)
-
         cy_z500_objects = watershed_3d_overlap_parallel(
                 z500_Anomaly * -1,
                 z500_low_anom*-1,
-                z500_low_anom*-1.5,
+                z500_low_anom*-1.1,
                 min_dist,
                 dT,
                 mintime = MinTimeCY,
@@ -257,7 +256,6 @@ def cy_acy_z500_tracking(
         cy_z500_objects = ConnectLon_on_timestep(cy_z500_objects)
     
     if analyze_z500_history:
-        min_dist=int((1000 * 10**3)/Gridspacing)
         print(f"    Minimum distance between z500_Anomaly minima for watershed analysis: {min_dist} grid cells")
         union_array, events, histories = analyze_watershed_history(
             cy_z500_objects, min_dist, "cy_z500"
@@ -289,7 +287,7 @@ def cy_acy_z500_tracking(
                                     int(MinTimeCY/dT),
                                     dT)
     elif breakup == 'watershed':
-        min_dist=int((1000 * 10**3)/Gridspacing)
+        min_dist=int((1000 * 10**3 *2)/Gridspacing)
         # high_pres_an = np.copy(z500_Anomaly)
         # high_pres_an[acy_z500_objects == 0] = 0
         acy_z500_objects = watershed_3d_overlap_parallel(

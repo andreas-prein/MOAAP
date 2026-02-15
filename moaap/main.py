@@ -16,7 +16,7 @@ from moaap.utils.profiling import timer
 from moaap.config import MOAAP_DEFAULTS
 import metpy.calc as calc
 from metpy.units import units
-
+from pdb import set_trace as stop
 
 
 def moaap(
@@ -441,7 +441,6 @@ def moaap(
         end = time.perf_counter()
         timer(start, end)
         
-    
     if ew_test == 'yes':
         print('======> track tropical waves')
         start = time.perf_counter()

@@ -6,6 +6,7 @@ from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_wate
 from moaap.utils.object_props import clean_up_objects, BreakupObjects, ConnectLon_on_timestep
 import gc
 import sys
+from pdb import set_trace as stop
 
 def track_tropwaves_tb(tb,
                    Lat,
