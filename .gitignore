@@ -1,4 +1,4 @@
-# Prerequisites
+ Prerequisites
 *.d
 
 # Compiled Object files
@@ -59,3 +59,7 @@ generate_shim.py
 logs/
 .vscode
 moaap.egg-info
+
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
