@@ -89,7 +89,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">MOAAP_DEFAULTS</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">metpy.calc</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">calc</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">metpy.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">units</span>
-
+<span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
 
 
 <div class="viewcode-block" id="moaap">
@@ -516,7 +516,6 @@
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
         
-    
     <span class="k">if</span> <span class="n">ew_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track tropical waves&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>

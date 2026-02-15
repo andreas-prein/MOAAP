@@ -683,27 +683,29 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.prepared</span><span class="w"> </span><span class="kn">import</span> <span class="n">prep</span>
 
-<span class="n">land_shp_fname</span> <span class="o">=</span> <span class="n">shpreader</span><span class="o">.</span><span class="n">natural_earth</span><span class="p">(</span><span class="n">resolution</span><span class="o">=</span><span class="s1">&#39;50m&#39;</span><span class="p">,</span>
-                                       <span class="n">category</span><span class="o">=</span><span class="s1">&#39;physical&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;land&#39;</span><span class="p">)</span>
-
-<span class="c1"># land_geom = unary_union(list(shpreader.Reader(land_shp_fname).geometries()))</span>
 <span class="n">land_geom</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">_ensure_land_geom</span><span class="p">():</span>
-    <span class="k">global</span> <span class="n">land_geom</span>
-    <span class="k">if</span> <span class="n">land_geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">cartopy.io.shapereader</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">shpreader</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
+<span class="n">land</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># prepared geometry</span>
 
-        <span class="n">land_shp</span> <span class="o">=</span> <span class="n">shpreader</span><span class="o">.</span><span class="n">natural_earth</span><span class="p">(</span>
-            <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;110m&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;physical&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;land&quot;</span>
-        <span class="p">)</span>
-        <span class="n">land_geom</span> <span class="o">=</span> <span class="n">unary_union</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shpreader</span><span class="o">.</span><span class="n">Reader</span><span class="p">(</span><span class="n">land_shp</span><span class="p">)</span><span class="o">.</span><span class="n">geometries</span><span class="p">()))</span>
-<span class="n">land</span> <span class="o">=</span> <span class="n">prep</span><span class="p">(</span><span class="n">land_geom</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_ensure_land_geom</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">land_geom</span><span class="p">,</span> <span class="n">land</span>
+    <span class="k">if</span> <span class="n">land</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>  <span class="c1"># already prepared</span>
+
+    <span class="n">land_shp</span> <span class="o">=</span> <span class="n">shpreader</span><span class="o">.</span><span class="n">natural_earth</span><span class="p">(</span>
+        <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;110m&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;physical&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;land&quot;</span>
+    <span class="p">)</span>
+    <span class="n">geoms</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">shpreader</span><span class="o">.</span><span class="n">Reader</span><span class="p">(</span><span class="n">land_shp</span><span class="p">)</span><span class="o">.</span><span class="n">geometries</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">geoms</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Natural Earth &#39;land&#39; geometries are empty/unavailable.&quot;</span><span class="p">)</span>
+
+    <span class="n">land_geom</span> <span class="o">=</span> <span class="n">unary_union</span><span class="p">(</span><span class="n">geoms</span><span class="p">)</span>
+    <span class="n">land</span> <span class="o">=</span> <span class="n">prep</span><span class="p">(</span><span class="n">land_geom</span><span class="p">)</span>
 
 <div class="viewcode-block" id="is_land">
 <a class="viewcode-back" href="../../../modules.html#moaap.utils.object_props.is_land">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">is_land</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">land</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">sgeom</span><span class="o">.</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span></div>
+    <span class="n">_ensure_land_geom</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">land</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">sgeom</span><span class="o">.</span><span class="n">Point</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="p">)))</span></div>
 
 </pre></div>
 
