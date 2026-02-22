@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import ndimage
+from pdb import set_trace as stop
 from moaap.utils.data_proc import smooth_uniform
 from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_watershed_history
 from moaap.utils.object_props import clean_up_objects, BreakupObjects, ConnectLon_on_timestep
@@ -149,12 +150,16 @@ def cy_acy_psl_tracking(
                                             extend_size_ratio = 0.15
                                             )
     if analyze_psl_history:
-        min_dist=8
+        min_dist=int((1000 * 10**3 * 2)/Gridspacing)
         print(f"    Minimum distance between high_pres_anomaly maxima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
-            ACY_objects, min_dist, "cy_acy_psl"
+        union_array, events, histories, history_cy = analyze_watershed_history(
+            CY_objects, min_dist, "cy_psl"
+        )
+        union_array, events, histories, history_acy = analyze_watershed_history(
+            ACY_objects, min_dist, "acy_psl"
         )
 
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -171,8 +176,13 @@ def cy_acy_psl_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-
-    return CY_objects, ACY_objects
+        """
+        
+    else:
+        history_cy = None
+        history_acy = None
+        
+    return CY_objects, ACY_objects, history_cy, history_acy
 
 
 def cy_acy_z500_tracking(
@@ -257,10 +267,11 @@ def cy_acy_z500_tracking(
     
     if analyze_z500_history:
         print(f"    Minimum distance between z500_Anomaly minima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, history_cy500 = analyze_watershed_history(
             cy_z500_objects, min_dist, "cy_z500"
         )
 
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -277,7 +288,9 @@ def cy_acy_z500_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-
+        """
+    else:
+        history_cy500 = None
 
     # -------------------------------------
     print('    track 500 hPa anticyclones')
@@ -307,10 +320,10 @@ def cy_acy_z500_tracking(
     if analyze_z500_history:
         min_dist=int((1000 * 10**3)/Gridspacing)
         print(f"    Minimum distance between z500_Anomaly minima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, history_acy500 = analyze_watershed_history(
             acy_z500_objects, min_dist, "acy_z500"
         )
-
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -327,8 +340,10 @@ def cy_acy_z500_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-
-    return cy_z500_objects, acy_z500_objects
+        """
+    else:
+        history_acy500 = None
+    return cy_z500_objects, acy_z500_objects, history_cy500, history_acy500
 
 
 def col_identification(cy_z500_objects,

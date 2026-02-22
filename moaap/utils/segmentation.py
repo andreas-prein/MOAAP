@@ -15,6 +15,7 @@ import matplotlib.patches as mpatches
 import multiprocessing as mp
 from multiprocessing import shared_memory
 from scipy.spatial import cKDTree
+from pdb import set_trace as stop
 from moaap.utils.object_props import clean_up_objects, ConnectLon_on_timestep
 
 
@@ -214,7 +215,111 @@ def _find_nearest_neighbor(
 
     return nearest_label, min_distance
 
-def analyze_watershed_history(watershed_results, min_dist, object_type: str):
+
+
+from collections import defaultdict
+import os
+import pickle
+import json
+import numpy as np
+
+def build_object_history_dict(labels, centers, events, uf, histories, object_type=None, out_dir="outputs", save=True):
+    """
+    Build per-object history records (lifetime + interactions) from watershed tracking outputs.
+
+    Parameters
+    ----------
+    labels : array-like of int
+        All nonzero object labels.
+    centers : dict
+        centers[label][t] -> (y, x) or similar. Used only to infer lifetimes.
+    events : list of dict
+        Each event dict must have keys:
+        - 'type' in {'merge','split'}
+        - 'time' (int)
+        - 'from_label' (int)
+        - 'to_label' (int)
+        - 'distance' (float)
+    uf : UnionFind
+        Must implement uf.find(label) and have uf.parent mapping.
+    histories : dict[int, set[int]]
+        Root -> set of labels connected by merges/splits.
+
+    Returns
+    -------
+    object_data : dict[int, dict]
+        object_data[label] is the record for that object label.
+    """
+    labels = [int(l) for l in labels]
+
+    # lifetimes from centers
+    label_times = {}
+    for lab in labels:
+        ts = sorted(centers.get(lab, {}).keys())
+        label_times[lab] = (int(ts[0]), int(ts[-1])) if ts else (None, None)
+
+    # interactions per label
+    interactions = defaultdict(list)
+    for e in events:
+        t = int(e["time"])
+        etype = e["type"]
+        a = int(e["from_label"])
+        b = int(e["to_label"])
+        dist = float(e["distance"])
+
+        interactions[a].append({"time": t, "type": etype, "role": "from", "other_label": b, "distance": dist})
+        interactions[b].append({"time": t, "type": etype, "role": "to",   "other_label": a, "distance": dist})
+
+    # union-find group info
+    label_root = {lab: int(uf.find(lab)) for lab in labels}
+    root_members = {int(root): sorted(int(x) for x in members) for root, members in histories.items()}
+
+    # assemble object_data
+    object_data = {}
+    for lab in labels:
+        t0, t1 = label_times[lab]
+        evs = sorted(interactions.get(lab, []), key=lambda d: d["time"])
+        duration = None if (t0 is None or t1 is None) else (t1 - t0 + 1)
+
+        partners = sorted({e["other_label"] for e in evs})
+        n_partners = len(partners)
+
+        root = label_root[lab]
+        object_data[lab] = {
+            "label": lab,
+            "lifetime": {"t_start": t0, "t_end": t1, "duration": duration},
+            "root": root,
+            "group_labels": root_members.get(root, [lab]),
+            "n_interactions": len(evs),
+            "unique_partners": partners,
+            "n_unique_partners": n_partners,
+            "interactions": evs,
+        }
+
+    if save:
+        os.makedirs(out_dir, exist_ok=True)
+
+        # lossless, recommended
+        pkl_name = f"object_history_{object_type}.pkl" if object_type else "object_history.pkl"
+        with open(os.path.join(out_dir, pkl_name), "wb") as f:
+            pickle.dump(object_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # optional human-readable JSON (keys become strings)
+        def _jsonify(x):
+            if isinstance(x, (np.integer,)): return int(x)
+            if isinstance(x, (np.floating,)): return float(x)
+            if isinstance(x, np.ndarray): return x.tolist()
+            return x
+
+        json_name = f"object_history_{object_type}.json" if object_type else "object_history.json"
+        with open(os.path.join(out_dir, json_name), "w") as f:
+            json.dump({str(k): {kk: _jsonify(vv) for kk, vv in v.items()} for k, v in object_data.items()},
+                      f, indent=2)
+
+    return object_data
+
+
+def analyze_watershed_history(watershed_results, min_dist, object_type: str, histplot: bool = False):
     """
     Analyze the history of watershed objects over time.
     The output is a union of all objects which merged or split over time, 
@@ -232,6 +337,8 @@ def analyze_watershed_history(watershed_results, min_dist, object_type: str):
         Minimum distance threshold to consider two objects as related (for merges/splits).
     object_type : str
         Type of object being analyzed (e.g., "mcs", "cloud").
+    histplot : bolean
+        Switch to turn on plotting of object history
     
     Returns
     -------
@@ -272,7 +379,10 @@ def analyze_watershed_history(watershed_results, min_dist, object_type: str):
         # check for split genesis
         center_start = np.array(centers[label][t_start])
         if t_start > 0:
-            center_next = np.array(centers[label][t_start + 1])
+            try:
+                center_next = np.array(centers[label][t_start + 1])
+            except:
+                center_next = np.array(centers[label][t_start])
 
             # previous center prediction, c_-1 = c_0 - v * dt, v = (c_1 - c_0) / dt
             # hence, c_-1 = 2 * c_0 - c_1
@@ -297,7 +407,10 @@ def analyze_watershed_history(watershed_results, min_dist, object_type: str):
                 })
 
         if t_end < T - 1:
-            center_prev = np.array(centers[label][t_end - 1])
+            try:
+                center_prev = np.array(centers[label][t_end - 1])
+            except:
+                center_prev = np.array(centers[label][t_end])
             center_end = np.array(centers[label][t_end])
 
             # next center prediction, c_+1 = c_0 + v * dt, v = (c_0 - c_-1) / dt
@@ -330,114 +443,119 @@ def analyze_watershed_history(watershed_results, min_dist, object_type: str):
 
     union_array = uf.parent
 
-    # Plot the history
-    # Collect all unique labels and their lifetimes
-    all_labels = set()
-    for root, labels in histories.items():
-        all_labels.update(labels)
-    label_times = {}
-    for label in all_labels:
-        if label in centers:
-            times = sorted(centers[label].keys())
-            label_times[label] = (min(times), max(times))
+    # get object histories into a directory
+    history_data = build_object_history_dict(labels, centers, events, uf, histories, object_type=object_type, save=True)
 
-    # Filter to only labels involved in events (merges or splits)
-    event_labels = set()
-    for event in events:
-        event_labels.add(event['from_label'])
-        event_labels.add(event['to_label'])
-    filtered_labels = [label for label in all_labels if label in event_labels]
-    filtered_label_times = {label: label_times[label] for label in filtered_labels if label in label_times}
-
-    # Group filtered_labels by their history root and sort within groups and between groups
-    label_to_root = {}
-    for root, labels in histories.items():
-        for label in labels:
-            if label in filtered_labels:
-                label_to_root[label] = root
+    if histplot is True:
+        # Plot the history
+        # Collect all unique labels and their lifetimes
+        all_labels = set()
+        for root, labels in histories.items():
+            all_labels.update(labels)
+        label_times = {}
+        for label in all_labels:
+            if label in centers:
+                times = sorted(centers[label].keys())
+                label_times[label] = (min(times), max(times))
     
-    # Group labels by root
-    root_groups = {}
-    for label in filtered_labels:
-        root = label_to_root[label]
-        if root not in root_groups:
-            root_groups[root] = []
-        root_groups[root].append(label)
+        # Filter to only labels involved in events (merges or splits)
+        event_labels = set()
+        for event in events:
+            event_labels.add(event['from_label'])
+            event_labels.add(event['to_label'])
+        filtered_labels = [label for label in all_labels if label in event_labels]
+        filtered_label_times = {label: label_times[label] for label in filtered_labels if label in label_times}
     
-    # Count events per label
-    event_count = defaultdict(int)
-    for event in events:
-        event_count[event['from_label']] += 1
-        event_count[event['to_label']] += 1
-    
-    # Sort groups by the minimum label in the group
-    sorted_roots = sorted(root_groups.keys(), key=lambda r: min(root_groups[r]))
-    
-    # For each root, arrange labels by event count, with most eventful in the middle
-    ordered_labels = []
-    for root in sorted_roots:
-        labels = root_groups[root]
-        # Sort by event count descending
-        sorted_labels = sorted(labels, key=lambda l: event_count[l], reverse=True)
-        # Arrange to place highest event count in middle
-        left = deque()
-        right = deque()
-        for label in sorted_labels:
-            if len(right) <= len(left):
-                right.append(label)
-            else:
-                left.appendleft(label)
-        ordered_group = list(left) + list(right)
-        ordered_labels.extend(ordered_group)
-
-    # Plot setup (only for filtered labels, ordered)
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Limit to first 50 entries to keep plot readable
-    if len(ordered_labels) > 40:
-        ordered_labels = ordered_labels[:40]
-
-    y_positions = {label: i for i, label in enumerate(ordered_labels)}
-    ax.set_yticks(list(y_positions.values()))
-    ax.set_yticklabels(list(y_positions.keys()), fontsize=12)
-    ax.set_xlabel('Time Step', fontsize=14)
-    ax.set_title('Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)', fontsize=16)
-
-    ax.tick_params(axis='x', labelsize=14)   # increase x-axis tick fontsize
-
-    # Plot label lifetimes as horizontal lines (only for filtered labels)
-    for label, (t_start, t_end) in filtered_label_times.items():
-        if label in y_positions:
-            y = y_positions[label]
-            ax.plot([t_start, t_end], [y, y], 'b-', linewidth=2)
-
-    # Plot events (only for filtered labels)
-    for event in events:
-        t = event['time']
-        from_label = event['from_label']
-        to_label = event['to_label']
-        dist = event['distance']
-        event_type = event['type']
+        # Group filtered_labels by their history root and sort within groups and between groups
+        label_to_root = {}
+        for root, labels in histories.items():
+            for label in labels:
+                if label in filtered_labels:
+                    label_to_root[label] = root
         
-        # Only plot if both labels are in the filtered set
-        if from_label in y_positions and to_label in y_positions:
-            y_from = y_positions[from_label]
-            y_to = y_positions[to_label]
-            color = 'red' if event_type == 'merge' else 'green'
-            ax.plot([t, t], [y_from, y_to], color=color, linestyle='--', linewidth=1)
-            ax.scatter([t, t], [y_from, y_to], color=color, s=50)
-
-    # Create proper legend with correct colors
-    lifetime_patch = mpatches.Patch(color='blue', label='Lifetime')
-    merge_patch = mpatches.Patch(color='red', label='Merge')
-    split_patch = mpatches.Patch(color='green', label='Split')
-    ax.legend(handles=[lifetime_patch, merge_patch, split_patch], loc='upper left', fontsize=14)
-
-    # save the plot in a pdf
-    plt.tight_layout()
-    os.makedirs('outputs', exist_ok=True)
-    plt.savefig('outputs/watershed_history_' + object_type + '.pdf')
-    return union_array, events, histories
+        # Group labels by root
+        root_groups = {}
+        for label in filtered_labels:
+            root = label_to_root[label]
+            if root not in root_groups:
+                root_groups[root] = []
+            root_groups[root].append(label)
+        
+        # Count events per label
+        event_count = defaultdict(int)
+        for event in events:
+            event_count[event['from_label']] += 1
+            event_count[event['to_label']] += 1
+        
+        # Sort groups by the minimum label in the group
+        sorted_roots = sorted(root_groups.keys(), key=lambda r: min(root_groups[r]))
+        
+        # For each root, arrange labels by event count, with most eventful in the middle
+        ordered_labels = []
+        for root in sorted_roots:
+            labels = root_groups[root]
+            # Sort by event count descending
+            sorted_labels = sorted(labels, key=lambda l: event_count[l], reverse=True)
+            # Arrange to place highest event count in middle
+            left = deque()
+            right = deque()
+            for label in sorted_labels:
+                if len(right) <= len(left):
+                    right.append(label)
+                else:
+                    left.appendleft(label)
+            ordered_group = list(left) + list(right)
+            ordered_labels.extend(ordered_group)
+    
+        # Plot setup (only for filtered labels, ordered)
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Limit to first 50 entries to keep plot readable
+        if len(ordered_labels) > 40:
+            ordered_labels = ordered_labels[:40]
+    
+        y_positions = {label: i for i, label in enumerate(ordered_labels)}
+        ax.set_yticks(list(y_positions.values()))
+        ax.set_yticklabels(list(y_positions.keys()), fontsize=12)
+        ax.set_xlabel('Time Step', fontsize=14)
+        ax.set_title('Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)', fontsize=16)
+    
+        ax.tick_params(axis='x', labelsize=14)   # increase x-axis tick fontsize
+    
+        # Plot label lifetimes as horizontal lines (only for filtered labels)
+        for label, (t_start, t_end) in filtered_label_times.items():
+            if label in y_positions:
+                y = y_positions[label]
+                ax.plot([t_start, t_end], [y, y], 'b-', linewidth=2)
+    
+        # Plot events (only for filtered labels)
+        for event in events:
+            t = event['time']
+            from_label = event['from_label']
+            to_label = event['to_label']
+            dist = event['distance']
+            event_type = event['type']
+            
+            # Only plot if both labels are in the filtered set
+            if from_label in y_positions and to_label in y_positions:
+                y_from = y_positions[from_label]
+                y_to = y_positions[to_label]
+                color = 'red' if event_type == 'merge' else 'green'
+                ax.plot([t, t], [y_from, y_to], color=color, linestyle='--', linewidth=1)
+                ax.scatter([t, t], [y_from, y_to], color=color, s=50)
+    
+        # Create proper legend with correct colors
+        lifetime_patch = mpatches.Patch(color='blue', label='Lifetime')
+        merge_patch = mpatches.Patch(color='red', label='Merge')
+        split_patch = mpatches.Patch(color='green', label='Split')
+        ax.legend(handles=[lifetime_patch, merge_patch, split_patch], loc='upper left', fontsize=14)
+    
+        # save the plot in a pdf
+        plt.tight_layout()
+        os.makedirs('outputs', exist_ok=True)
+        plt.savefig('outputs/watershed_history_' + object_type + '.pdf')
+    
+    return union_array, events, histories, history_data
     
 
 
@@ -600,8 +718,12 @@ def watershed_3d_overlap(
         data = np.concatenate(
                 [data[:, :, -extension_size:], data, data[:, :, :extension_size]], axis=axis
             )
+        if np.ndim(object_threshold) >= 2:
+            object_threshold = np.concatenate(
+                [object_threshold[:, :, -extension_size:], object_threshold, object_threshold[:, :, :extension_size]], axis=axis
+            )
     
-    # Create binary mask for watershedding, all data that needs to be segmented is True
+    # Create a binary mask for watershedding, all data that needs to be segmented is True
     image = data >= object_threshold
     
     coords_list = []

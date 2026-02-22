@@ -142,10 +142,22 @@ def track_tropwaves_tb(tb,
         if analyze_twave_history:
             min_dist=int((1000 * 10**3)/Gridspacing)
             print(f"    Minimum distance between {wave_names[wa]} maxima for watershed analysis: {min_dist} grid cells")
-            union_array, events, histories = analyze_watershed_history(
+            union_array, events, histories, history_obj = analyze_watershed_history(
                 wave_objects, min_dist, wave_names[wa].lower()
             )
 
+            if wa == 0:
+                er_history = history_obj.copy()
+            if wa == 1:
+                mrg_history = history_obj.copy()
+            if wa == 2:
+                igw_history = history_obj.copy()
+            if wa == 3:
+                kelvin_history = history_obj.copy()
+            if wa == 4:
+                eig0_history = history_obj.copy()
+
+            """
             union_array_clean = {int(k): int(v) for k, v in union_array.items()}
             events_clean = [
             {
@@ -162,12 +174,20 @@ def track_tropwaves_tb(tb,
             print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
             print(f"    Printing events: {events_clean}")
             print(f"    Printing histories: {dict(list(histories_clean.items()))}")
+            """
+        else:
+            er_history = None
+            mrg_history = None
+            igw_history = None
+            kelvin_history = None
+            eig0_history = None
 
 
         del wave
         del wave_objects
         gc.collect()
-    return mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects
+    return mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects, \
+           mrg_history, igw_history, kelvin_history, eig0_history, er_history
 
 class KFfilter:
     """class for wavenumber-frequency filtering for WK99 and WKH00"""

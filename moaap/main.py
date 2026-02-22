@@ -10,7 +10,8 @@ from .trackers import (
     frontal_identification,
     jetstream_tracking,
     tc_tracking,
-    track_tropwaves_tb)
+    track_tropwaves_tb,
+    sst_anom_tracking)
 from moaap.utils.object_props import calc_object_characteristics
 from moaap.utils.profiling import timer
 from moaap.config import MOAAP_DEFAULTS
@@ -225,7 +226,7 @@ def moaap(
     required_keys = [
         "v850",  "u850",  "t850",  "q850",  "slp",
         "ivte",  "ivtn",  "z500",  "v200",  "u200",
-        "pr",    "tb"
+        "pr",    "tb" , "sst"
     ]
 
     for key in required_keys:
@@ -247,7 +248,8 @@ def moaap(
     u200 = params["u200"]                   # 200 hPa meridional wind speed [m/s]
     pr   = params["pr"]                     # accumulated surface precipitation [mm/time]
     tb   = params["tb"]                     # brightness temperature [K]
-        
+    sst  = params["sst"]                    # sea surface temperature [K]
+
 
     # calculate grid spacing assuming a regular lat/lon grid
     _,_,Area,Gridspacing = calc_grid_distance_area(Lon,Lat)
@@ -326,6 +328,10 @@ def moaap(
         ew_test = 'yes'
     else:
         ew_test = 'no'
+    if (sst is not None):
+        sst_test = 'yes'
+    else:
+        sst_test = 'no'
 
     """
     jet_test =  'no'
@@ -339,6 +345,7 @@ def moaap(
     mcs_tb_test =  'no'
     cloud_test =  'no'
     ew_test =  'no'
+    sst_test = 'no'
     """
     
     print(' ')
@@ -357,6 +364,7 @@ def moaap(
     print('   MCSs        |   ' + mcs_tb_test)
     print('   clouds      |   ' + cloud_test)
     print('   Equ. Waves  |   ' + ew_test)
+    print('   SST_ANOM    |   ' + sst_test)
     print('---------------------------')
     print(' ')
 
@@ -418,7 +426,7 @@ def moaap(
         start = time.perf_counter()
         uv200 = (u200 ** 2 + v200 ** 2) ** 0.5
 
-        jet_objects, object_split = jetstream_tracking(uv200,
+        jet_objects, _, jet_history = jetstream_tracking(uv200,
                                       params["js_min_anomaly"],
                                       params["MinTimeJS"],
                                       dT,
@@ -436,7 +444,7 @@ def moaap(
                                      Gridspacing,
                                      Area,
                                      min_tsteps=int(params["MinTimeJS"]/dT),
-                                     split_merge = object_split)
+                                     history = jet_history)
         
         end = time.perf_counter()
         timer(start, end)
@@ -444,7 +452,8 @@ def moaap(
     if ew_test == 'yes':
         print('======> track tropical waves')
         start = time.perf_counter()
-        mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects = track_tropwaves_tb(
+        mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects, \
+        mrg_history, igw_history, kelvin_history, eig0_history, er_history= track_tropwaves_tb(
                         tb,
                         Lat,
                         connectLon,
@@ -469,7 +478,8 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(params["tropwave_minTime"]/dT))      # minimum livetime in hours
+                                 min_tsteps=int(params["tropwave_minTime"]/dT),      # minimum livetime in hours
+                                 history = mrg_history)
         
         gr_igw = calc_object_characteristics(igw_objects, # feature object file
                                  pr,         # original file used for feature detection
@@ -479,7 +489,8 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(48/dT))      # minimum livetime in hours
+                                 min_tsteps=int(48/dT),      # minimum livetime in hours
+                                 history = igw_history)
         
         gr_kelvin = calc_object_characteristics(kelvin_objects, # feature object file
                                  pr,         # original file used for feature detection
@@ -489,7 +500,8 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(48/dT))      # minimum livetime in hours
+                                 min_tsteps=int(48/dT),      # minimum livetime in hours
+                                 history = kelvin_history)
         
         gr_eig0 = calc_object_characteristics(eig0_objects, # feature object file
                                  pr,         # original file used for feature detection
@@ -499,7 +511,8 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(48/dT))      # minimum livetime in hours
+                                 min_tsteps=int(48/dT),      # minimum livetime in hours
+                                 history = eig0_history)
         
         gr_er = calc_object_characteristics(er_objects, # feature object file
                                  pr,         # original file used for feature detection
@@ -509,16 +522,16 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(48/dT))      # minimum livetime in hours
-        
-        
+                                 min_tsteps=int(48/dT),      # minimum livetime in hours
+                                 history = er_history)
+
     if ms_test == 'yes':
         print('======> track moisture streams and atmospheric rivers (ARs)')
         start = time.perf_counter()
         VapTrans = ((u850 * q850)**2 + 
                     (v850 * q850)**2)**(1/2)
 
-        MS_objects = ar_850hpa_tracking(
+        MS_objects, ms_history = ar_850hpa_tracking(
                                         VapTrans,
                                         params["MinMSthreshold"],
                                         params["MinTimeMS"],
@@ -539,18 +552,18 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(params["MinTimeMS"]/dT))      # minimum livetime in hours
+                                 min_tsteps=int(params["MinTimeMS"]/dT),      # minimum livetime in hours
+                                 history = ms_history)
         
         end = time.perf_counter()
         timer(start, end)
-        
     
     if ar_test == 'yes':
         print('======> track IVT streams and atmospheric rivers (ARs)')
         start = time.perf_counter()
         IVT = (ivte ** 2 + ivtn ** 2) ** 0.5
 
-        IVT_objects = ar_ivt_tracking(IVT,
+        IVT_objects, ivt_history = ar_ivt_tracking(IVT,
                                     params["IVTtrheshold"],
                                     params["MinTimeIVT"],
                                     dT,
@@ -567,8 +580,9 @@ def moaap(
                                      Lon,             # 2D Longitudes
                                      Gridspacing,
                                      Area,
-                                     min_tsteps=int(params["MinTimeIVT"]/dT))      # minimum livetime in hours
-        
+                                     min_tsteps=int(params["MinTimeIVT"]/dT),      # minimum livetime in hours
+                                     history = ivt_history)
+
         print('        check if MSs quallify as ARs')
         AR_obj = ar_check(IVT_objects,
                          params["AR_Lat"],
@@ -576,15 +590,18 @@ def moaap(
                          params["AR_MinLen"],
                          Lon,
                          Lat)
-    
-        grACs = calc_object_characteristics(AR_obj, # feature object file
+
+        ar_keys = np.flatnonzero(np.bincount(AR_obj.ravel()))[1:]
+        ar_history = {k: ivt_history[k] for k in ar_keys}
+        grARs = calc_object_characteristics(AR_obj, # feature object file
                          IVT,         # original file used for feature detection
                          params["OutputFolder"]+'ARs_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
                          Time,            # timesteps of the data
                          Lat,             # 2D latidudes
                          Lon,             # 2D Longitudes
                          Gridspacing,
-                         Area)
+                         Area,
+                         history = ar_history)
         
         end = time.perf_counter()
         timer(start, end)
@@ -629,7 +646,7 @@ def moaap(
         print('======> track cyclones from PSL')
         start = time.perf_counter()
         
-        CY_objects, ACY_objects= cy_acy_psl_tracking(
+        CY_objects, ACY_objects, cy_history, acy_history = cy_acy_psl_tracking(
                                                     slp,
                                                     params["MaxPresAnCY"],
                                                     params["MinTimeCY"],
@@ -650,7 +667,8 @@ def moaap(
                                          Lon,             # 2D Longitudes
                                          Gridspacing,
                                          Area,
-                                         min_tsteps=int(params["MinTimeCY"]/dT)) 
+                                         min_tsteps=int(params["MinTimeCY"]/dT),
+                                         history = cy_history)
 
         grACyclonesPT = calc_object_characteristics(ACY_objects, # feature object file
                                          slp,         # original file used for feature detection
@@ -660,7 +678,8 @@ def moaap(
                                          Lon,             # 2D Longitudes
                                          Gridspacing,
                                          Area,
-                                         min_tsteps=int(params["MinTimeCY"]/dT)) 
+                                         min_tsteps=int(params["MinTimeCY"]/dT),
+                                         history = acy_history)
 
         end = time.perf_counter()
         timer(start, end)
@@ -668,7 +687,7 @@ def moaap(
     if z500_test == 'yes':
         print('======> track cyclones from Z500')
         start = time.perf_counter()
-        cy_z500_objects, acy_z500_objects = cy_acy_z500_tracking(
+        cy_z500_objects, acy_z500_objects, cy_z500_history, acy_z500_history = cy_acy_z500_tracking(
                                             z500,
                                             params["MinTimeCY"],
                                             dT,
@@ -688,7 +707,8 @@ def moaap(
                                      Lon,             # 2D Longitudes
                                      Gridspacing,
                                      Area,
-                                     min_tsteps=int(params["MinTimeCY"]/dT))
+                                     min_tsteps=int(params["MinTimeCY"]/dT),
+                                     history = cy_z500_history)
         
         acy_z500_objects_characteristics = calc_object_characteristics(acy_z500_objects, # feature object file
                                  z500,         # original file used for feature detection
@@ -698,7 +718,8 @@ def moaap(
                                  Lon,             # 2D Longitudes
                                  Gridspacing,
                                  Area,
-                                 min_tsteps=int(params["MinTimeCY"]/dT)) 
+                                 min_tsteps=int(params["MinTimeCY"]/dT),
+                                 history = acy_z500_history)
         
         if col_test == 'yes':
             print('    Check if cyclones qualify as Cut Off Low (COL)')
@@ -729,7 +750,7 @@ def moaap(
     if mcs_tb_test == 'yes':
         print("======> 'check if Tb objects qualify as MCS (or selected storm type)")
         start = time.perf_counter()
-        MCS_objects_Tb, C_objects = mcs_tb_tracking(tb,
+        MCS_objects_Tb, C_objects, history_MCS = mcs_tb_tracking(tb,
                             pr,
                             params["SmoothSigmaC"],
                             params["Pthreshold"],
@@ -767,7 +788,8 @@ def moaap(
             Lat,             # 2D latidudes
             Lon,             # 2D Longitudes
             Gridspacing,
-            Area)
+            Area,
+            history = history_MCS)
         
         end = time.perf_counter()
         timer(start, end)
@@ -779,7 +801,7 @@ def moaap(
         tb_no_mcs = tb.copy()
         tb_no_mcs[MCS_objects_Tb > 0] = 330 # remove MCSs from cloud field
         
-        cloud_objects = cloud_tracking(
+        cloud_objects, history_clouds = cloud_tracking(
                         tb_no_mcs,
                         pr,
                         connectLon,
@@ -800,7 +822,8 @@ def moaap(
             Lat,             # 2D latidudes
             Lon,             # 2D Longitudes
             Gridspacing,
-            Area)
+            Area,
+            history = history_clouds)
         
         end = time.perf_counter()
         timer(start, end)
@@ -853,8 +876,69 @@ def moaap(
         
         end = time.perf_counter()
         timer(start, end)  
-        
+
+
     
+    SST_ANOM_objects = None
+    SST_GRAD_objects = None
+    
+    if sst_test == 'yes':
+        print('======> track SST anomalies and gradients')
+        start = time.perf_counter()        
+        
+        # Build ocean mask
+        import cartopy.io.shapereader as shpreader
+        from shapely.ops import unary_union
+        import shapely
+        land_shp = shpreader.natural_earth(resolution="110m", category="physical", name="land")
+        land_geom = unary_union(list(shpreader.Reader(land_shp).geometries()))
+        pts = shapely.points(Lon.ravel(), Lat.ravel())
+        mask_land = shapely.contains(land_geom, pts).reshape(Lat.shape)
+        tskin_ocean = sst.astype(float).copy()
+        tskin_ocean[:, mask_land] = np.nan
+        # set cells that are below freezing to zero to remove areas with sea ice
+        tskin_ocean[tskin_ocean < 271.5] = np.nan
+
+        SST_ANOM_objects_warm, SST_ANOM_objects_cold, ssta, sst_bg, sst_hist_warm, sst_hist_cold = sst_anom_tracking(
+            sst=tskin_ocean,
+            dT=dT,
+            Area=Area,
+            Gridspacing=Gridspacing,
+            connectLon=connectLon,
+            lat = Lat,
+            SST_BG_temporal_h=params["SST_BG_temporal_h"],
+            SST_BG_spatial_km=params["SST_BG_spatial_km"],
+            SST_ANOM_abs_floor_K=params["SST_ANOM_abs_floor_K"],
+            SST_ANOM_min_dist_km=params["SST_ANOM_min_dist_km"],
+            MinTimeSST_ANOM=params["MinTimeSST_ANOM"],
+            MinAreaSST_ANOM=params["MinAreaSST_ANOM"],
+            breakup=params["breakup_sst_anom"],
+            analyze_sst_anom_history=params["analyze_sst_anom_history"],
+        )
+
+        warm_sst_objects_characteristics = calc_object_characteristics(SST_ANOM_objects_warm, # feature object file
+                                     sst,             # original file used for feature detection
+                                     params["OutputFolder"]+'warm-sst_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     Time,            # timesteps of the data
+                                     Lat,             # 2D latidudes
+                                     Lon,             # 2D Longitudes
+                                     Gridspacing,
+                                     Area,
+                                     min_tsteps=int(params["MinTimeSST_ANOM"]/dT),
+                                     history = sst_hist_warm)
+
+        cold_sst_objects_characteristics = calc_object_characteristics(SST_ANOM_objects_cold, # feature object file
+                                     sst,             # original file used for feature detection
+                                     params["OutputFolder"]+'cold-sst_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     Time,            # timesteps of the data
+                                     Lat,             # 2D latidudes
+                                     Lon,             # 2D Longitudes
+                                     Gridspacing,
+                                     Area,
+                                     min_tsteps=int(params["MinTimeSST_ANOM"]/dT),
+                                     history = sst_hist_cold)
+        end = time.perf_counter()
+        timer(start, end)
 
 
     print(' ')
@@ -913,6 +997,11 @@ def moaap(
         KELVIN = dataset.createVariable('Kelvin_Objects', np.float32,('time','yc','xc'),zlib=True)
         EIG = dataset.createVariable('EIG0_Objects', np.float32,('time','yc','xc'),zlib=True)
         ER = dataset.createVariable('ER_Objects', np.float32,('time','yc','xc'),zlib=True)
+    if sst_test == 'yes':
+        SST_ANOM_warm = dataset.createVariable('warm_SST_Objects', np.float32,('time','yc','xc'),zlib=True)
+        SST_ANOM_cold = dataset.createVariable('cold_SST_Objects', np.float32,('time','yc','xc'),zlib=True)
+        SST = dataset.createVariable('SST', np.float32,('time','yc','xc'),zlib=True)
+        
         
 
     times.calendar = "standard"
@@ -1048,6 +1137,18 @@ def moaap(
         ER.coordinates = "lon lat"
         ER.longname = "Equatorial Rossby wave objects"
         ER.unit = ""
+    if sst_test == 'yes':
+        SST_ANOM_warm.coordinates = "lon lat"
+        SST_ANOM_warm.longname = "warm SST anomaly objects"
+        SST_ANOM_warm.unit = ""
+
+        SST_ANOM_cold.coordinates = "lon lat"
+        SST_ANOM_cold.longname = "warm SST anomaly objects"
+        SST_ANOM_cold.unit = ""
+        
+        SST.coordinates = "lon lat"
+        SST.longname = "sea surface temperature"
+        SST.unit = "K"
 
     lat[:] = Lat
     lon[:] = Lon
@@ -1092,11 +1193,14 @@ def moaap(
         KELVIN[:] = kelvin_objects
         EIG[:] = eig0_objects
         ER[:] = er_objects
-                
+    if sst_test == 'yes':
+        SST_ANOM_warm[:] = SST_ANOM_objects_warm
+        SST_ANOM_cold[:] = SST_ANOM_objects_cold
+        SST[:] = sst
+        
     times[:] = iTime
     
     # SET GLOBAL ATTRIBUTES
-    # Add global attributes
     dataset.title = "MOAAP object tracking output"
     dataset.contact = "Andreas F. Prein (prein@ucar.edu)"
     # dataset.breakup = 'The ' + breakup + " method has been used to segment the objects"

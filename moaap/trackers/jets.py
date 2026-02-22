@@ -77,10 +77,10 @@ def jetstream_tracking(
     if analyze_jet_history:
         min_dist=int(3000*10**3/Gridspacing)
         print(f"    Minimum distance between js minima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, jet_history = analyze_watershed_history(
             jet_objects, min_dist, "jet"
         )
-
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -97,5 +97,8 @@ def jetstream_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-
-    return jet_objects, object_split
+        """
+    else:
+        jet_history = None
+        
+    return jet_objects, object_split, jet_history

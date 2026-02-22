@@ -7,6 +7,7 @@ from moaap.utils.segmentation import (
 from moaap.utils.data_proc import smooth_uniform
 from moaap.utils.object_props import clean_up_objects, BreakupObjects, is_land
 from tqdm import tqdm
+from pdb import set_trace as stop
 
 
 #from memory_profiler import profile
@@ -177,14 +178,15 @@ def mcs_tb_tracking(
                                            dT,
                                            min_tsteps=int(MCS_minTime/dT))
 
-    # analyze MCS history with watershed method
+    # analyze MCS history with the watershed method
     if analyze_mcs_history:
         min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
         print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, history_MCSs = analyze_watershed_history(
             MCS_objects_Tb, min_dist, "mcs"
         )
-
+        
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -201,8 +203,17 @@ def mcs_tb_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-    
-    return MCS_objects_Tb, C_objects
+        
+
+        union_array, events, histories, history_clouds = analyze_watershed_history(
+            C_objects, min_dist, "mcs"
+        )
+        """
+        
+    else:
+        history_MCSs = None
+        
+    return MCS_objects_Tb, C_objects, history_MCSs
 
 
 
@@ -281,10 +292,10 @@ def cloud_tracking(
     if analyze_cloud_history:
         min_dist=8
         print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, history_clouds = analyze_watershed_history(
             cloud_objects, min_dist, "cloud"
         )
-
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -301,6 +312,9 @@ def cloud_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
+        """
+    else:
+        history_clouds = None
 
-    return cloud_objects
+    return cloud_objects, history_clouds
 

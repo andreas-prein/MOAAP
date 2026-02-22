@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import ndimage
+from pdb import set_trace as stop
 from moaap.utils.data_proc import smooth_uniform 
 from moaap.utils.grid import DistanceCoord
 from moaap.utils.segmentation import watershed_3d_overlap_parallel, analyze_watershed_history
@@ -78,10 +79,10 @@ def ar_850hpa_tracking(
     if analyze_ms_history:
         min_dist=int((4000 * 10**3)/Gridspacing)
         print(f"    Minimum distance between VapTrans maxima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, history_ms = analyze_watershed_history(
             MS_objects, min_dist, "ms"
         )
-
+        """"
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -98,8 +99,10 @@ def ar_850hpa_tracking(
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-    
-    return MS_objects
+        """
+    else:
+        history_ms = None
+    return MS_objects, history_ms
 
 
 
@@ -169,10 +172,10 @@ def ar_ivt_tracking(IVT,
     if analyze_ivt_history:
         min_dist=int((4000 * 10**3)/Gridspacing)
         print(f"    Minimum distance between IVT maxima for watershed analysis: {min_dist} grid cells")
-        union_array, events, histories = analyze_watershed_history(
+        union_array, events, histories, history_ar = analyze_watershed_history(
             IVT_objects, min_dist, "ivt"
         )
-
+        """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
         events_clean = [
         {
@@ -189,7 +192,11 @@ def ar_ivt_tracking(IVT,
         print(f"    Printing union array: {dict(list(union_array_clean.items()))}")
         print(f"    Printing events: {events_clean}")
         print(f"    Printing histories: {dict(list(histories_clean.items()))}")
-    return IVT_objects
+        """
+    else:
+        history_ar = None
+
+    return IVT_objects, history_ar
   
 
 def ar_check(objects_mask,
@@ -223,9 +230,10 @@ def ar_check(objects_mask,
 
     start = time.perf_counter()
     AR_obj = np.copy(objects_mask); AR_obj[:] = 0.
+    ivt_keys = np.flatnonzero(np.bincount(objects_mask.ravel()))[1:]
     Objects=ndimage.find_objects(objects_mask.astype(int))
 
-    aa=1
+    aa=0
     for ii in range(len(Objects)):
         if Objects[ii] == None:
             continue
@@ -264,14 +272,14 @@ def ar_check(objects_mask,
                 LatCent = LatObj[rgiCenter[0],rgiCenter[1]]
                 if np.abs(LatCent) < AR_Lat:
                     ObjACT[tt,:,:] = 0
-            # check width to lenght ratio
+            # check width to length ratio
             if DIST.max()/DIST.min() < AR_width_lenght_ratio:
                 ObjACT[tt,:,:] = 0
 
         if LonObj.max()-LonObj.min() > 359:
             ObjACT = np.roll(ObjACT, -int(ObjACT.shape[2]/2), axis=2)
         ObjACT = ObjACT.astype(int)
-        ObjACT[ObjACT!=0] = aa
+        ObjACT[ObjACT!=0] = ivt_keys[aa]
         ObjACT = ObjACT + AR_obj[Objects[ii]]
         AR_obj[Objects[ii]] = ObjACT
         aa=aa+1

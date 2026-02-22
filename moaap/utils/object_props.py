@@ -16,7 +16,7 @@ def calc_object_characteristics(
     grid_spacing, # average grid spacing
     grid_cell_area,
     min_tsteps=1,       # minimum lifetime in data timesteps
-    split_merge = None  # dict containing information of splitting and merging of objects
+    history = None  # dict containing information of splitting and merging of objects
     ):
     """
     Calculates comprehensive statistics for tracked objects, including size, 
@@ -40,8 +40,8 @@ def calc_object_characteristics(
         Area of grid cells.
     min_tsteps : int, optional
         Minimum timesteps an object must exist to be processed.
-    split_merge : dict, optional
-        Dictionary containing lineage info (split/merge history).
+    history : dict, optional
+        Dictionary containing object history information from a previous call of analyze_watershed_history.
 
     Returns
     -------
@@ -123,9 +123,12 @@ def calc_object_characteristics(
                     "times": obj_times,
                     "track": obj_track,
                 }
+                if history is not None:
+                    # add the history of this object
+                    this_object_charac["history"] = history[iobj + 1]
 
                 try:
-                    objects_charac[str(iobj + 1)] = this_object_charac
+                    objects_charac[iobj + 1] = this_object_charac
                 except:
                     raise ValueError ("Error asigning properties to final dictionary")
 
