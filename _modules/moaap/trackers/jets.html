@@ -152,28 +152,31 @@
     <span class="k">if</span> <span class="n">analyze_jet_history</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">3000</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between js minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
-        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">jet_history</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
             <span class="n">jet_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;jet&quot;</span>
         <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        union_array_clean = {int(k): int(v) for k, v in union_array.items()}</span>
+<span class="sd">        events_clean = [</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;type&#39;: e[&#39;type&#39;],</span>
+<span class="sd">            &#39;time&#39;: int(e[&#39;time&#39;]),</span>
+<span class="sd">            &#39;from_label&#39;: int(e[&#39;from_label&#39;]),</span>
+<span class="sd">            &#39;to_label&#39;: int(e[&#39;to_label&#39;]),</span>
+<span class="sd">            &#39;distance&#39;: float(e[&#39;distance&#39;])</span>
+<span class="sd">        }</span>
+<span class="sd">        for e in events</span>
+<span class="sd">        ]</span>
+<span class="sd">        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}</span>
 
-        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
-            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
-        <span class="p">}</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
-        <span class="p">]</span>
-        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">jet_objects</span><span class="p">,</span> <span class="n">object_split</span></div>
+<span class="sd">        print(f&quot;    Printing union array: {dict(list(union_array_clean.items()))}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing events: {events_clean}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing histories: {dict(list(histories_clean.items()))}&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">jet_history</span> <span class="o">=</span> <span class="kc">None</span>
+        
+    <span class="k">return</span> <span class="n">jet_objects</span><span class="p">,</span> <span class="n">object_split</span><span class="p">,</span> <span class="n">jet_history</span></div>
 
 </pre></div>
 

@@ -88,6 +88,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mp</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">shared_memory</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">cKDTree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">ConnectLon_on_timestep</span>
 
 
@@ -302,9 +303,116 @@
 
     <span class="k">return</span> <span class="n">nearest_label</span><span class="p">,</span> <span class="n">min_distance</span>
 
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<div class="viewcode-block" id="build_object_history_dict">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.segmentation.build_object_history_dict">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_object_history_dict</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">uf</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">object_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;outputs&quot;</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build per-object history records (lifetime + interactions) from watershed tracking outputs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    labels : array-like of int</span>
+<span class="sd">        All nonzero object labels.</span>
+<span class="sd">    centers : dict</span>
+<span class="sd">        centers[label][t] -&gt; (y, x) or similar. Used only to infer lifetimes.</span>
+<span class="sd">    events : list of dict</span>
+<span class="sd">        Each event dict must have keys:</span>
+<span class="sd">        - &#39;type&#39; in {&#39;merge&#39;,&#39;split&#39;}</span>
+<span class="sd">        - &#39;time&#39; (int)</span>
+<span class="sd">        - &#39;from_label&#39; (int)</span>
+<span class="sd">        - &#39;to_label&#39; (int)</span>
+<span class="sd">        - &#39;distance&#39; (float)</span>
+<span class="sd">    uf : UnionFind</span>
+<span class="sd">        Must implement uf.find(label) and have uf.parent mapping.</span>
+<span class="sd">    histories : dict[int, set[int]]</span>
+<span class="sd">        Root -&gt; set of labels connected by merges/splits.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    object_data : dict[int, dict]</span>
+<span class="sd">        object_data[label] is the record for that object label.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
+
+    <span class="c1"># lifetimes from centers</span>
+    <span class="n">label_times</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">centers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">lab</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">label_times</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span> <span class="k">if</span> <span class="n">ts</span> <span class="k">else</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># interactions per label</span>
+    <span class="n">interactions</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span>
+        <span class="n">etype</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;from_label&quot;</span><span class="p">])</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;to_label&quot;</span><span class="p">])</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;distance&quot;</span><span class="p">])</span>
+
+        <span class="n">interactions</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">etype</span><span class="p">,</span> <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;from&quot;</span><span class="p">,</span> <span class="s2">&quot;other_label&quot;</span><span class="p">:</span> <span class="n">b</span><span class="p">,</span> <span class="s2">&quot;distance&quot;</span><span class="p">:</span> <span class="n">dist</span><span class="p">})</span>
+        <span class="n">interactions</span><span class="p">[</span><span class="n">b</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">etype</span><span class="p">,</span> <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;to&quot;</span><span class="p">,</span>   <span class="s2">&quot;other_label&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="s2">&quot;distance&quot;</span><span class="p">:</span> <span class="n">dist</span><span class="p">})</span>
+
+    <span class="c1"># union-find group info</span>
+    <span class="n">label_root</span> <span class="o">=</span> <span class="p">{</span><span class="n">lab</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">uf</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">lab</span><span class="p">))</span> <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">}</span>
+    <span class="n">root_members</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">members</span><span class="p">)</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">members</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="c1"># assemble object_data</span>
+    <span class="n">object_data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+        <span class="n">t0</span><span class="p">,</span> <span class="n">t1</span> <span class="o">=</span> <span class="n">label_times</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span>
+        <span class="n">evs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">interactions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">lab</span><span class="p">,</span> <span class="p">[]),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="n">t0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">t1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">t1</span> <span class="o">-</span> <span class="n">t0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">partners</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;other_label&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">evs</span><span class="p">})</span>
+        <span class="n">n_partners</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">partners</span><span class="p">)</span>
+
+        <span class="n">root</span> <span class="o">=</span> <span class="n">label_root</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span>
+        <span class="n">object_data</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">lab</span><span class="p">,</span>
+            <span class="s2">&quot;lifetime&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;t_start&quot;</span><span class="p">:</span> <span class="n">t0</span><span class="p">,</span> <span class="s2">&quot;t_end&quot;</span><span class="p">:</span> <span class="n">t1</span><span class="p">,</span> <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="n">duration</span><span class="p">},</span>
+            <span class="s2">&quot;root&quot;</span><span class="p">:</span> <span class="n">root</span><span class="p">,</span>
+            <span class="s2">&quot;group_labels&quot;</span><span class="p">:</span> <span class="n">root_members</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="p">[</span><span class="n">lab</span><span class="p">]),</span>
+            <span class="s2">&quot;n_interactions&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">evs</span><span class="p">),</span>
+            <span class="s2">&quot;unique_partners&quot;</span><span class="p">:</span> <span class="n">partners</span><span class="p">,</span>
+            <span class="s2">&quot;n_unique_partners&quot;</span><span class="p">:</span> <span class="n">n_partners</span><span class="p">,</span>
+            <span class="s2">&quot;interactions&quot;</span><span class="p">:</span> <span class="n">evs</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">save</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># lossless, recommended</span>
+        <span class="n">pkl_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;object_history_</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2">.pkl&quot;</span> <span class="k">if</span> <span class="n">object_type</span> <span class="k">else</span> <span class="s2">&quot;object_history.pkl&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">pkl_name</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">object_data</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+
+        <span class="c1"># optional human-readable JSON (keys become strings)</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">_jsonify</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">,)):</span> <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">,)):</span> <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span> <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">x</span>
+
+        <span class="n">json_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;object_history_</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2">.json&quot;</span> <span class="k">if</span> <span class="n">object_type</span> <span class="k">else</span> <span class="s2">&quot;object_history.json&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">json_name</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="p">{</span><span class="n">kk</span><span class="p">:</span> <span class="n">_jsonify</span><span class="p">(</span><span class="n">vv</span><span class="p">)</span> <span class="k">for</span> <span class="n">kk</span><span class="p">,</span> <span class="n">vv</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">object_data</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                      <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">object_data</span></div>
+
+
+
 <div class="viewcode-block" id="analyze_watershed_history">
 <a class="viewcode-back" href="../../../modules.html#moaap.utils.segmentation.analyze_watershed_history">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">analyze_watershed_history</span><span class="p">(</span><span class="n">watershed_results</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">analyze_watershed_history</span><span class="p">(</span><span class="n">watershed_results</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">histplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Analyze the history of watershed objects over time.</span>
 <span class="sd">    The output is a union of all objects which merged or split over time, </span>
@@ -322,6 +430,8 @@
 <span class="sd">        Minimum distance threshold to consider two objects as related (for merges/splits).</span>
 <span class="sd">    object_type : str</span>
 <span class="sd">        Type of object being analyzed (e.g., &quot;mcs&quot;, &quot;cloud&quot;).</span>
+<span class="sd">    histplot : bolean</span>
+<span class="sd">        Switch to turn on plotting of object history</span>
 <span class="sd">    </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -362,7 +472,10 @@
         <span class="c1"># check for split genesis</span>
         <span class="n">center_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_start</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">t_start</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">center_next</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">center_next</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">center_next</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_start</span><span class="p">])</span>
 
             <span class="c1"># previous center prediction, c_-1 = c_0 - v * dt, v = (c_1 - c_0) / dt</span>
             <span class="c1"># hence, c_-1 = 2 * c_0 - c_1</span>
@@ -387,7 +500,10 @@
                 <span class="p">})</span>
 
         <span class="k">if</span> <span class="n">t_end</span> <span class="o">&lt;</span> <span class="n">T</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">center_prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">center_prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">center_prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_end</span><span class="p">])</span>
             <span class="n">center_end</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">t_end</span><span class="p">])</span>
 
             <span class="c1"># next center prediction, c_+1 = c_0 + v * dt, v = (c_0 - c_-1) / dt</span>
@@ -420,114 +536,119 @@
 
     <span class="n">union_array</span> <span class="o">=</span> <span class="n">uf</span><span class="o">.</span><span class="n">parent</span>
 
-    <span class="c1"># Plot the history</span>
-    <span class="c1"># Collect all unique labels and their lifetimes</span>
-    <span class="n">all_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">all_labels</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
-    <span class="n">label_times</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">all_labels</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">centers</span><span class="p">:</span>
-            <span class="n">times</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-            <span class="n">label_times</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">times</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">times</span><span class="p">))</span>
+    <span class="c1"># get object histories into a directory</span>
+    <span class="n">history_data</span> <span class="o">=</span> <span class="n">build_object_history_dict</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">uf</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">object_type</span><span class="o">=</span><span class="n">object_type</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="c1"># Filter to only labels involved in events (merges or splits)</span>
-    <span class="n">event_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
-        <span class="n">event_labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">])</span>
-        <span class="n">event_labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">])</span>
-    <span class="n">filtered_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">all_labels</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">event_labels</span><span class="p">]</span>
-    <span class="n">filtered_label_times</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">label_times</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">filtered_labels</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">label_times</span><span class="p">}</span>
-
-    <span class="c1"># Group filtered_labels by their history root and sort within groups and between groups</span>
-    <span class="n">label_to_root</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">filtered_labels</span><span class="p">:</span>
-                <span class="n">label_to_root</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">root</span>
+    <span class="k">if</span> <span class="n">histplot</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># Plot the history</span>
+        <span class="c1"># Collect all unique labels and their lifetimes</span>
+        <span class="n">all_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">all_labels</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">label_times</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">all_labels</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">centers</span><span class="p">:</span>
+                <span class="n">times</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                <span class="n">label_times</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">times</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">times</span><span class="p">))</span>
     
-    <span class="c1"># Group labels by root</span>
-    <span class="n">root_groups</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">filtered_labels</span><span class="p">:</span>
-        <span class="n">root</span> <span class="o">=</span> <span class="n">label_to_root</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">root_groups</span><span class="p">:</span>
-            <span class="n">root_groups</span><span class="p">[</span><span class="n">root</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">root_groups</span><span class="p">[</span><span class="n">root</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="c1"># Filter to only labels involved in events (merges or splits)</span>
+        <span class="n">event_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+            <span class="n">event_labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">])</span>
+            <span class="n">event_labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">])</span>
+        <span class="n">filtered_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">all_labels</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">event_labels</span><span class="p">]</span>
+        <span class="n">filtered_label_times</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">label_times</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">filtered_labels</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">label_times</span><span class="p">}</span>
     
-    <span class="c1"># Count events per label</span>
-    <span class="n">event_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
-        <span class="n">event_count</span><span class="p">[</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="n">event_count</span><span class="p">[</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
-    
-    <span class="c1"># Sort groups by the minimum label in the group</span>
-    <span class="n">sorted_roots</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">root_groups</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">root_groups</span><span class="p">[</span><span class="n">r</span><span class="p">]))</span>
-    
-    <span class="c1"># For each root, arrange labels by event count, with most eventful in the middle</span>
-    <span class="n">ordered_labels</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">sorted_roots</span><span class="p">:</span>
-        <span class="n">labels</span> <span class="o">=</span> <span class="n">root_groups</span><span class="p">[</span><span class="n">root</span><span class="p">]</span>
-        <span class="c1"># Sort by event count descending</span>
-        <span class="n">sorted_labels</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">l</span><span class="p">:</span> <span class="n">event_count</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="c1"># Arrange to place highest event count in middle</span>
-        <span class="n">left</span> <span class="o">=</span> <span class="n">deque</span><span class="p">()</span>
-        <span class="n">right</span> <span class="o">=</span> <span class="n">deque</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">sorted_labels</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">right</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">left</span><span class="p">):</span>
-                <span class="n">right</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">left</span><span class="o">.</span><span class="n">appendleft</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
-        <span class="n">ordered_group</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">left</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">right</span><span class="p">)</span>
-        <span class="n">ordered_labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ordered_group</span><span class="p">)</span>
-
-    <span class="c1"># Plot setup (only for filtered labels, ordered)</span>
-    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
-    
-    <span class="c1"># Limit to first 50 entries to keep plot readable</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ordered_labels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">40</span><span class="p">:</span>
-        <span class="n">ordered_labels</span> <span class="o">=</span> <span class="n">ordered_labels</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span>
-
-    <span class="n">y_positions</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ordered_labels</span><span class="p">)}</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">y_positions</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">y_positions</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Time Step&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-
-    <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>   <span class="c1"># increase x-axis tick fontsize</span>
-
-    <span class="c1"># Plot label lifetimes as horizontal lines (only for filtered labels)</span>
-    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="p">)</span> <span class="ow">in</span> <span class="n">filtered_label_times</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">y_positions</span><span class="p">:</span>
-            <span class="n">y</span> <span class="o">=</span> <span class="n">y_positions</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="p">],</span> <span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">],</span> <span class="s1">&#39;b-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-
-    <span class="c1"># Plot events (only for filtered labels)</span>
-    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
-        <span class="n">t</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
-        <span class="n">from_label</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]</span>
-        <span class="n">to_label</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]</span>
-        <span class="n">dist</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">]</span>
-        <span class="n">event_type</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+        <span class="c1"># Group filtered_labels by their history root and sort within groups and between groups</span>
+        <span class="n">label_to_root</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">filtered_labels</span><span class="p">:</span>
+                    <span class="n">label_to_root</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">root</span>
         
-        <span class="c1"># Only plot if both labels are in the filtered set</span>
-        <span class="k">if</span> <span class="n">from_label</span> <span class="ow">in</span> <span class="n">y_positions</span> <span class="ow">and</span> <span class="n">to_label</span> <span class="ow">in</span> <span class="n">y_positions</span><span class="p">:</span>
-            <span class="n">y_from</span> <span class="o">=</span> <span class="n">y_positions</span><span class="p">[</span><span class="n">from_label</span><span class="p">]</span>
-            <span class="n">y_to</span> <span class="o">=</span> <span class="n">y_positions</span><span class="p">[</span><span class="n">to_label</span><span class="p">]</span>
-            <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span> <span class="k">if</span> <span class="n">event_type</span> <span class="o">==</span> <span class="s1">&#39;merge&#39;</span> <span class="k">else</span> <span class="s1">&#39;green&#39;</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="p">[</span><span class="n">y_from</span><span class="p">,</span> <span class="n">y_to</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="p">[</span><span class="n">y_from</span><span class="p">,</span> <span class="n">y_to</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-
-    <span class="c1"># Create proper legend with correct colors</span>
-    <span class="n">lifetime_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Lifetime&#39;</span><span class="p">)</span>
-    <span class="n">merge_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Merge&#39;</span><span class="p">)</span>
-    <span class="n">split_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Split&#39;</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="p">[</span><span class="n">lifetime_patch</span><span class="p">,</span> <span class="n">merge_patch</span><span class="p">,</span> <span class="n">split_patch</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
-
-    <span class="c1"># save the plot in a pdf</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s1">&#39;outputs&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;outputs/watershed_history_&#39;</span> <span class="o">+</span> <span class="n">object_type</span> <span class="o">+</span> <span class="s1">&#39;.pdf&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span></div>
+        <span class="c1"># Group labels by root</span>
+        <span class="n">root_groups</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">filtered_labels</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">label_to_root</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">root_groups</span><span class="p">:</span>
+                <span class="n">root_groups</span><span class="p">[</span><span class="n">root</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">root_groups</span><span class="p">[</span><span class="n">root</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        
+        <span class="c1"># Count events per label</span>
+        <span class="n">event_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+            <span class="n">event_count</span><span class="p">[</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">event_count</span><span class="p">[</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="c1"># Sort groups by the minimum label in the group</span>
+        <span class="n">sorted_roots</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">root_groups</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">root_groups</span><span class="p">[</span><span class="n">r</span><span class="p">]))</span>
+        
+        <span class="c1"># For each root, arrange labels by event count, with most eventful in the middle</span>
+        <span class="n">ordered_labels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">sorted_roots</span><span class="p">:</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">root_groups</span><span class="p">[</span><span class="n">root</span><span class="p">]</span>
+            <span class="c1"># Sort by event count descending</span>
+            <span class="n">sorted_labels</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">l</span><span class="p">:</span> <span class="n">event_count</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># Arrange to place highest event count in middle</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">deque</span><span class="p">()</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">deque</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">sorted_labels</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">right</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">left</span><span class="p">):</span>
+                    <span class="n">right</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">left</span><span class="o">.</span><span class="n">appendleft</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+            <span class="n">ordered_group</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">left</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">right</span><span class="p">)</span>
+            <span class="n">ordered_labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ordered_group</span><span class="p">)</span>
+    
+        <span class="c1"># Plot setup (only for filtered labels, ordered)</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+        
+        <span class="c1"># Limit to first 50 entries to keep plot readable</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ordered_labels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">40</span><span class="p">:</span>
+            <span class="n">ordered_labels</span> <span class="o">=</span> <span class="n">ordered_labels</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span>
+    
+        <span class="n">y_positions</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ordered_labels</span><span class="p">)}</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">y_positions</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">y_positions</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Time Step&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Watershed Object History: Merges and Splits (Filtered to Event-Involved Labels)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+    
+        <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>   <span class="c1"># increase x-axis tick fontsize</span>
+    
+        <span class="c1"># Plot label lifetimes as horizontal lines (only for filtered labels)</span>
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="p">)</span> <span class="ow">in</span> <span class="n">filtered_label_times</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">y_positions</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">y_positions</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="p">],</span> <span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">],</span> <span class="s1">&#39;b-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    
+        <span class="c1"># Plot events (only for filtered labels)</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span>
+            <span class="n">from_label</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]</span>
+            <span class="n">to_label</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">]</span>
+            <span class="n">event_type</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+            
+            <span class="c1"># Only plot if both labels are in the filtered set</span>
+            <span class="k">if</span> <span class="n">from_label</span> <span class="ow">in</span> <span class="n">y_positions</span> <span class="ow">and</span> <span class="n">to_label</span> <span class="ow">in</span> <span class="n">y_positions</span><span class="p">:</span>
+                <span class="n">y_from</span> <span class="o">=</span> <span class="n">y_positions</span><span class="p">[</span><span class="n">from_label</span><span class="p">]</span>
+                <span class="n">y_to</span> <span class="o">=</span> <span class="n">y_positions</span><span class="p">[</span><span class="n">to_label</span><span class="p">]</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span> <span class="k">if</span> <span class="n">event_type</span> <span class="o">==</span> <span class="s1">&#39;merge&#39;</span> <span class="k">else</span> <span class="s1">&#39;green&#39;</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="p">[</span><span class="n">y_from</span><span class="p">,</span> <span class="n">y_to</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="p">[</span><span class="n">y_from</span><span class="p">,</span> <span class="n">y_to</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+    
+        <span class="c1"># Create proper legend with correct colors</span>
+        <span class="n">lifetime_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Lifetime&#39;</span><span class="p">)</span>
+        <span class="n">merge_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Merge&#39;</span><span class="p">)</span>
+        <span class="n">split_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Split&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="p">[</span><span class="n">lifetime_patch</span><span class="p">,</span> <span class="n">merge_patch</span><span class="p">,</span> <span class="n">split_patch</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    
+        <span class="c1"># save the plot in a pdf</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s1">&#39;outputs&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;outputs/watershed_history_&#39;</span> <span class="o">+</span> <span class="n">object_type</span> <span class="o">+</span> <span class="s1">&#39;.pdf&#39;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">history_data</span></div>
 
     
 
@@ -696,8 +817,12 @@
         <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
                 <span class="p">[</span><span class="n">data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="n">extension_size</span><span class="p">:],</span> <span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="n">extension_size</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">ndim</span><span class="p">(</span><span class="n">object_threshold</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">object_threshold</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">object_threshold</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="n">extension_size</span><span class="p">:],</span> <span class="n">object_threshold</span><span class="p">,</span> <span class="n">object_threshold</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="n">extension_size</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span>
+            <span class="p">)</span>
     
-    <span class="c1"># Create binary mask for watershedding, all data that needs to be segmented is True</span>
+    <span class="c1"># Create a binary mask for watershedding, all data that needs to be segmented is True</span>
     <span class="n">image</span> <span class="o">=</span> <span class="n">data</span> <span class="o">&gt;=</span> <span class="n">object_threshold</span>
     
     <span class="n">coords_list</span> <span class="o">=</span> <span class="p">[]</span>

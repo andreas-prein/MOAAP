@@ -76,6 +76,7 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.analyze_watershed_history"><code class="docutils literal notranslate"><span class="pre">analyze_watershed_history()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.build_object_history_dict"><code class="docutils literal notranslate"><span class="pre">build_object_history_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.connect_3d_objects"><code class="docutils literal notranslate"><span class="pre">connect_3d_objects()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.label_peaks_over_time_3d"><code class="docutils literal notranslate"><span class="pre">label_peaks_over_time_3d()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_2d_overlap"><code class="docutils literal notranslate"><span class="pre">watershed_2d_overlap()</span></code></a></li>
@@ -526,7 +527,7 @@ smaller objects using the BreakupObjects function.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="moaap.utils.object_props.calc_object_characteristics">
-<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">calc_object_characteristics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">var_objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_spacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_cell_area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tsteps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_merge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#calc_object_characteristics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.calc_object_characteristics" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">calc_object_characteristics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">var_objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_spacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_cell_area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tsteps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">history</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#calc_object_characteristics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.calc_object_characteristics" title="Link to this definition"></a></dt>
 <dd><p>Calculates comprehensive statistics for tracked objects, including size,
 intensity, velocity, and trajectory.</p>
 <dl class="field-list simple">
@@ -541,7 +542,7 @@ intensity, velocity, and trajectory.</p>
 <li><p><strong>grid_spacing</strong> (<em>float</em>) – Average grid spacing (m).</p></li>
 <li><p><strong>grid_cell_area</strong> (<em>np.ndarray</em>) – Area of grid cells.</p></li>
 <li><p><strong>min_tsteps</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum timesteps an object must exist to be processed.</p></li>
-<li><p><strong>split_merge</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary containing lineage info (split/merge history).</p></li>
+<li><p><strong>history</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary containing object history information from a previous call of analyze_watershed_history.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -661,7 +662,7 @@ Assumes each ‘label’ (int) is a unique object ID.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="moaap.utils.segmentation.analyze_watershed_history">
-<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">analyze_watershed_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">watershed_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#analyze_watershed_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.analyze_watershed_history" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">analyze_watershed_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">watershed_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">histplot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#analyze_watershed_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.analyze_watershed_history" title="Link to this definition"></a></dt>
 <dd><p>Analyze the history of watershed objects over time.
 The output is a union of all objects which merged or split over time,
 along with a list of events (merges and splits) that occurred and the history array
@@ -675,6 +676,7 @@ at most 40 objects (for better readability).</p>
 <li><p><strong>watershed_results</strong> (<em>np.ndarray</em>) – 3D array of watershed labels over time, shape (T, H, W).</p></li>
 <li><p><strong>min_dist</strong> (<em>float</em>) – Minimum distance threshold to consider two objects as related (for merges/splits).</p></li>
 <li><p><strong>object_type</strong> (<em>str</em>) – Type of object being analyzed (e.g., “mcs”, “cloud”).</p></li>
+<li><p><strong>histplot</strong> (<em>bolean</em>) – Switch to turn on plotting of object history</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -684,6 +686,34 @@ at most 40 objects (for better readability).</p>
 <li><p><strong>histories</strong> (<em>Dict[int, Set[int]]</em>) – Dictionary mapping root labels to sets of all connected labels.</p></li>
 </ul>
 </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.build_object_history_dict">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">build_object_history_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">histories</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'outputs'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#build_object_history_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.build_object_history_dict" title="Link to this definition"></a></dt>
+<dd><p>Build per-object history records (lifetime + interactions) from watershed tracking outputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>labels</strong> (<em>array-like</em><em> of </em><em>int</em>) – All nonzero object labels.</p></li>
+<li><p><strong>centers</strong> (<em>dict</em>) – centers[label][t] -&gt; (y, x) or similar. Used only to infer lifetimes.</p></li>
+<li><p><strong>events</strong> (<em>list</em><em> of </em><em>dict</em>) – Each event dict must have keys:
+- ‘type’ in {‘merge’,’split’}
+- ‘time’ (int)
+- ‘from_label’ (int)
+- ‘to_label’ (int)
+- ‘distance’ (float)</p></li>
+<li><p><strong>uf</strong> (<a class="reference internal" href="#moaap.utils.segmentation.UnionFind" title="moaap.utils.segmentation.UnionFind"><em>UnionFind</em></a>) – Must implement uf.find(label) and have uf.parent mapping.</p></li>
+<li><p><strong>histories</strong> (<em>dict</em><em>[</em><em>int</em><em>, </em><em>set</em><em>[</em><em>int</em><em>]</em><em>]</em>) – Root -&gt; set of labels connected by merges/splits.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>object_data</strong> – object_data[label] is the record for that object label.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[int, dict]</p>
 </dd>
 </dl>
 </dd></dl>

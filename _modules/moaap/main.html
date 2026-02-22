@@ -83,7 +83,8 @@
     <span class="n">frontal_identification</span><span class="p">,</span>
     <span class="n">jetstream_tracking</span><span class="p">,</span>
     <span class="n">tc_tracking</span><span class="p">,</span>
-    <span class="n">track_tropwaves_tb</span><span class="p">)</span>
+    <span class="n">track_tropwaves_tb</span><span class="p">,</span>
+    <span class="n">sst_anom_tracking</span><span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_object_characteristics</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.profiling</span><span class="w"> </span><span class="kn">import</span> <span class="n">timer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">MOAAP_DEFAULTS</span>
@@ -300,7 +301,7 @@
     <span class="n">required_keys</span> <span class="o">=</span> <span class="p">[</span>
         <span class="s2">&quot;v850&quot;</span><span class="p">,</span>  <span class="s2">&quot;u850&quot;</span><span class="p">,</span>  <span class="s2">&quot;t850&quot;</span><span class="p">,</span>  <span class="s2">&quot;q850&quot;</span><span class="p">,</span>  <span class="s2">&quot;slp&quot;</span><span class="p">,</span>
         <span class="s2">&quot;ivte&quot;</span><span class="p">,</span>  <span class="s2">&quot;ivtn&quot;</span><span class="p">,</span>  <span class="s2">&quot;z500&quot;</span><span class="p">,</span>  <span class="s2">&quot;v200&quot;</span><span class="p">,</span>  <span class="s2">&quot;u200&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;pr&quot;</span><span class="p">,</span>    <span class="s2">&quot;tb&quot;</span>
+        <span class="s2">&quot;pr&quot;</span><span class="p">,</span>    <span class="s2">&quot;tb&quot;</span> <span class="p">,</span> <span class="s2">&quot;sst&quot;</span>
     <span class="p">]</span>
 
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">required_keys</span><span class="p">:</span>
@@ -322,7 +323,8 @@
     <span class="n">u200</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;u200&quot;</span><span class="p">]</span>                   <span class="c1"># 200 hPa meridional wind speed [m/s]</span>
     <span class="n">pr</span>   <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;pr&quot;</span><span class="p">]</span>                     <span class="c1"># accumulated surface precipitation [mm/time]</span>
     <span class="n">tb</span>   <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;tb&quot;</span><span class="p">]</span>                     <span class="c1"># brightness temperature [K]</span>
-        
+    <span class="n">sst</span>  <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;sst&quot;</span><span class="p">]</span>                    <span class="c1"># sea surface temperature [K]</span>
+
 
     <span class="c1"># calculate grid spacing assuming a regular lat/lon grid</span>
     <span class="n">_</span><span class="p">,</span><span class="n">_</span><span class="p">,</span><span class="n">Area</span><span class="p">,</span><span class="n">Gridspacing</span> <span class="o">=</span> <span class="n">calc_grid_distance_area</span><span class="p">(</span><span class="n">Lon</span><span class="p">,</span><span class="n">Lat</span><span class="p">)</span>
@@ -401,6 +403,10 @@
         <span class="n">ew_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">ew_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sst</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sst_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sst_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    jet_test =  &#39;no&#39;</span>
@@ -414,6 +420,7 @@
 <span class="sd">    mcs_tb_test =  &#39;no&#39;</span>
 <span class="sd">    cloud_test =  &#39;no&#39;</span>
 <span class="sd">    ew_test =  &#39;no&#39;</span>
+<span class="sd">    sst_test = &#39;no&#39;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
@@ -432,6 +439,7 @@
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   MCSs        |   &#39;</span> <span class="o">+</span> <span class="n">mcs_tb_test</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   clouds      |   &#39;</span> <span class="o">+</span> <span class="n">cloud_test</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   Equ. Waves  |   &#39;</span> <span class="o">+</span> <span class="n">ew_test</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   SST_ANOM    |   &#39;</span> <span class="o">+</span> <span class="n">sst_test</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---------------------------&#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
 
@@ -493,7 +501,7 @@
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">uv200</span> <span class="o">=</span> <span class="p">(</span><span class="n">u200</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">v200</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
 
-        <span class="n">jet_objects</span><span class="p">,</span> <span class="n">object_split</span> <span class="o">=</span> <span class="n">jetstream_tracking</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
+        <span class="n">jet_objects</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">jet_history</span> <span class="o">=</span> <span class="n">jetstream_tracking</span><span class="p">(</span><span class="n">uv200</span><span class="p">,</span>
                                       <span class="n">params</span><span class="p">[</span><span class="s2">&quot;js_min_anomaly&quot;</span><span class="p">],</span>
                                       <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeJS&quot;</span><span class="p">],</span>
                                       <span class="n">dT</span><span class="p">,</span>
@@ -511,7 +519,7 @@
                                      <span class="n">Gridspacing</span><span class="p">,</span>
                                      <span class="n">Area</span><span class="p">,</span>
                                      <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeJS&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
-                                     <span class="n">split_merge</span> <span class="o">=</span> <span class="n">object_split</span><span class="p">)</span>
+                                     <span class="n">history</span> <span class="o">=</span> <span class="n">jet_history</span><span class="p">)</span>
         
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
@@ -519,7 +527,8 @@
     <span class="k">if</span> <span class="n">ew_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track tropical waves&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-        <span class="n">mrg_objects</span><span class="p">,</span> <span class="n">igw_objects</span><span class="p">,</span> <span class="n">kelvin_objects</span><span class="p">,</span> <span class="n">eig0_objects</span><span class="p">,</span> <span class="n">er_objects</span> <span class="o">=</span> <span class="n">track_tropwaves_tb</span><span class="p">(</span>
+        <span class="n">mrg_objects</span><span class="p">,</span> <span class="n">igw_objects</span><span class="p">,</span> <span class="n">kelvin_objects</span><span class="p">,</span> <span class="n">eig0_objects</span><span class="p">,</span> <span class="n">er_objects</span><span class="p">,</span> \
+        <span class="n">mrg_history</span><span class="p">,</span> <span class="n">igw_history</span><span class="p">,</span> <span class="n">kelvin_history</span><span class="p">,</span> <span class="n">eig0_history</span><span class="p">,</span> <span class="n">er_history</span><span class="o">=</span> <span class="n">track_tropwaves_tb</span><span class="p">(</span>
                         <span class="n">tb</span><span class="p">,</span>
                         <span class="n">Lat</span><span class="p">,</span>
                         <span class="n">connectLon</span><span class="p">,</span>
@@ -544,7 +553,8 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;tropwave_minTime&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;tropwave_minTime&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">mrg_history</span><span class="p">)</span>
         
         <span class="n">gr_igw</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">igw_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                                  <span class="n">pr</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
@@ -554,7 +564,8 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">igw_history</span><span class="p">)</span>
         
         <span class="n">gr_kelvin</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">kelvin_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                                  <span class="n">pr</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
@@ -564,7 +575,8 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">kelvin_history</span><span class="p">)</span>
         
         <span class="n">gr_eig0</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">eig0_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                                  <span class="n">pr</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
@@ -574,7 +586,8 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">eig0_history</span><span class="p">)</span>
         
         <span class="n">gr_er</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">er_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                                  <span class="n">pr</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
@@ -584,16 +597,16 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
-        
-        
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">48</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">er_history</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="n">ms_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track moisture streams and atmospheric rivers (ARs)&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">VapTrans</span> <span class="o">=</span> <span class="p">((</span><span class="n">u850</span> <span class="o">*</span> <span class="n">q850</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> 
                     <span class="p">(</span><span class="n">v850</span> <span class="o">*</span> <span class="n">q850</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
 
-        <span class="n">MS_objects</span> <span class="o">=</span> <span class="n">ar_850hpa_tracking</span><span class="p">(</span>
+        <span class="n">MS_objects</span><span class="p">,</span> <span class="n">ms_history</span> <span class="o">=</span> <span class="n">ar_850hpa_tracking</span><span class="p">(</span>
                                         <span class="n">VapTrans</span><span class="p">,</span>
                                         <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinMSthreshold&quot;</span><span class="p">],</span>
                                         <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeMS&quot;</span><span class="p">],</span>
@@ -614,18 +627,18 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeMS&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeMS&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">ms_history</span><span class="p">)</span>
         
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
-        
     
     <span class="k">if</span> <span class="n">ar_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track IVT streams and atmospheric rivers (ARs)&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">IVT</span> <span class="o">=</span> <span class="p">(</span><span class="n">ivte</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">ivtn</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
 
-        <span class="n">IVT_objects</span> <span class="o">=</span> <span class="n">ar_ivt_tracking</span><span class="p">(</span><span class="n">IVT</span><span class="p">,</span>
+        <span class="n">IVT_objects</span><span class="p">,</span> <span class="n">ivt_history</span> <span class="o">=</span> <span class="n">ar_ivt_tracking</span><span class="p">(</span><span class="n">IVT</span><span class="p">,</span>
                                     <span class="n">params</span><span class="p">[</span><span class="s2">&quot;IVTtrheshold&quot;</span><span class="p">],</span>
                                     <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeIVT&quot;</span><span class="p">],</span>
                                     <span class="n">dT</span><span class="p">,</span>
@@ -642,8 +655,9 @@
                                      <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                      <span class="n">Gridspacing</span><span class="p">,</span>
                                      <span class="n">Area</span><span class="p">,</span>
-                                     <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeIVT&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
-        
+                                     <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeIVT&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>      <span class="c1"># minimum livetime in hours</span>
+                                     <span class="n">history</span> <span class="o">=</span> <span class="n">ivt_history</span><span class="p">)</span>
+
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        check if MSs quallify as ARs&#39;</span><span class="p">)</span>
         <span class="n">AR_obj</span> <span class="o">=</span> <span class="n">ar_check</span><span class="p">(</span><span class="n">IVT_objects</span><span class="p">,</span>
                          <span class="n">params</span><span class="p">[</span><span class="s2">&quot;AR_Lat&quot;</span><span class="p">],</span>
@@ -651,15 +665,18 @@
                          <span class="n">params</span><span class="p">[</span><span class="s2">&quot;AR_MinLen&quot;</span><span class="p">],</span>
                          <span class="n">Lon</span><span class="p">,</span>
                          <span class="n">Lat</span><span class="p">)</span>
-    
-        <span class="n">grACs</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">AR_obj</span><span class="p">,</span> <span class="c1"># feature object file</span>
+
+        <span class="n">ar_keys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">AR_obj</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">ar_history</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">ivt_history</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ar_keys</span><span class="p">}</span>
+        <span class="n">grARs</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">AR_obj</span><span class="p">,</span> <span class="c1"># feature object file</span>
                          <span class="n">IVT</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
                          <span class="n">params</span><span class="p">[</span><span class="s2">&quot;OutputFolder&quot;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;ARs_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">year</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">SetupString</span><span class="p">,</span>
                          <span class="n">Time</span><span class="p">,</span>            <span class="c1"># timesteps of the data</span>
                          <span class="n">Lat</span><span class="p">,</span>             <span class="c1"># 2D latidudes</span>
                          <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                          <span class="n">Gridspacing</span><span class="p">,</span>
-                         <span class="n">Area</span><span class="p">)</span>
+                         <span class="n">Area</span><span class="p">,</span>
+                         <span class="n">history</span> <span class="o">=</span> <span class="n">ar_history</span><span class="p">)</span>
         
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
@@ -704,7 +721,7 @@
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track cyclones from PSL&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         
-        <span class="n">CY_objects</span><span class="p">,</span> <span class="n">ACY_objects</span><span class="o">=</span> <span class="n">cy_acy_psl_tracking</span><span class="p">(</span>
+        <span class="n">CY_objects</span><span class="p">,</span> <span class="n">ACY_objects</span><span class="p">,</span> <span class="n">cy_history</span><span class="p">,</span> <span class="n">acy_history</span> <span class="o">=</span> <span class="n">cy_acy_psl_tracking</span><span class="p">(</span>
                                                     <span class="n">slp</span><span class="p">,</span>
                                                     <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MaxPresAnCY&quot;</span><span class="p">],</span>
                                                     <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">],</span>
@@ -725,7 +742,8 @@
                                          <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                          <span class="n">Gridspacing</span><span class="p">,</span>
                                          <span class="n">Area</span><span class="p">,</span>
-                                         <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span> 
+                                         <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                         <span class="n">history</span> <span class="o">=</span> <span class="n">cy_history</span><span class="p">)</span>
 
         <span class="n">grACyclonesPT</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">ACY_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                                          <span class="n">slp</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
@@ -735,7 +753,8 @@
                                          <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                          <span class="n">Gridspacing</span><span class="p">,</span>
                                          <span class="n">Area</span><span class="p">,</span>
-                                         <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span> 
+                                         <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                         <span class="n">history</span> <span class="o">=</span> <span class="n">acy_history</span><span class="p">)</span>
 
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
@@ -743,7 +762,7 @@
     <span class="k">if</span> <span class="n">z500_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track cyclones from Z500&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-        <span class="n">cy_z500_objects</span><span class="p">,</span> <span class="n">acy_z500_objects</span> <span class="o">=</span> <span class="n">cy_acy_z500_tracking</span><span class="p">(</span>
+        <span class="n">cy_z500_objects</span><span class="p">,</span> <span class="n">acy_z500_objects</span><span class="p">,</span> <span class="n">cy_z500_history</span><span class="p">,</span> <span class="n">acy_z500_history</span> <span class="o">=</span> <span class="n">cy_acy_z500_tracking</span><span class="p">(</span>
                                             <span class="n">z500</span><span class="p">,</span>
                                             <span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">],</span>
                                             <span class="n">dT</span><span class="p">,</span>
@@ -763,7 +782,8 @@
                                      <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                      <span class="n">Gridspacing</span><span class="p">,</span>
                                      <span class="n">Area</span><span class="p">,</span>
-                                     <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>
+                                     <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                     <span class="n">history</span> <span class="o">=</span> <span class="n">cy_z500_history</span><span class="p">)</span>
         
         <span class="n">acy_z500_objects_characteristics</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">acy_z500_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                                  <span class="n">z500</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
@@ -773,7 +793,8 @@
                                  <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
                                  <span class="n">Gridspacing</span><span class="p">,</span>
                                  <span class="n">Area</span><span class="p">,</span>
-                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span> 
+                                 <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeCY&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                 <span class="n">history</span> <span class="o">=</span> <span class="n">acy_z500_history</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">col_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;    Check if cyclones qualify as Cut Off Low (COL)&#39;</span><span class="p">)</span>
@@ -804,7 +825,7 @@
     <span class="k">if</span> <span class="n">mcs_tb_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;======&gt; &#39;check if Tb objects qualify as MCS (or selected storm type)&quot;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-        <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">C_objects</span> <span class="o">=</span> <span class="n">mcs_tb_tracking</span><span class="p">(</span><span class="n">tb</span><span class="p">,</span>
+        <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">C_objects</span><span class="p">,</span> <span class="n">history_MCS</span> <span class="o">=</span> <span class="n">mcs_tb_tracking</span><span class="p">(</span><span class="n">tb</span><span class="p">,</span>
                             <span class="n">pr</span><span class="p">,</span>
                             <span class="n">params</span><span class="p">[</span><span class="s2">&quot;SmoothSigmaC&quot;</span><span class="p">],</span>
                             <span class="n">params</span><span class="p">[</span><span class="s2">&quot;Pthreshold&quot;</span><span class="p">],</span>
@@ -842,7 +863,8 @@
             <span class="n">Lat</span><span class="p">,</span>             <span class="c1"># 2D latidudes</span>
             <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
             <span class="n">Gridspacing</span><span class="p">,</span>
-            <span class="n">Area</span><span class="p">)</span>
+            <span class="n">Area</span><span class="p">,</span>
+            <span class="n">history</span> <span class="o">=</span> <span class="n">history_MCS</span><span class="p">)</span>
         
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
@@ -854,7 +876,7 @@
         <span class="n">tb_no_mcs</span> <span class="o">=</span> <span class="n">tb</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">tb_no_mcs</span><span class="p">[</span><span class="n">MCS_objects_Tb</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">330</span> <span class="c1"># remove MCSs from cloud field</span>
         
-        <span class="n">cloud_objects</span> <span class="o">=</span> <span class="n">cloud_tracking</span><span class="p">(</span>
+        <span class="n">cloud_objects</span><span class="p">,</span> <span class="n">history_clouds</span> <span class="o">=</span> <span class="n">cloud_tracking</span><span class="p">(</span>
                         <span class="n">tb_no_mcs</span><span class="p">,</span>
                         <span class="n">pr</span><span class="p">,</span>
                         <span class="n">connectLon</span><span class="p">,</span>
@@ -875,7 +897,8 @@
             <span class="n">Lat</span><span class="p">,</span>             <span class="c1"># 2D latidudes</span>
             <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
             <span class="n">Gridspacing</span><span class="p">,</span>
-            <span class="n">Area</span><span class="p">)</span>
+            <span class="n">Area</span><span class="p">,</span>
+            <span class="n">history</span> <span class="o">=</span> <span class="n">history_clouds</span><span class="p">)</span>
         
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
@@ -928,8 +951,69 @@
         
         <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>  
-        
+
+
     
+    <span class="n">SST_ANOM_objects</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">SST_GRAD_objects</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="k">if</span> <span class="n">sst_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track SST anomalies and gradients&#39;</span><span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>        
+        
+        <span class="c1"># Build ocean mask</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">cartopy.io.shapereader</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">shpreader</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">shapely</span>
+        <span class="n">land_shp</span> <span class="o">=</span> <span class="n">shpreader</span><span class="o">.</span><span class="n">natural_earth</span><span class="p">(</span><span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;110m&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;physical&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;land&quot;</span><span class="p">)</span>
+        <span class="n">land_geom</span> <span class="o">=</span> <span class="n">unary_union</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shpreader</span><span class="o">.</span><span class="n">Reader</span><span class="p">(</span><span class="n">land_shp</span><span class="p">)</span><span class="o">.</span><span class="n">geometries</span><span class="p">()))</span>
+        <span class="n">pts</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">points</span><span class="p">(</span><span class="n">Lon</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">Lat</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="n">mask_land</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">land_geom</span><span class="p">,</span> <span class="n">pts</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">Lat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">tskin_ocean</span> <span class="o">=</span> <span class="n">sst</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">tskin_ocean</span><span class="p">[:,</span> <span class="n">mask_land</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="c1"># set cells that are below freezing to zero to remove areas with sea ice</span>
+        <span class="n">tskin_ocean</span><span class="p">[</span><span class="n">tskin_ocean</span> <span class="o">&lt;</span> <span class="mf">271.5</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">SST_ANOM_objects_warm</span><span class="p">,</span> <span class="n">SST_ANOM_objects_cold</span><span class="p">,</span> <span class="n">ssta</span><span class="p">,</span> <span class="n">sst_bg</span><span class="p">,</span> <span class="n">sst_hist_warm</span><span class="p">,</span> <span class="n">sst_hist_cold</span> <span class="o">=</span> <span class="n">sst_anom_tracking</span><span class="p">(</span>
+            <span class="n">sst</span><span class="o">=</span><span class="n">tskin_ocean</span><span class="p">,</span>
+            <span class="n">dT</span><span class="o">=</span><span class="n">dT</span><span class="p">,</span>
+            <span class="n">Area</span><span class="o">=</span><span class="n">Area</span><span class="p">,</span>
+            <span class="n">Gridspacing</span><span class="o">=</span><span class="n">Gridspacing</span><span class="p">,</span>
+            <span class="n">connectLon</span><span class="o">=</span><span class="n">connectLon</span><span class="p">,</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="n">Lat</span><span class="p">,</span>
+            <span class="n">SST_BG_temporal_h</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;SST_BG_temporal_h&quot;</span><span class="p">],</span>
+            <span class="n">SST_BG_spatial_km</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;SST_BG_spatial_km&quot;</span><span class="p">],</span>
+            <span class="n">SST_ANOM_abs_floor_K</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;SST_ANOM_abs_floor_K&quot;</span><span class="p">],</span>
+            <span class="n">SST_ANOM_min_dist_km</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;SST_ANOM_min_dist_km&quot;</span><span class="p">],</span>
+            <span class="n">MinTimeSST_ANOM</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeSST_ANOM&quot;</span><span class="p">],</span>
+            <span class="n">MinAreaSST_ANOM</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinAreaSST_ANOM&quot;</span><span class="p">],</span>
+            <span class="n">breakup</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;breakup_sst_anom&quot;</span><span class="p">],</span>
+            <span class="n">analyze_sst_anom_history</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;analyze_sst_anom_history&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">warm_sst_objects_characteristics</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">SST_ANOM_objects_warm</span><span class="p">,</span> <span class="c1"># feature object file</span>
+                                     <span class="n">sst</span><span class="p">,</span>             <span class="c1"># original file used for feature detection</span>
+                                     <span class="n">params</span><span class="p">[</span><span class="s2">&quot;OutputFolder&quot;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;warm-sst_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">year</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">SetupString</span><span class="p">,</span>
+                                     <span class="n">Time</span><span class="p">,</span>            <span class="c1"># timesteps of the data</span>
+                                     <span class="n">Lat</span><span class="p">,</span>             <span class="c1"># 2D latidudes</span>
+                                     <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
+                                     <span class="n">Gridspacing</span><span class="p">,</span>
+                                     <span class="n">Area</span><span class="p">,</span>
+                                     <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeSST_ANOM&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                     <span class="n">history</span> <span class="o">=</span> <span class="n">sst_hist_warm</span><span class="p">)</span>
+
+        <span class="n">cold_sst_objects_characteristics</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">SST_ANOM_objects_cold</span><span class="p">,</span> <span class="c1"># feature object file</span>
+                                     <span class="n">sst</span><span class="p">,</span>             <span class="c1"># original file used for feature detection</span>
+                                     <span class="n">params</span><span class="p">[</span><span class="s2">&quot;OutputFolder&quot;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;cold-sst_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">year</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">SetupString</span><span class="p">,</span>
+                                     <span class="n">Time</span><span class="p">,</span>            <span class="c1"># timesteps of the data</span>
+                                     <span class="n">Lat</span><span class="p">,</span>             <span class="c1"># 2D latidudes</span>
+                                     <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
+                                     <span class="n">Gridspacing</span><span class="p">,</span>
+                                     <span class="n">Area</span><span class="p">,</span>
+                                     <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeSST_ANOM&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">),</span>
+                                     <span class="n">history</span> <span class="o">=</span> <span class="n">sst_hist_cold</span><span class="p">)</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
 
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
@@ -988,6 +1072,11 @@
         <span class="n">KELVIN</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s1">&#39;Kelvin_Objects&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="s1">&#39;yc&#39;</span><span class="p">,</span><span class="s1">&#39;xc&#39;</span><span class="p">),</span><span class="n">zlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">EIG</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s1">&#39;EIG0_Objects&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="s1">&#39;yc&#39;</span><span class="p">,</span><span class="s1">&#39;xc&#39;</span><span class="p">),</span><span class="n">zlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">ER</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s1">&#39;ER_Objects&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="s1">&#39;yc&#39;</span><span class="p">,</span><span class="s1">&#39;xc&#39;</span><span class="p">),</span><span class="n">zlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sst_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
+        <span class="n">SST_ANOM_warm</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s1">&#39;warm_SST_Objects&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="s1">&#39;yc&#39;</span><span class="p">,</span><span class="s1">&#39;xc&#39;</span><span class="p">),</span><span class="n">zlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">SST_ANOM_cold</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s1">&#39;cold_SST_Objects&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="s1">&#39;yc&#39;</span><span class="p">,</span><span class="s1">&#39;xc&#39;</span><span class="p">),</span><span class="n">zlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">SST</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s1">&#39;SST&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="s1">&#39;yc&#39;</span><span class="p">,</span><span class="s1">&#39;xc&#39;</span><span class="p">),</span><span class="n">zlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
         
 
     <span class="n">times</span><span class="o">.</span><span class="n">calendar</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
@@ -1123,6 +1212,18 @@
         <span class="n">ER</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="s2">&quot;lon lat&quot;</span>
         <span class="n">ER</span><span class="o">.</span><span class="n">longname</span> <span class="o">=</span> <span class="s2">&quot;Equatorial Rossby wave objects&quot;</span>
         <span class="n">ER</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">sst_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
+        <span class="n">SST_ANOM_warm</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="s2">&quot;lon lat&quot;</span>
+        <span class="n">SST_ANOM_warm</span><span class="o">.</span><span class="n">longname</span> <span class="o">=</span> <span class="s2">&quot;warm SST anomaly objects&quot;</span>
+        <span class="n">SST_ANOM_warm</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="n">SST_ANOM_cold</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="s2">&quot;lon lat&quot;</span>
+        <span class="n">SST_ANOM_cold</span><span class="o">.</span><span class="n">longname</span> <span class="o">=</span> <span class="s2">&quot;warm SST anomaly objects&quot;</span>
+        <span class="n">SST_ANOM_cold</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        
+        <span class="n">SST</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="s2">&quot;lon lat&quot;</span>
+        <span class="n">SST</span><span class="o">.</span><span class="n">longname</span> <span class="o">=</span> <span class="s2">&quot;sea surface temperature&quot;</span>
+        <span class="n">SST</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;K&quot;</span>
 
     <span class="n">lat</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">Lat</span>
     <span class="n">lon</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">Lon</span>
@@ -1167,11 +1268,14 @@
         <span class="n">KELVIN</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">kelvin_objects</span>
         <span class="n">EIG</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">eig0_objects</span>
         <span class="n">ER</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">er_objects</span>
-                
+    <span class="k">if</span> <span class="n">sst_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
+        <span class="n">SST_ANOM_warm</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">SST_ANOM_objects_warm</span>
+        <span class="n">SST_ANOM_cold</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">SST_ANOM_objects_cold</span>
+        <span class="n">SST</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">sst</span>
+        
     <span class="n">times</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">iTime</span>
     
     <span class="c1"># SET GLOBAL ATTRIBUTES</span>
-    <span class="c1"># Add global attributes</span>
     <span class="n">dataset</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;MOAAP object tracking output&quot;</span>
     <span class="n">dataset</span><span class="o">.</span><span class="n">contact</span> <span class="o">=</span> <span class="s2">&quot;Andreas F. Prein (prein@ucar.edu)&quot;</span>
     <span class="c1"># dataset.breakup = &#39;The &#39; + breakup + &quot; method has been used to segment the objects&quot;</span>

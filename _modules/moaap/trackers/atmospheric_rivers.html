@@ -73,6 +73,7 @@
   <h1>Source code for moaap.trackers.atmospheric_rivers</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">smooth_uniform</span> 
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistanceCoord</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">,</span> <span class="n">analyze_watershed_history</span>
@@ -153,28 +154,30 @@
     <span class="k">if</span> <span class="n">analyze_ms_history</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">4000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between VapTrans maxima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
-        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">history_ms</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
             <span class="n">MS_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;ms&quot;</span>
         <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;&quot;</span>
+<span class="sd">        union_array_clean = {int(k): int(v) for k, v in union_array.items()}</span>
+<span class="sd">        events_clean = [</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;type&#39;: e[&#39;type&#39;],</span>
+<span class="sd">            &#39;time&#39;: int(e[&#39;time&#39;]),</span>
+<span class="sd">            &#39;from_label&#39;: int(e[&#39;from_label&#39;]),</span>
+<span class="sd">            &#39;to_label&#39;: int(e[&#39;to_label&#39;]),</span>
+<span class="sd">            &#39;distance&#39;: float(e[&#39;distance&#39;])</span>
+<span class="sd">        }</span>
+<span class="sd">        for e in events</span>
+<span class="sd">        ]</span>
+<span class="sd">        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}</span>
 
-        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
-            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
-        <span class="p">}</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
-        <span class="p">]</span>
-        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    
-    <span class="k">return</span> <span class="n">MS_objects</span></div>
+<span class="sd">        print(f&quot;    Printing union array: {dict(list(union_array_clean.items()))}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing events: {events_clean}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing histories: {dict(list(histories_clean.items()))}&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">history_ms</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">MS_objects</span><span class="p">,</span> <span class="n">history_ms</span></div>
 
 
 
@@ -247,27 +250,31 @@
     <span class="k">if</span> <span class="n">analyze_ivt_history</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="mi">4000</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">Gridspacing</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between IVT maxima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
-        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">history_ar</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
             <span class="n">IVT_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;ivt&quot;</span>
         <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        union_array_clean = {int(k): int(v) for k, v in union_array.items()}</span>
+<span class="sd">        events_clean = [</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;type&#39;: e[&#39;type&#39;],</span>
+<span class="sd">            &#39;time&#39;: int(e[&#39;time&#39;]),</span>
+<span class="sd">            &#39;from_label&#39;: int(e[&#39;from_label&#39;]),</span>
+<span class="sd">            &#39;to_label&#39;: int(e[&#39;to_label&#39;]),</span>
+<span class="sd">            &#39;distance&#39;: float(e[&#39;distance&#39;])</span>
+<span class="sd">        }</span>
+<span class="sd">        for e in events</span>
+<span class="sd">        ]</span>
+<span class="sd">        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}</span>
 
-        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
-            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
-        <span class="p">}</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
-        <span class="p">]</span>
-        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<span class="sd">        print(f&quot;    Printing union array: {dict(list(union_array_clean.items()))}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing events: {events_clean}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing histories: {dict(list(histories_clean.items()))}&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">history_ar</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">IVT_objects</span></div>
+    <span class="k">return</span> <span class="n">IVT_objects</span><span class="p">,</span> <span class="n">history_ar</span></div>
 
   
 
@@ -304,9 +311,10 @@
 
     <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     <span class="n">AR_obj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">objects_mask</span><span class="p">);</span> <span class="n">AR_obj</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">ivt_keys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">objects_mask</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))[</span><span class="mi">1</span><span class="p">:]</span>
     <span class="n">Objects</span><span class="o">=</span><span class="n">ndimage</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">objects_mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
 
-    <span class="n">aa</span><span class="o">=</span><span class="mi">1</span>
+    <span class="n">aa</span><span class="o">=</span><span class="mi">0</span>
     <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Objects</span><span class="p">)):</span>
         <span class="k">if</span> <span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">continue</span>
@@ -345,14 +353,14 @@
                 <span class="n">LatCent</span> <span class="o">=</span> <span class="n">LatObj</span><span class="p">[</span><span class="n">rgiCenter</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">rgiCenter</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
                 <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">LatCent</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">AR_Lat</span><span class="p">:</span>
                     <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="c1"># check width to lenght ratio</span>
+            <span class="c1"># check width to length ratio</span>
             <span class="k">if</span> <span class="n">DIST</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">/</span><span class="n">DIST</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">AR_width_lenght_ratio</span><span class="p">:</span>
                 <span class="n">ObjACT</span><span class="p">[</span><span class="n">tt</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="k">if</span> <span class="n">LonObj</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">LonObj</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">359</span><span class="p">:</span>
             <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">ObjACT</span><span class="p">,</span> <span class="o">-</span><span class="nb">int</span><span class="p">(</span><span class="n">ObjACT</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">ObjACT</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-        <span class="n">ObjACT</span><span class="p">[</span><span class="n">ObjACT</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">aa</span>
+        <span class="n">ObjACT</span><span class="p">[</span><span class="n">ObjACT</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ivt_keys</span><span class="p">[</span><span class="n">aa</span><span class="p">]</span>
         <span class="n">ObjACT</span> <span class="o">=</span> <span class="n">ObjACT</span> <span class="o">+</span> <span class="n">AR_obj</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span>
         <span class="n">AR_obj</span><span class="p">[</span><span class="n">Objects</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span> <span class="o">=</span> <span class="n">ObjACT</span>
         <span class="n">aa</span><span class="o">=</span><span class="n">aa</span><span class="o">+</span><span class="mi">1</span>

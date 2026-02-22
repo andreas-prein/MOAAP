@@ -91,7 +91,7 @@
     <span class="n">grid_spacing</span><span class="p">,</span> <span class="c1"># average grid spacing</span>
     <span class="n">grid_cell_area</span><span class="p">,</span>
     <span class="n">min_tsteps</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>       <span class="c1"># minimum lifetime in data timesteps</span>
-    <span class="n">split_merge</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># dict containing information of splitting and merging of objects</span>
+    <span class="n">history</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># dict containing information of splitting and merging of objects</span>
     <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculates comprehensive statistics for tracked objects, including size, </span>
@@ -115,8 +115,8 @@
 <span class="sd">        Area of grid cells.</span>
 <span class="sd">    min_tsteps : int, optional</span>
 <span class="sd">        Minimum timesteps an object must exist to be processed.</span>
-<span class="sd">    split_merge : dict, optional</span>
-<span class="sd">        Dictionary containing lineage info (split/merge history).</span>
+<span class="sd">    history : dict, optional</span>
+<span class="sd">        Dictionary containing object history information from a previous call of analyze_watershed_history.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -198,9 +198,12 @@
                     <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="n">obj_times</span><span class="p">,</span>
                     <span class="s2">&quot;track&quot;</span><span class="p">:</span> <span class="n">obj_track</span><span class="p">,</span>
                 <span class="p">}</span>
+                <span class="k">if</span> <span class="n">history</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># add the history of this object</span>
+                    <span class="n">this_object_charac</span><span class="p">[</span><span class="s2">&quot;history&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">history</span><span class="p">[</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
 
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="n">objects_charac</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">this_object_charac</span>
+                    <span class="n">objects_charac</span><span class="p">[</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">this_object_charac</span>
                 <span class="k">except</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span> <span class="p">(</span><span class="s2">&quot;Error asigning properties to final dictionary&quot;</span><span class="p">)</span>
 

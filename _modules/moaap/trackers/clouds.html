@@ -80,6 +80,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.data_proc</span><span class="w"> </span><span class="kn">import</span> <span class="n">smooth_uniform</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">BreakupObjects</span><span class="p">,</span> <span class="n">is_land</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
 
 
 <span class="c1">#from memory_profiler import profile</span>
@@ -252,32 +253,42 @@
                                            <span class="n">dT</span><span class="p">,</span>
                                            <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">MCS_minTime</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>
 
-    <span class="c1"># analyze MCS history with watershed method</span>
+    <span class="c1"># analyze MCS history with the watershed method</span>
     <span class="k">if</span> <span class="n">analyze_mcs_history</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">(((</span><span class="n">CL_Area</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mi">1000</span><span class="p">))</span><span class="o">*</span><span class="mi">2</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between TB minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
-        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">history_MCSs</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
             <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;mcs&quot;</span>
         <span class="p">)</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        union_array_clean = {int(k): int(v) for k, v in union_array.items()}</span>
+<span class="sd">        events_clean = [</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;type&#39;: e[&#39;type&#39;],</span>
+<span class="sd">            &#39;time&#39;: int(e[&#39;time&#39;]),</span>
+<span class="sd">            &#39;from_label&#39;: int(e[&#39;from_label&#39;]),</span>
+<span class="sd">            &#39;to_label&#39;: int(e[&#39;to_label&#39;]),</span>
+<span class="sd">            &#39;distance&#39;: float(e[&#39;distance&#39;])</span>
+<span class="sd">        }</span>
+<span class="sd">        for e in events</span>
+<span class="sd">        ]</span>
+<span class="sd">        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}</span>
 
-        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
-            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
-        <span class="p">}</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
-        <span class="p">]</span>
-        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<span class="sd">        print(f&quot;    Printing union array: {dict(list(union_array_clean.items()))}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing events: {events_clean}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing histories: {dict(list(histories_clean.items()))}&quot;)</span>
+<span class="sd">        </span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    
-    <span class="k">return</span> <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">C_objects</span></div>
+<span class="sd">        union_array, events, histories, history_clouds = analyze_watershed_history(</span>
+<span class="sd">            C_objects, min_dist, &quot;mcs&quot;</span>
+<span class="sd">        )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">history_MCSs</span> <span class="o">=</span> <span class="kc">None</span>
+        
+    <span class="k">return</span> <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">C_objects</span><span class="p">,</span> <span class="n">history_MCSs</span></div>
 
 
 
@@ -359,28 +370,31 @@
     <span class="k">if</span> <span class="n">analyze_cloud_history</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="mi">8</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between TB minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
-        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
+        <span class="n">union_array</span><span class="p">,</span> <span class="n">events</span><span class="p">,</span> <span class="n">histories</span><span class="p">,</span> <span class="n">history_clouds</span> <span class="o">=</span> <span class="n">analyze_watershed_history</span><span class="p">(</span>
             <span class="n">cloud_objects</span><span class="p">,</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s2">&quot;cloud&quot;</span>
         <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        union_array_clean = {int(k): int(v) for k, v in union_array.items()}</span>
+<span class="sd">        events_clean = [</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;type&#39;: e[&#39;type&#39;],</span>
+<span class="sd">            &#39;time&#39;: int(e[&#39;time&#39;]),</span>
+<span class="sd">            &#39;from_label&#39;: int(e[&#39;from_label&#39;]),</span>
+<span class="sd">            &#39;to_label&#39;: int(e[&#39;to_label&#39;]),</span>
+<span class="sd">            &#39;distance&#39;: float(e[&#39;distance&#39;])</span>
+<span class="sd">        }</span>
+<span class="sd">        for e in events</span>
+<span class="sd">        ]</span>
+<span class="sd">        histories_clean = {int(root): [int(label) for label in labels] for root, labels in histories.items()}</span>
 
-        <span class="n">union_array_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">union_array</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-        <span class="n">events_clean</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">],</span>
-            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;from_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;from_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;to_label&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;to_label&#39;</span><span class="p">]),</span>
-            <span class="s1">&#39;distance&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">])</span>
-        <span class="p">}</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span>
-        <span class="p">]</span>
-        <span class="n">histories_clean</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="p">):</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">histories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<span class="sd">        print(f&quot;    Printing union array: {dict(list(union_array_clean.items()))}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing events: {events_clean}&quot;)</span>
+<span class="sd">        print(f&quot;    Printing histories: {dict(list(histories_clean.items()))}&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">history_clouds</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing union array: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">union_array_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing events: </span><span class="si">{</span><span class="n">events_clean</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Printing histories: </span><span class="si">{</span><span class="nb">dict</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">histories_clean</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">cloud_objects</span></div>
+    <span class="k">return</span> <span class="n">cloud_objects</span><span class="p">,</span> <span class="n">history_clouds</span></div>
 
 
 </pre></div>
