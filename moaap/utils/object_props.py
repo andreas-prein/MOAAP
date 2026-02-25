@@ -126,7 +126,6 @@ def calc_object_characteristics(
                 if history is not None:
                     # add the history of this object
                     this_object_charac["history"] = history[iobj + 1]
-
                 try:
                     objects_charac[iobj + 1] = this_object_charac
                 except:

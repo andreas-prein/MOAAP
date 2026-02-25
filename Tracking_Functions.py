@@ -687,7 +687,7 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
         TimeMM = [TimeDD[0]]
 
     dT = int(divmod((TimeDD[1] - TimeDD[0]).total_seconds(), 60)[0]/60)
-    ERA5dir = '/glade/campaign/mmm/c3we/prein/ERA5/hourly/'
+    ERA5dir = '/highres_nobackup/observations/ERA5/hourly/'
     if PL != -1:
         DirName = str(var)+str(PL)
     else:
@@ -695,7 +695,7 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
 
     print(var)
     # read in the coordinates
-    ncid=Dataset("/glade/campaign/mmm/c3we/prein/ERA5/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc", mode='r')
+    ncid=Dataset("/highres_nobackup/observations/ERA5/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc", mode='r')
     Lat=np.squeeze(ncid.variables['latitude'][:])
     Lon=np.squeeze(ncid.variables['longitude'][:])
     # Zfull=np.squeeze(ncid.variables['Z'][:])
@@ -732,17 +732,48 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
         DD = monthrange(YYYY, MM)[1]
         TimeFile = TimeDD=pd.date_range(datetime.datetime(YYYY, MM, 1,0), end=datetime.datetime(YYYY, MM, DD,23), freq='h')
         TT = np.isin(TimeFile,TIME)
-        
-        ncid = Dataset(ERA5dir+DirName+'/'+YYYYMM+'_'+DirName+'_ERA5.nc', mode='r')
-        if iRoll != 0:
-            try:
-                DATAact = np.squeeze(ncid.variables[var][TT,iNorth:iSouth,:])
+
+        if DirName != "swvl1":
+            ncid = Dataset(ERA5dir+DirName+'/'+YYYYMM+'_'+DirName+'_ERA5.nc', mode='r')
+            if iRoll != 0:
+                try:
+                    DATAact = np.squeeze(ncid.variables[var][TT,iNorth:iSouth,:])
+                    ncid.close()
+                except:
+                    stop()
+            else:
+                DATAact = np.squeeze(ncid.variables[var][TT,iNorth:iSouth,iWest:iEeast])
                 ncid.close()
-            except:
-                stop()
-        else:
-            DATAact = np.squeeze(ncid.variables[var][TT,iNorth:iSouth,iWest:iEeast])
-            ncid.close()
+        
+        else: 
+            iRoll=0
+            ncid = Dataset("/net/atmos/data/era5-land_cds/original/swvl1/1hr/"+str(TimeMM[mm].year)+'/swvl1_1hr_era5-land_'+YYYYMM+'.nc', mode='r')
+            DATAact = np.squeeze(ncid.variables[var][TT,:,:])
+            # go to ERA5 grid
+            latl = np.squeeze(ncid.variables["lat"][:])
+            lonl = np.squeeze(ncid.variables["lon"][:])
+            if mm == 0:
+                # -----------
+                # Remap ERA5-Land to ERA5
+                import xarray as xr
+                import xesmf as xe
+                
+                # data: np.ndarray with shape (time, lat, lon)
+                # lat_in: 1D (nlat,), lon_in: 1D (nlon,)
+                # lat_out: 1D (nlat2,), lon_out: 1D (nlon2,)
+                
+                da = xr.DataArray(
+                    DATAact,
+                    dims=("time", "lat", "lon"),
+                    coords={"time": range(DATAact.shape[0]), "lat": latl, "lon": lonl},
+                    name="var",
+                )
+                
+                grid_out = xr.Dataset({"lat": (["lat"], Lat[:,0]), "lon": (["lon"], Lon[0,:])})
+                regridder = xe.Regridder(da.to_dataset(), grid_out, method="bilinear", reuse_weights=False)
+                da_out = regridder(da)
+                DATAact = da_out.values  # shape: (time, nlat2, nlon2)
+            
         # cut out region
         if len(DATAact.shape) == 2:
             DATAact=DATAact[None,:,:]

@@ -19,6 +19,7 @@ MOAAP_DEFAULTS = {
     "pr": None,          # surface precipitation [mm per time step]
     "tb": None,          # brightness temperature [K]
     "sst": None,         # sea surface temperature [K]
+    "sm": None,          # upper level soil moisture [kg**3 kg**-3]
 
     # IO & metadata
     "DataName": "",     # common grid name [str]
@@ -112,7 +113,17 @@ MOAAP_DEFAULTS = {
     "SST_ANOM_abs_floor_K": 0.3,   # Physical minimum anomaly [K]
     "SST_ANOM_min_dist_km": 500,
     "MinTimeSST_ANOM": 24*4,
-    "MinAreaSST_ANOM": 5000,
+    "MinAreaSST_ANOM": 500,
     "breakup_sst_anom": "watershed",
     "analyze_sst_anom_history": True, #False,
+
+    # SM (soil moisture) anomaly settings
+    "SM_BG_temporal_h": 24*3,    # hours
+    "SM_BG_spatial_km": 125,     # km
+    "SM_ANOM_abs": 0.04,         # anomaly [m**3 m**-3]
+    "SM_ANOM_min_dist_km": 1000, # km
+    "MinTimeSM_ANOM": 24,        # hours
+    "MinAreaSM_ANOM": 500,       # km2
+    "breakup_sm_anom": "watershed",
+    "analyze_sm_anom_history": True,
 }

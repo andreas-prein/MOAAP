@@ -11,7 +11,8 @@ from .trackers import (
     jetstream_tracking,
     tc_tracking,
     track_tropwaves_tb,
-    sst_anom_tracking)
+    sst_anom_tracking,
+    sm_anom_tracking)
 from moaap.utils.object_props import calc_object_characteristics
 from moaap.utils.profiling import timer
 from moaap.config import MOAAP_DEFAULTS
@@ -226,7 +227,7 @@ def moaap(
     required_keys = [
         "v850",  "u850",  "t850",  "q850",  "slp",
         "ivte",  "ivtn",  "z500",  "v200",  "u200",
-        "pr",    "tb" , "sst"
+        "pr",    "tb" , "sst", "sm"
     ]
 
     for key in required_keys:
@@ -249,7 +250,7 @@ def moaap(
     pr   = params["pr"]                     # accumulated surface precipitation [mm/time]
     tb   = params["tb"]                     # brightness temperature [K]
     sst  = params["sst"]                    # sea surface temperature [K]
-
+    sm   = params["sm"]                     # soil moisture [m**3 m**-3]
 
     # calculate grid spacing assuming a regular lat/lon grid
     _,_,Area,Gridspacing = calc_grid_distance_area(Lon,Lat)
@@ -332,6 +333,10 @@ def moaap(
         sst_test = 'yes'
     else:
         sst_test = 'no'
+    if (sm is not None):
+        sm_test = 'yes'
+    else:
+        sm_test = 'no'
 
     """
     jet_test =  'no'
@@ -346,8 +351,9 @@ def moaap(
     cloud_test =  'no'
     ew_test =  'no'
     sst_test = 'no'
+    sm_test = "no"
     """
-    
+
     print(' ')
     print('The provided variables allow tracking the following phenomena')
     print(' ')
@@ -365,6 +371,7 @@ def moaap(
     print('   clouds      |   ' + cloud_test)
     print('   Equ. Waves  |   ' + ew_test)
     print('   SST_ANOM    |   ' + sst_test)
+    print('   SM_ANOM     |   ' + sm_test)
     print('---------------------------')
     print(' ')
 
@@ -418,6 +425,14 @@ def moaap(
         pass
     try:
         tb[:,Mask == 0]   = np.nan
+    except:
+        pass
+    try:
+        sst[:,Mask == 0]   = np.nan
+    except:
+        pass
+    try:
+        sm[:,Mask == 0]   = np.nan
     except:
         pass
 
@@ -879,21 +894,38 @@ def moaap(
 
 
     
-    SST_ANOM_objects = None
-    SST_GRAD_objects = None
+    SST_ANOM_objects_warm = None
+    SST_ANOM_objects_cold = None
     
     if sst_test == 'yes':
-        print('======> track SST anomalies and gradients')
-        start = time.perf_counter()        
+        print('======> track SST anomalies')
+        start = time.perf_counter()
         
-        # Build ocean mask
+        "    Build an ocean mask"
+
+        """
         import cartopy.io.shapereader as shpreader
         from shapely.ops import unary_union
         import shapely
         land_shp = shpreader.natural_earth(resolution="110m", category="physical", name="land")
         land_geom = unary_union(list(shpreader.Reader(land_shp).geometries()))
         pts = shapely.points(Lon.ravel(), Lat.ravel())
+        stop()
         mask_land = shapely.contains(land_geom, pts).reshape(Lat.shape)
+        """
+
+        import cartopy.io.shapereader as shpreader
+        from shapely.ops import unary_union
+        import shapely
+        
+        land_shp = shpreader.natural_earth(
+            resolution="110m", category="physical", name="land"
+        )
+        land_geom = unary_union(list(shpreader.Reader(land_shp).geometries()))
+
+        # Vectorized point-in-polygon directly on arrays:
+        mask_land = shapely.contains_xy(land_geom, Lon, Lat)   # Lon/Lat can be 2D
+        
         tskin_ocean = sst.astype(float).copy()
         tskin_ocean[:, mask_land] = np.nan
         # set cells that are below freezing to zero to remove areas with sea ice
@@ -940,6 +972,49 @@ def moaap(
         end = time.perf_counter()
         timer(start, end)
 
+
+    if sm_test == 'yes':
+        print('======> track SM (soil moisture) anomalies')
+        start = time.perf_counter()        
+
+        SM_ANOM_objects_wet, SM_ANOM_objects_dry, sm_hist_wet, sm_hist_dry = sm_anom_tracking(
+            sm=sm,
+            dT=dT,
+            Area=Area,
+            Gridspacing=Gridspacing,
+            SM_BG_temporal_h=params["SM_BG_temporal_h"],
+            SM_BG_spatial_km=params["SM_BG_spatial_km"],
+            SM_ANOM_abs=params["SM_ANOM_abs"],
+            SM_ANOM_min_dist_km=params["SM_ANOM_min_dist_km"],
+            MinTimeSM_ANOM=params["MinTimeSM_ANOM"],
+            MinAreaSM_ANOM=params["MinAreaSM_ANOM"],
+            breakup=params["breakup_sm_anom"],
+            analyze_sm_anom_history=params["analyze_sm_anom_history"],
+        )
+
+        wet_sm_objects_characteristics = calc_object_characteristics(SM_ANOM_objects_wet, # feature object file
+                                     sm,             # original file used for feature detection
+                                     params["OutputFolder"]+'wet-sm_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     Time,            # timesteps of the data
+                                     Lat,             # 2D latidudes
+                                     Lon,             # 2D Longitudes
+                                     Gridspacing,
+                                     Area,
+                                     min_tsteps=int(params["MinTimeSM_ANOM"]/dT),
+                                     history = sm_hist_wet)
+
+        dry_sm_objects_characteristics = calc_object_characteristics(SM_ANOM_objects_dry, # feature object file
+                                     sm,             # original file used for feature detection
+                                     params["OutputFolder"]+'dry-sm_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
+                                     Time,            # timesteps of the data
+                                     Lat,             # 2D latidudes
+                                     Lon,             # 2D Longitudes
+                                     Gridspacing,
+                                     Area,
+                                     min_tsteps=int(params["MinTimeSM_ANOM"]/dT),
+                                     history = sm_hist_dry)
+        end = time.perf_counter()
+        timer(start, end)
 
     print(' ')
     print('Save the object masks into a joint netCDF')
@@ -1001,7 +1076,10 @@ def moaap(
         SST_ANOM_warm = dataset.createVariable('warm_SST_Objects', np.float32,('time','yc','xc'),zlib=True)
         SST_ANOM_cold = dataset.createVariable('cold_SST_Objects', np.float32,('time','yc','xc'),zlib=True)
         SST = dataset.createVariable('SST', np.float32,('time','yc','xc'),zlib=True)
-        
+    if sm_test == 'yes':
+        SM_ANOM_wet = dataset.createVariable('wet_SM_Objects', np.float32,('time','yc','xc'),zlib=True)
+        SM_ANOM_dry = dataset.createVariable('dry_SM_Objects', np.float32,('time','yc','xc'),zlib=True)
+        SM_val = dataset.createVariable('SM', np.float32,('time','yc','xc'),zlib=True)
         
 
     times.calendar = "standard"
@@ -1149,6 +1227,18 @@ def moaap(
         SST.coordinates = "lon lat"
         SST.longname = "sea surface temperature"
         SST.unit = "K"
+    if sm_test == 'yes':
+        SM_ANOM_wet.coordinates = "lon lat"
+        SM_ANOM_wet.longname = "wet SM anomaly objects"
+        SM_ANOM_wet.unit = ""
+
+        SM_ANOM_dry.coordinates = "lon lat"
+        SM_ANOM_dry.longname = "dry SM anomaly objects"
+        SM_ANOM_dry.unit = ""
+        
+        SM_val.coordinates = "lon lat"
+        SM_val.longname = "top layer soil moisture"
+        SM_val.unit = "kg3 kg-3"
 
     lat[:] = Lat
     lon[:] = Lon
@@ -1197,14 +1287,17 @@ def moaap(
         SST_ANOM_warm[:] = SST_ANOM_objects_warm
         SST_ANOM_cold[:] = SST_ANOM_objects_cold
         SST[:] = sst
+    if sm_test == 'yes':
+        SM_ANOM_wet[:] = SM_ANOM_objects_wet
+        SM_ANOM_dry[:] = SM_ANOM_objects_dry
+        SM_val[:] = sm
         
     times[:] = iTime
     
     # SET GLOBAL ATTRIBUTES
     dataset.title = "MOAAP object tracking output"
-    dataset.contact = "Andreas F. Prein (prein@ucar.edu)"
+    dataset.contact = "Andreas F. Prein (aprein@ethz.ch)"
     # dataset.breakup = 'The ' + breakup + " method has been used to segment the objects"
-
     dataset.close()
     print('Saved: '+NCfile)
     import time

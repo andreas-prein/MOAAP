@@ -444,7 +444,7 @@ def analyze_watershed_history(watershed_results, min_dist, object_type: str, his
     union_array = uf.parent
 
     # get object histories into a directory
-    history_data = build_object_history_dict(labels, centers, events, uf, histories, object_type=object_type, save=True)
+    history_data = build_object_history_dict(labels, centers, events, uf, histories, object_type=object_type, save=False)
 
     if histplot is True:
         # Plot the history

@@ -151,7 +151,7 @@ def ar_ivt_tracking(IVT,
                                     int(MinTimeIVT/dT),
                                 dT)
     elif breakup == 'watershed':
-        min_dist=int((4000 * 10**3)/Gridspacing)
+        min_dist=int((2000 * 10**3)/Gridspacing)
         IVT_smooth = smooth_uniform(IVT,
                                     1,
                                     int(250/(Gridspacing/1000.)))

@@ -19,3 +19,4 @@ from .fronts import frontal_identification
 from .tropical_cyclones import tc_tracking
 from .waves import track_tropwaves_tb
 from .sst import sst_anom_tracking
+from .sm import sm_anom_tracking
