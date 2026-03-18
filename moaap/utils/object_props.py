@@ -138,10 +138,106 @@ def calc_object_characteristics(
 
         return objects_charac
 
-    
 
+
+import numpy as np
+from scipy import ndimage
 
 def ConnectLon_on_timestep(object_indices):
+    """
+    Connect objects across the date line using bounding boxes from
+    ndimage.find_objects, so relabeling is restricted to the spatial
+    extent of affected objects.
+
+    Parameters
+    ----------
+    object_indices : np.ndarray
+        3D labeled array (time, y, x)
+
+    Returns
+    -------
+    np.ndarray
+        Updated labeled array with east-edge objects relabeled to the
+        corresponding west-edge label.
+    """
+
+    arr = object_indices.copy()
+
+    # ------------------------------------------------------------
+    # 1. Collect all west/east label merges needed across timesteps
+    # ------------------------------------------------------------
+    parent = {}
+
+    def find(x):
+        x = int(x)
+        root = x
+        while root in parent:
+            root = parent[root]
+        while x in parent and parent[x] != root:
+            nxt = parent[x]
+            parent[x] = root
+            x = nxt
+        return root
+
+    for tt in range(arr.shape[0]):
+        west = arr[tt, :, -1]
+        east = arr[tt, :, 0]
+
+        valid = (west > 0) & (east > 0)
+        if not np.any(valid):
+            continue
+
+        pairs = np.column_stack((west[valid], east[valid]))
+        pairs = pairs[pairs[:, 0] != pairs[:, 1]]
+        if pairs.size == 0:
+            continue
+
+        pairs = np.unique(pairs, axis=0)
+
+        for ObW, ObE in pairs:
+            rep_w = find(ObW)
+            rep_e = find(ObE)
+            if rep_w != rep_e:
+                parent[rep_e] = rep_w
+
+    if not parent:
+        return arr
+
+    # ------------------------------------------------------------
+    # 2. Resolve final mapping for all labels involved
+    # ------------------------------------------------------------
+    labels_to_update = sorted(parent.keys())
+    final_map = {lab: find(lab) for lab in labels_to_update}
+
+    # ------------------------------------------------------------
+    # 3. Get object bounding boxes once
+    #    Note: index i corresponds to label i+1
+    # ------------------------------------------------------------
+    obj_slices = ndimage.find_objects(arr)
+
+    # ------------------------------------------------------------
+    # 4. Relabel only inside each affected object's bounding box
+    # ------------------------------------------------------------
+    for old_label, new_label in final_map.items():
+        if old_label == new_label:
+            continue
+
+        # find_objects uses label-1 indexing
+        if old_label - 1 >= len(obj_slices):
+            continue
+
+        slc = obj_slices[old_label - 1]
+        if slc is None:
+            continue
+
+        sub = arr[slc]
+        sub[sub == old_label] = new_label
+
+    return arr
+
+
+
+def ConnectLon_on_timestep_orig(object_indices):
     
     """ 
     This function connects objects over the date line on a time-step by
@@ -205,7 +301,8 @@ def ConnectLon_on_timestep(object_indices):
                 ObW = int(OBJ_unique[obj].split("_")[0])
             except:
                 continue
-            object_indices[tt,object_indices[tt,:] == ObE] = ObW
+            object_indices[object_indices == ObE] = ObW
+            # object_indices[tt,object_indices[tt,:] == ObE] = ObW
     return object_indices
 
 

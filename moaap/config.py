@@ -99,7 +99,7 @@ MOAAP_DEFAULTS = {
 
     # equatorial waves
     "tropwave_minTime": 48, # minimum tropical wave lifetime [h]
-    "er_th": -1.25, #-0.5,           # equatorial Rossby wave threshold [unitless]
+    "er_th": -5, #-0.5,           # equatorial Rossby wave threshold [unitless]
     "mrg_th": -3,          # mixed Rossby-gravity wave threshold [unitless]
     "igw_th": -5,          # inertia-gravity wave threshold [unitless]
     "kel_th": -5,          # Kelvin wave threshold [unitless]

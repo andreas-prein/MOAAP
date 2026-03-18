@@ -60,10 +60,37 @@ def sst_anom_tracking(
     t_win = _to_tsteps(SST_BG_temporal_h, dT)
     xy_win = _to_cells(SST_BG_spatial_km, Gridspacing)
 
-    sst_f = sst.astype(float)
+    # --------------------------------------------------
+    # Remove mean diurnal cycle
+    # --------------------------------------------------
 
-    bg = smooth_uniform(sst_f, t_win, xy_win)
-    ssta = sst_f - bg
+    nt, ny, nx = sst.shape
+    steps_per_day = int(24 / dT)
+    
+    if steps_per_day > 1 and nt >= steps_per_day:
+    
+        n_days = nt // steps_per_day
+        sst_day = sst.reshape(n_days, steps_per_day, ny, nx)
+    
+        # mean over days -> diurnal cycle
+        diurnal_cycle = np.nanmean(sst_day, axis=0)
+
+        # smooth along time-of-day axis with periodic wrap-around
+        diurnal_cycle_ext = np.concatenate(
+            [diurnal_cycle[-1:, :, :], diurnal_cycle, diurnal_cycle[:1, :, :]],
+            axis=0
+        )
+        diurnal_cycle = (
+            diurnal_cycle_ext[:-2] +
+            diurnal_cycle_ext[1:-1] +
+            diurnal_cycle_ext[2:]
+        ) / 3.0
+
+        # subtract and reshape back
+        sst = (sst_day - diurnal_cycle[None, :, :, :]).reshape(nt, ny, nx)        
+    
+    bg = smooth_uniform(sst, t_win, xy_win)
+    ssta = sst - bg
 
     # calculate anomaly threshold dependent on latitude
     ny = lat.shape[0]
@@ -158,8 +185,6 @@ def sst_anom_tracking(
             "sst_anom",
         )
 
-        # history_warm = (union_array, events, histories, history_data)
-
     # --------------------------------------------------
     # --------------------------------------------------
     # Start working on cold features
@@ -213,9 +238,6 @@ def sst_anom_tracking(
             objects_cold,
             min_dist,
             "sst_anom",
-        )
-
-        # history_cold = (union_array, events, histories, history_data)
-        
+        )        
 
     return objects_warm, objects_cold, ssta, bg, history_warm, history_cold

@@ -19,6 +19,7 @@ from moaap.config import MOAAP_DEFAULTS
 import metpy.calc as calc
 from metpy.units import units
 from pdb import set_trace as stop
+import time
 
 
 def moaap(
@@ -219,6 +220,8 @@ def moaap(
         A dictionary containing detected features grouped by type
         (e.g., 'precip', 'moisture', 'cyclones', etc.).
     """
+    import time
+    start_moaap = time.perf_counter()
     
     params = MOAAP_DEFAULTS.copy()
     # ... load/merge config_file if given ...
@@ -354,6 +357,7 @@ def moaap(
     sm_test = "no"
     """
 
+
     print(' ')
     print('The provided variables allow tracking the following phenomena')
     print(' ')
@@ -374,9 +378,6 @@ def moaap(
     print('   SM_ANOM     |   ' + sm_test)
     print('---------------------------')
     print(' ')
-
-    
-    import time
     
     # Mask data outside of Focus domain
     try:
@@ -764,7 +765,9 @@ def moaap(
 
     if mcs_tb_test == 'yes':
         print("======> 'check if Tb objects qualify as MCS (or selected storm type)")
-        start = time.perf_counter()
+        
+        start_1 = time.perf_counter()
+        print("        MCS tracking")
         MCS_objects_Tb, C_objects, history_MCS = mcs_tb_tracking(tb,
                             pr,
                             params["SmoothSigmaC"],
@@ -784,7 +787,12 @@ def moaap(
                             breakup=params["breakup_mcs"],
                             analyze_mcs_history=params["analyze_mcs_history"]
                            )
+        end_1 = time.perf_counter()
+        timer(start_1, end_1)
+
         
+        start_1 = time.perf_counter()
+        print("        Cloud characteristics")
         grCs = calc_object_characteristics(C_objects, # feature object file
                              tb,         # original file used for feature detection
                              params["OutputFolder"]+'Clouds_'+str(StartDay.year)+str(StartDay.month).zfill(2)+'_'+SetupString,
@@ -794,7 +802,11 @@ def moaap(
                              Gridspacing,
                              Area,
                              min_tsteps=int(params["MinTimeC"]/dT))      # minimum livetime in hours
-        
+        end_1 = time.perf_counter()
+        timer(start_1, end_1)
+
+        start_1 = time.perf_counter()
+        print("        MCS characteristics")
         grMCSs_Tb = calc_object_characteristics(
             MCS_objects_Tb,  # feature object file
             pr,  # original file used for feature detection
@@ -806,8 +818,8 @@ def moaap(
             Area,
             history = history_MCS)
         
-        end = time.perf_counter()
-        timer(start, end)
+        end_1 = time.perf_counter()
+        timer(start_1, end_1)
 
     
     if cloud_test == "yes":
@@ -902,18 +914,6 @@ def moaap(
         start = time.perf_counter()
         
         "    Build an ocean mask"
-
-        """
-        import cartopy.io.shapereader as shpreader
-        from shapely.ops import unary_union
-        import shapely
-        land_shp = shpreader.natural_earth(resolution="110m", category="physical", name="land")
-        land_geom = unary_union(list(shpreader.Reader(land_shp).geometries()))
-        pts = shapely.points(Lon.ravel(), Lat.ravel())
-        stop()
-        mask_land = shapely.contains(land_geom, pts).reshape(Lat.shape)
-        """
-
         import cartopy.io.shapereader as shpreader
         from shapely.ops import unary_union
         import shapely
@@ -1303,6 +1303,11 @@ def moaap(
     import time
     end = time.perf_counter()
     timer(start, end)
+
+    print("        ")
+    print("        MOAAP total runtime:")
+    end_moaap = time.perf_counter()
+    timer(start_moaap, end_moaap)
 
     if tc_test == 'yes':
         ### SAVE THE TC TRACKS TO PICKL FILE

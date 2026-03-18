@@ -92,7 +92,7 @@ def mcs_tb_tracking(
         #                6,  # at least six grid cells apart 
         #                1)
         threshold=1
-        min_dist=int((np.sqrt(CL_Area/np.pi))/(Gridspacing/1000))*4
+        min_dist=int((np.sqrt(CL_Area/np.pi))/(Gridspacing/1000))*2
 
         C_objects = watershed_3d_overlap_parallel(
                 tb * -1,
@@ -104,14 +104,12 @@ def mcs_tb_tracking(
                 connectLon = connectLon,
                 extend_size_ratio = 0.10
                 )
-        
-
 
     # check if precipitation object is from an MCS
     object_indices = ndimage.find_objects(C_objects)
     MCS_objects_Tb = np.zeros(C_objects.shape,dtype=int)
 
-    for iobj,_ in tqdm(enumerate(object_indices)):
+    for iobj,_ in tqdm(enumerate(object_indices), desc="        calc. obj. properties"):
         if object_indices[iobj] is None:
             continue
 
@@ -174,17 +172,27 @@ def mcs_tb_tracking(
         else:
             continue
 
+    print("        clean up MCSs")
+    import time
+    start_t = time.time()
     MCS_objects_Tb, _ = clean_up_objects(MCS_objects_Tb,
                                            dT,
                                            min_tsteps=int(MCS_minTime/dT))
+    end_t = time.time()
+    print(f"Runtime: {end_t - start_t:.4f} seconds")
 
-    # analyze MCS history with the watershed method
+
     if analyze_mcs_history:
+        print("        analyze MCS history with the watershed method")
+        start_t = time.time()
         min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*2
         print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
         union_array, events, histories, history_MCSs = analyze_watershed_history(
             MCS_objects_Tb, min_dist, "mcs"
         )
+        
+        end_t = time.time()
+        print(f"Runtime: {end_t - start_t:.4f} seconds")
         
         """
         union_array_clean = {int(k): int(v) for k, v in union_array.items()}
@@ -209,9 +217,9 @@ def mcs_tb_tracking(
             C_objects, min_dist, "mcs"
         )
         """
-        
     else:
         history_MCSs = None
+    
         
     return MCS_objects_Tb, C_objects, history_MCSs
 

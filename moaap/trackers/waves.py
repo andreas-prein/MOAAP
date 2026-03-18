@@ -118,6 +118,7 @@ def track_tropwaves_tb(tb,
                     min_dist,
                     dT,
                     mintime = ew_mintime,
+                    extend_size_ratio = 0.25,
                     )
             
         if connectLon == 1:
