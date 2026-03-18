@@ -92,6 +92,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">metpy.calc</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">calc</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">metpy.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">units</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 
 
 <div class="viewcode-block" id="moaap">
@@ -294,6 +295,8 @@
 <span class="sd">        A dictionary containing detected features grouped by type</span>
 <span class="sd">        (e.g., &#39;precip&#39;, &#39;moisture&#39;, &#39;cyclones&#39;, etc.).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+    <span class="n">start_moaap</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     
     <span class="n">params</span> <span class="o">=</span> <span class="n">MOAAP_DEFAULTS</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="c1"># ... load/merge config_file if given ...</span>
@@ -429,6 +432,7 @@
 <span class="sd">    sm_test = &quot;no&quot;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The provided variables allow tracking the following phenomena&#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
@@ -449,9 +453,6 @@
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   SM_ANOM     |   &#39;</span> <span class="o">+</span> <span class="n">sm_test</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---------------------------&#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
-
-    
-    <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
     
     <span class="c1"># Mask data outside of Focus domain</span>
     <span class="k">try</span><span class="p">:</span>
@@ -839,7 +840,9 @@
 
     <span class="k">if</span> <span class="n">mcs_tb_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;======&gt; &#39;check if Tb objects qualify as MCS (or selected storm type)&quot;</span><span class="p">)</span>
-        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        
+        <span class="n">start_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        MCS tracking&quot;</span><span class="p">)</span>
         <span class="n">MCS_objects_Tb</span><span class="p">,</span> <span class="n">C_objects</span><span class="p">,</span> <span class="n">history_MCS</span> <span class="o">=</span> <span class="n">mcs_tb_tracking</span><span class="p">(</span><span class="n">tb</span><span class="p">,</span>
                             <span class="n">pr</span><span class="p">,</span>
                             <span class="n">params</span><span class="p">[</span><span class="s2">&quot;SmoothSigmaC&quot;</span><span class="p">],</span>
@@ -859,7 +862,12 @@
                             <span class="n">breakup</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;breakup_mcs&quot;</span><span class="p">],</span>
                             <span class="n">analyze_mcs_history</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;analyze_mcs_history&quot;</span><span class="p">]</span>
                            <span class="p">)</span>
+        <span class="n">end_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">timer</span><span class="p">(</span><span class="n">start_1</span><span class="p">,</span> <span class="n">end_1</span><span class="p">)</span>
+
         
+        <span class="n">start_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        Cloud characteristics&quot;</span><span class="p">)</span>
         <span class="n">grCs</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">C_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
                              <span class="n">tb</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
                              <span class="n">params</span><span class="p">[</span><span class="s2">&quot;OutputFolder&quot;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;Clouds_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">year</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">SetupString</span><span class="p">,</span>
@@ -869,7 +877,11 @@
                              <span class="n">Gridspacing</span><span class="p">,</span>
                              <span class="n">Area</span><span class="p">,</span>
                              <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeC&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
-        
+        <span class="n">end_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">timer</span><span class="p">(</span><span class="n">start_1</span><span class="p">,</span> <span class="n">end_1</span><span class="p">)</span>
+
+        <span class="n">start_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        MCS characteristics&quot;</span><span class="p">)</span>
         <span class="n">grMCSs_Tb</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span>
             <span class="n">MCS_objects_Tb</span><span class="p">,</span>  <span class="c1"># feature object file</span>
             <span class="n">pr</span><span class="p">,</span>  <span class="c1"># original file used for feature detection</span>
@@ -881,8 +893,8 @@
             <span class="n">Area</span><span class="p">,</span>
             <span class="n">history</span> <span class="o">=</span> <span class="n">history_MCS</span><span class="p">)</span>
         
-        <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-        <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+        <span class="n">end_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">timer</span><span class="p">(</span><span class="n">start_1</span><span class="p">,</span> <span class="n">end_1</span><span class="p">)</span>
 
     
     <span class="k">if</span> <span class="n">cloud_test</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span><span class="p">:</span>
@@ -977,18 +989,6 @@
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         
         <span class="s2">&quot;    Build an ocean mask&quot;</span>
-
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        import cartopy.io.shapereader as shpreader</span>
-<span class="sd">        from shapely.ops import unary_union</span>
-<span class="sd">        import shapely</span>
-<span class="sd">        land_shp = shpreader.natural_earth(resolution=&quot;110m&quot;, category=&quot;physical&quot;, name=&quot;land&quot;)</span>
-<span class="sd">        land_geom = unary_union(list(shpreader.Reader(land_shp).geometries()))</span>
-<span class="sd">        pts = shapely.points(Lon.ravel(), Lat.ravel())</span>
-<span class="sd">        stop()</span>
-<span class="sd">        mask_land = shapely.contains(land_geom, pts).reshape(Lat.shape)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="kn">import</span><span class="w"> </span><span class="nn">cartopy.io.shapereader</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">shpreader</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">shapely</span>
@@ -1378,6 +1378,11 @@
     <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
     <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     <span class="n">timer</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        &quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        MOAAP total runtime:&quot;</span><span class="p">)</span>
+    <span class="n">end_moaap</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">timer</span><span class="p">(</span><span class="n">start_moaap</span><span class="p">,</span> <span class="n">end_moaap</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">tc_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="c1">### SAVE THE TC TRACKS TO PICKL FILE</span>

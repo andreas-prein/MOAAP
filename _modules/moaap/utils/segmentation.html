@@ -89,8 +89,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">shared_memory</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">cKDTree</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_trace</span> <span class="k">as</span> <span class="n">stop</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">ConnectLon_on_timestep</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">moaap.utils.object_props</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_up_objects</span><span class="p">,</span> <span class="n">BreakupObjects</span><span class="p">,</span> <span class="n">ConnectLon_on_timestep</span>
 
 
 <div class="viewcode-block" id="UnionFind">
@@ -827,8 +827,8 @@
     
     <span class="n">coords_list</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="c1"># find peaks in each time slice and add time as an additional coordinate</span>
-    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        find peaks in each time slice and add time as an additional coordinate&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
         <span class="n">coords_t</span> <span class="o">=</span> <span class="n">peak_local_max</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> 
                                 <span class="n">min_distance</span> <span class="o">=</span> <span class="n">min_dist</span><span class="p">,</span>
                                 <span class="n">threshold_abs</span> <span class="o">=</span> <span class="n">max_treshold</span><span class="p">,</span>
@@ -853,17 +853,179 @@
     <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
     <span class="n">markers</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">T</span><span class="p">)]</span> <span class="o">=</span> <span class="n">labels</span>
 
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        define connectivity for 3D watershedding and perform watershedding&quot;</span><span class="p">)</span>
 
-    <span class="c1"># define connectivity for 3D watershedding and perform watershedding</span>
+    <span class="n">conection</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        label connected mask components&quot;</span><span class="p">)</span>
+    <span class="n">mask_labels</span><span class="p">,</span> <span class="n">num_features</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">conection</span><span class="p">)</span>
+    <span class="n">object_slices</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">mask_labels</span><span class="p">)</span>
+
+    <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        define connectivity for 3D watershedding&quot;</span><span class="p">)</span>
+    <span class="n">conection</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        label connected mask components&quot;</span><span class="p">)</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+    <span class="n">start_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">mask_labels</span><span class="p">,</span> <span class="n">num_features</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">conection</span><span class="p">)</span>
+    <span class="n">object_slices</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">mask_labels</span><span class="p">)</span>
+    
+    <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    <span class="n">end_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;        Runtime: </span><span class="si">{</span><span class="n">end_t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_t</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;        perform watershedding for </span><span class="si">{</span><span class="n">num_features</span><span class="si">}</span><span class="s2"> connected mask components&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">iobj</span><span class="p">,</span> <span class="n">slc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tqdm</span><span class="p">(</span><span class="n">object_slices</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">object_slices</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Watershed components&quot;</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">slc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+    
+        <span class="n">local_component</span> <span class="o">=</span> <span class="p">(</span><span class="n">mask_labels</span><span class="p">[</span><span class="n">slc</span><span class="p">]</span> <span class="o">==</span> <span class="p">(</span><span class="n">iobj</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">local_component</span><span class="p">):</span>
+            <span class="k">continue</span>
+    
+        <span class="n">local_markers</span> <span class="o">=</span> <span class="n">markers</span><span class="p">[</span><span class="n">slc</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">local_markers</span> <span class="o">=</span> <span class="n">local_markers</span> <span class="o">*</span> <span class="n">local_component</span>
+    
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">local_markers</span><span class="p">):</span>
+            <span class="k">continue</span>
+    
+        <span class="n">local_data</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">slc</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    
+        <span class="n">local_ws</span> <span class="o">=</span> <span class="n">watershed</span><span class="p">(</span>
+            <span class="n">image</span><span class="o">=</span><span class="n">local_data</span><span class="p">,</span>
+            <span class="n">markers</span><span class="o">=</span><span class="n">local_markers</span><span class="p">,</span>
+            <span class="n">connectivity</span><span class="o">=</span><span class="n">conection</span><span class="p">,</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
+            <span class="n">mask</span><span class="o">=</span><span class="n">local_component</span><span class="p">,</span>
+            <span class="n">compactness</span><span class="o">=</span><span class="mi">0</span>
+        <span class="p">)</span>
+    
+        <span class="n">out_sub</span> <span class="o">=</span> <span class="n">watershed_results</span><span class="p">[</span><span class="n">slc</span><span class="p">]</span>
+        <span class="n">out_sub</span><span class="p">[</span><span class="n">local_component</span><span class="p">]</span> <span class="o">=</span> <span class="n">local_ws</span><span class="p">[</span><span class="n">local_component</span><span class="p">]</span>
+        <span class="n">watershed_results</span><span class="p">[</span><span class="n">slc</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_sub</span>
+<span class="w">    </span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    conection = np.ones((3, 3, 3))</span>
+<span class="sd">    watershed_results = watershed(image = -np.asarray(data, dtype=np.float32), #np.array(data)*-1,  # watershedding field with maxima transformed to minima</span>
+<span class="sd">                    markers = np.asarray(markers, dtype=np.int32), # maximum points in 3D matrix</span>
+<span class="sd">                    connectivity = conection, # connectivity</span>
+<span class="sd">                    offset = (np.ones((3)) * 1).astype(&#39;int&#39;), #4000/dx_m[dx]).astype(&#39;int&#39;),</span>
+<span class="sd">                    mask = np.asarray(image, dtype=bool), # binary mask for areas to watershed on</span>
+<span class="sd">                    compactness = 0) # high values --&gt; more regular shaped watersheds</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        correct objects on date line if needed&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">start_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">extension_size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">watershed_results</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">extension_size</span><span class="p">:</span><span class="o">-</span><span class="n">extension_size</span><span class="p">])</span>
+        <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">ConnectLon_on_timestep</span><span class="p">(</span><span class="n">watershed_results</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int&quot;</span><span class="p">))</span>
+        
+        <span class="n">end_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;        Runtime: </span><span class="si">{</span><span class="n">end_t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_t</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">watershed_results</span></div>
+
+
+
+<span class="c1"># from memory_profiler import profile</span>
+<span class="c1"># # @profile__sections</span>
+<span class="c1"># @profile_</span>
+<div class="viewcode-block" id="watershed_3d_overlap_orig">
+<a class="viewcode-back" href="../../../modules.html#moaap.utils.segmentation.watershed_3d_overlap_orig">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">watershed_3d_overlap_orig</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">object_threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">max_treshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">min_dist</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">dT</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">mintime</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">connectLon</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">extend_size_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform 3D watershedding on the input data with temporal consistency.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : np.ndarray</span>
+<span class="sd">        3D matrix with data for watershedding</span>
+<span class="sd">    object_threshold : float</span>
+<span class="sd">        Float to create binary object mast</span>
+<span class="sd">    max_treshold : float</span>
+<span class="sd">        Value for identifying max. points for spreading</span>
+<span class="sd">    min_dist : int</span>
+<span class="sd">        Minimum distance (in grid cells) between maximum points</span>
+<span class="sd">    dT : int</span>
+<span class="sd">        Time interval in hours</span>
+<span class="sd">    mintime : int, optional</span>
+<span class="sd">        Minimum time an object has to exist in dT, by default 24</span>
+<span class="sd">    connectLon : int, optional</span>
+<span class="sd">        Do we have to track features over the date line?, by default 0</span>
+<span class="sd">    extend_size_ratio : float, optional</span>
+<span class="sd">        If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding. </span>
+<span class="sd">        This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        3D matrix with watershed labels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    
+    <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">extension_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">extend_size_ratio</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="n">extension_size</span><span class="p">:],</span> <span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="n">extension_size</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">ndim</span><span class="p">(</span><span class="n">object_threshold</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">object_threshold</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">object_threshold</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="n">extension_size</span><span class="p">:],</span> <span class="n">object_threshold</span><span class="p">,</span> <span class="n">object_threshold</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="n">extension_size</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span>
+            <span class="p">)</span>
+    
+    <span class="c1"># Create a binary mask for watershedding, all data that needs to be segmented is True</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">data</span> <span class="o">&gt;=</span> <span class="n">object_threshold</span>
+    
+    <span class="n">coords_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        find peaks in each time slice and add time as an additional coordinate&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+        <span class="n">coords_t</span> <span class="o">=</span> <span class="n">peak_local_max</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> 
+                                <span class="n">min_distance</span> <span class="o">=</span> <span class="n">min_dist</span><span class="p">,</span>
+                                <span class="n">threshold_abs</span> <span class="o">=</span> <span class="n">max_treshold</span><span class="p">,</span>
+                                <span class="n">labels</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+                                <span class="n">exclude_border</span><span class="o">=</span><span class="kc">True</span>
+                               <span class="p">)</span>
+
+        <span class="n">coords_with_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">coords_t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">t</span><span class="p">),</span> <span class="n">coords_t</span><span class="p">))</span>
+        <span class="n">coords_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coords_with_time</span><span class="p">)</span>
+
+    <span class="c1"># Combine all coordinates into a single array</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">coords_list</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">mask</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">T</span><span class="p">)]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># label peaks over time to ensure temporal consistency</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">label_peaks_over_time_3d</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">max_dist</span><span class="o">=</span><span class="n">min_dist</span><span class="p">)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">markers</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">T</span><span class="p">)]</span> <span class="o">=</span> <span class="n">labels</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        define connectivity for 3D watershedding and perform watershedding&quot;</span><span class="p">)</span>
     <span class="n">conection</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
-    <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">watershed</span><span class="p">(</span><span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># watershedding field with maxima transformed to minima</span>
-                    <span class="n">markers</span> <span class="o">=</span> <span class="n">markers</span><span class="p">,</span> <span class="c1"># maximum points in 3D matrix</span>
+    <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">watershed</span><span class="p">(</span><span class="n">image</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="c1">#np.array(data)*-1,  # watershedding field with maxima transformed to minima</span>
+                    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="c1"># maximum points in 3D matrix</span>
                     <span class="n">connectivity</span> <span class="o">=</span> <span class="n">conection</span><span class="p">,</span> <span class="c1"># connectivity</span>
                     <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">),</span> <span class="c1">#4000/dx_m[dx]).astype(&#39;int&#39;),</span>
-                    <span class="n">mask</span> <span class="o">=</span> <span class="n">image</span><span class="p">,</span> <span class="c1"># binary mask for areas to watershed on</span>
+                    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">),</span> <span class="c1"># binary mask for areas to watershed on</span>
                     <span class="n">compactness</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># high values --&gt; more regular shaped watersheds</span>
 
-    <span class="c1"># correct objects on date line if needed</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        correct objects on date line if needed&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">connectLon</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">extension_size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">watershed_results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">watershed_results</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">extension_size</span><span class="p">:</span><span class="o">-</span><span class="n">extension_size</span><span class="p">])</span>
@@ -884,8 +1046,8 @@
     <span class="n">mintime</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
     <span class="n">connectLon</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">extend_size_ratio</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
-    <span class="n">n_chunks_lat</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="c1">#None,</span>
-    <span class="n">n_chunks_lon</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="c1">#None,</span>
+    <span class="n">n_chunks_lat</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="c1">#None,</span>
+    <span class="n">n_chunks_lon</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="c1">#None,</span>
     <span class="n">overlap_cells</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">mp_method</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span>
 <span class="p">):</span>
@@ -1620,6 +1782,7 @@
         <span class="n">prev_coords</span> <span class="o">=</span> <span class="n">coords_t</span>
         <span class="n">prev_labels</span> <span class="o">=</span> <span class="n">labels_t</span>
     <span class="k">return</span> <span class="n">labels</span></div>
+
 
 </pre></div>
 

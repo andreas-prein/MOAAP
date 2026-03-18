@@ -62,6 +62,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.grid.radialdistance"><code class="docutils literal notranslate"><span class="pre">radialdistance()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.BreakupObjects"><code class="docutils literal notranslate"><span class="pre">BreakupObjects()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.ConnectLon_on_timestep"><code class="docutils literal notranslate"><span class="pre">ConnectLon_on_timestep()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.ConnectLon_on_timestep_orig"><code class="docutils literal notranslate"><span class="pre">ConnectLon_on_timestep_orig()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.calc_object_characteristics"><code class="docutils literal notranslate"><span class="pre">calc_object_characteristics()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.clean_up_objects"><code class="docutils literal notranslate"><span class="pre">clean_up_objects()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.object_props.is_land"><code class="docutils literal notranslate"><span class="pre">is_land()</span></code></a></li>
@@ -81,6 +82,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.label_peaks_over_time_3d"><code class="docutils literal notranslate"><span class="pre">label_peaks_over_time_3d()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_2d_overlap"><code class="docutils literal notranslate"><span class="pre">watershed_2d_overlap()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_3d_overlap"><code class="docutils literal notranslate"><span class="pre">watershed_3d_overlap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_3d_overlap_orig"><code class="docutils literal notranslate"><span class="pre">watershed_3d_overlap_orig()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#moaap.utils.segmentation.watershed_3d_overlap_parallel"><code class="docutils literal notranslate"><span class="pre">watershed_3d_overlap_parallel()</span></code></a></li>
 </ul>
 </li>
@@ -508,6 +510,26 @@ and keeps the largest consistent overlap.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="moaap.utils.object_props.ConnectLon_on_timestep">
 <span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">ConnectLon_on_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#ConnectLon_on_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.ConnectLon_on_timestep" title="Link to this definition"></a></dt>
+<dd><p>Connect objects across the date line using bounding boxes from
+ndimage.find_objects, so relabeling is restricted to the spatial
+extent of affected objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>object_indices</strong> (<em>np.ndarray</em>) – 3D labeled array (time, y, x)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Updated labeled array with east-edge objects relabeled to the
+corresponding west-edge label.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.object_props.ConnectLon_on_timestep_orig">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.object_props.</span></span><span class="sig-name descname"><span class="pre">ConnectLon_on_timestep_orig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/moaap/utils/object_props.html#ConnectLon_on_timestep_orig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.object_props.ConnectLon_on_timestep_orig" title="Link to this definition"></a></dt>
 <dd><p>This function connects objects over the date line on a time-step by
 time-step basis, which makes it different from the ConnectLon function.
 This function is needed when long-living objects are first split into
@@ -788,6 +810,33 @@ This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MC
 <dl class="py function">
 <dt class="sig sig-object py" id="moaap.utils.segmentation.watershed_3d_overlap">
 <span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">watershed_3d_overlap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_treshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mintime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_size_ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#watershed_3d_overlap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.watershed_3d_overlap" title="Link to this definition"></a></dt>
+<dd><p>Perform 3D watershedding on the input data with temporal consistency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>np.ndarray</em>) – 3D matrix with data for watershedding</p></li>
+<li><p><strong>object_threshold</strong> (<em>float</em>) – Float to create binary object mast</p></li>
+<li><p><strong>max_treshold</strong> (<em>float</em>) – Value for identifying max. points for spreading</p></li>
+<li><p><strong>min_dist</strong> (<em>int</em>) – Minimum distance (in grid cells) between maximum points</p></li>
+<li><p><strong>dT</strong> (<em>int</em>) – Time interval in hours</p></li>
+<li><p><strong>mintime</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum time an object has to exist in dT, by default 24</p></li>
+<li><p><strong>connectLon</strong> (<em>int</em><em>, </em><em>optional</em>) – Do we have to track features over the date line?, by default 0</p></li>
+<li><p><strong>extend_size_ratio</strong> (<em>float</em><em>, </em><em>optional</em>) – If connectLon = 1 this key is setting the ratio of the zonal domain added to the watershedding.
+This has to be big for large objects (e.g., ARs) and can be smaller for e.g., MCSs, by default 0.25</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D matrix with watershed labels</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="moaap.utils.segmentation.watershed_3d_overlap_orig">
+<span class="sig-prename descclassname"><span class="pre">moaap.utils.segmentation.</span></span><span class="sig-name descname"><span class="pre">watershed_3d_overlap_orig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_treshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_dist</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dT</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mintime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectLon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_size_ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/moaap/utils/segmentation.html#watershed_3d_overlap_orig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#moaap.utils.segmentation.watershed_3d_overlap_orig" title="Link to this definition"></a></dt>
 <dd><p>Perform 3D watershedding on the input data with temporal consistency.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
