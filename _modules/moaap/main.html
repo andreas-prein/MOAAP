@@ -360,61 +360,101 @@
         <span class="n">connectLon</span><span class="o">=</span> <span class="mi">0</span>
 
     <span class="c1">### print out which phenomenon can be investigated</span>
-    <span class="k">if</span> <span class="n">slp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">slp_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;slp_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">slp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">slp_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">slp_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">slp_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">ivte</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ivtn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">ar_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">slp_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;slp_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;ar_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">ivte</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ivtn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">ar_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ar_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">ar_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">v850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">u850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">front_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">ar_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;ar_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;front_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">v850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">u850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">front_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">front_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">front_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">slp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> \
-       <span class="o">&amp;</span> <span class="p">(</span><span class="n">t850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">tc_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">front_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;front_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;tc_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">slp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> \
+           <span class="o">&amp;</span> <span class="p">(</span><span class="n">t850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> \
+           <span class="o">&amp;</span> <span class="p">(</span><span class="n">u850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">v850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">tc_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tc_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">tc_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="n">z500</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">z500_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">tc_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;tc_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;z500_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">z500</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">z500_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">z500_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">z500_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">z500</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">front_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">)</span> <span class="o">&amp;</span> \
-       <span class="p">(</span><span class="n">u200</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">col_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">z500_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;z500_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;col_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">z500</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">front_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">)</span> <span class="o">&amp;</span> \
+           <span class="p">(</span><span class="n">u200</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">col_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">col_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">col_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">v200</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">u200</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">jet_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">col_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;col_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;jet_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">v200</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">u200</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">jet_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">jet_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">jet_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">mcs_tb_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">jet_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;jet_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;mcs_tb_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">mcs_tb_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mcs_tb_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">mcs_tb_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">cloud_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">mcs_tb_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;mcs_tb_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;cloud_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">cloud_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cloud_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">cloud_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">q850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">v850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> \
-       <span class="p">(</span><span class="n">u850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">ms_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">cloud_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;cloud_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;ms_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">q850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">v850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> \
+           <span class="p">(</span><span class="n">u850</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">ms_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ms_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">ms_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">ew_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">ms_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;ms_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;ew_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">tb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="p">:</span>
+            <span class="n">ew_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ew_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">ew_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">sst</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">sst_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">ew_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;ew_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;sst_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sst</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">sst_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sst_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">sst_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">sm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">sm_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="n">sst_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;sst_test&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;sm_test&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">sm_test</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sm_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">sm_test</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
+        <span class="n">sm_test</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;sm_test&quot;</span><span class="p">]</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    jet_test =  &#39;no&#39;</span>
@@ -544,7 +584,7 @@
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; track tropical waves&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">mrg_objects</span><span class="p">,</span> <span class="n">igw_objects</span><span class="p">,</span> <span class="n">kelvin_objects</span><span class="p">,</span> <span class="n">eig0_objects</span><span class="p">,</span> <span class="n">er_objects</span><span class="p">,</span> \
-        <span class="n">mrg_history</span><span class="p">,</span> <span class="n">igw_history</span><span class="p">,</span> <span class="n">kelvin_history</span><span class="p">,</span> <span class="n">eig0_history</span><span class="p">,</span> <span class="n">er_history</span><span class="o">=</span> <span class="n">track_tropwaves_tb</span><span class="p">(</span>
+        <span class="n">mrg_history</span><span class="p">,</span> <span class="n">igw_history</span><span class="p">,</span> <span class="n">kelvin_history</span><span class="p">,</span> <span class="n">eig0_history</span><span class="p">,</span> <span class="n">er_history</span> <span class="o">=</span> <span class="n">track_tropwaves_tb</span><span class="p">(</span>
                         <span class="n">tb</span><span class="p">,</span>
                         <span class="n">Lat</span><span class="p">,</span>
                         <span class="n">connectLon</span><span class="p">,</span>
@@ -865,20 +905,22 @@
         <span class="n">end_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="n">timer</span><span class="p">(</span><span class="n">start_1</span><span class="p">,</span> <span class="n">end_1</span><span class="p">)</span>
 
-        
-        <span class="n">start_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        Cloud characteristics&quot;</span><span class="p">)</span>
-        <span class="n">grCs</span> <span class="o">=</span> <span class="n">calc_object_characteristics</span><span class="p">(</span><span class="n">C_objects</span><span class="p">,</span> <span class="c1"># feature object file</span>
-                             <span class="n">tb</span><span class="p">,</span>         <span class="c1"># original file used for feature detection</span>
-                             <span class="n">params</span><span class="p">[</span><span class="s2">&quot;OutputFolder&quot;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;Clouds_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">year</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">StartDay</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">SetupString</span><span class="p">,</span>
-                             <span class="n">Time</span><span class="p">,</span>            <span class="c1"># timesteps of the data</span>
-                             <span class="n">Lat</span><span class="p">,</span>             <span class="c1"># 2D latidudes</span>
-                             <span class="n">Lon</span><span class="p">,</span>             <span class="c1"># 2D Longitudes</span>
-                             <span class="n">Gridspacing</span><span class="p">,</span>
-                             <span class="n">Area</span><span class="p">,</span>
-                             <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;MinTimeC&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>      <span class="c1"># minimum livetime in hours</span>
-        <span class="n">end_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-        <span class="n">timer</span><span class="p">(</span><span class="n">start_1</span><span class="p">,</span> <span class="n">end_1</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        start_1 = time.perf_counter()</span>
+<span class="sd">        print(&quot;        Cloud characteristics&quot;)</span>
+<span class="sd">        grCs = calc_object_characteristics(C_objects, # feature object file</span>
+<span class="sd">                             tb,         # original file used for feature detection</span>
+<span class="sd">                             params[&quot;OutputFolder&quot;]+&#39;Clouds_&#39;+str(StartDay.year)+str(StartDay.month).zfill(2)+&#39;_&#39;+SetupString,</span>
+<span class="sd">                             Time,            # timesteps of the data</span>
+<span class="sd">                             Lat,             # 2D latidudes</span>
+<span class="sd">                             Lon,             # 2D Longitudes</span>
+<span class="sd">                             Gridspacing,</span>
+<span class="sd">                             Area,</span>
+<span class="sd">                             min_tsteps=int(params[&quot;MinTimeC&quot;]/dT))      # minimum livetime in hours</span>
+<span class="sd">        end_1 = time.perf_counter()</span>
+<span class="sd">        timer(start_1, end_1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">start_1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;        MCS characteristics&quot;</span><span class="p">)</span>
@@ -933,7 +975,6 @@
     <span class="k">if</span> <span class="n">tc_test</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;======&gt; Check if cyclones qualify as TCs&#39;</span><span class="p">)</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-
         <span class="n">TC_obj</span><span class="p">,</span> <span class="n">TC_Tracks</span> <span class="o">=</span> <span class="n">tc_tracking</span><span class="p">(</span><span class="n">CY_objects</span><span class="p">,</span>
                                         <span class="n">slp</span><span class="p">,</span>
                         <span class="n">t850</span><span class="p">,</span>

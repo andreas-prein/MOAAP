@@ -190,7 +190,7 @@
             <span class="c1"># check if the cyclone has strong enough wind speed</span>
             <span class="n">speed_test</span> <span class="o">=</span> <span class="p">(</span><span class="n">uv850_core</span> <span class="o">&gt;</span> <span class="mi">15</span><span class="p">)</span>
 
-            <span class="c1"># check if cyclone has strong low level winds compared to outflow</span>
+            <span class="c1"># check if cyclone has strong low-level winds compared to outflow</span>
             <span class="n">rmax_test</span> <span class="o">=</span> <span class="p">(</span><span class="n">uv850_core</span><span class="o">/</span><span class="n">uv200_core</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
 
             <span class="n">tc_sel_act</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_test</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">anvil_test</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">speed_test</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">rmax_test</span><span class="p">)</span>

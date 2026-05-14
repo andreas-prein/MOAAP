@@ -340,12 +340,12 @@
 <span class="sd">        cloud_objects (np.ndarray): labeled cloud objects of dimension [time,lat,lon]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">CL_Area</span> <span class="o">=</span> <span class="n">min_dist</span> <span class="o">*</span> <span class="n">Gridspacing</span>
+    <span class="n">CL_Area</span> <span class="o">=</span> <span class="mi">40000</span><span class="o">*</span><span class="mi">2</span> <span class="c1"># min_dist * Gridspacing</span>
    
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        track  clouds&#39;</span><span class="p">)</span>    
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;        break up long living cloud shield objects with wathershedding&#39;</span><span class="p">)</span>
     
-    <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">(((</span><span class="n">CL_Area</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mi">1000</span><span class="p">))</span><span class="o">*</span><span class="mi">4</span>
+    <span class="n">min_dist</span><span class="o">=</span><span class="nb">int</span><span class="p">(((</span><span class="n">CL_Area</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">Gridspacing</span><span class="o">/</span><span class="mi">1000</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Minimum distance between TB minima for watershed analysis: </span><span class="si">{</span><span class="n">min_dist</span><span class="si">}</span><span class="s2"> grid cells&quot;</span><span class="p">)</span>
 
     <span class="n">cloud_objects</span> <span class="o">=</span> <span class="n">watershed_3d_overlap_parallel</span><span class="p">(</span>
@@ -374,6 +374,14 @@
         <span class="n">pr_act</span><span class="p">[</span><span class="o">~</span><span class="n">pr_object_act</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">pr_act</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">min_pr</span><span class="p">:</span>
             <span class="n">cloud_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]][</span><span class="n">cloud_objects</span><span class="p">[</span><span class="n">object_indices</span><span class="p">[</span><span class="n">iobj</span><span class="p">]]</span> <span class="o">==</span> <span class="n">iobj</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># remove objects that are too short-lived</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+    <span class="n">start_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">cloud_objects</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">clean_up_objects</span><span class="p">(</span><span class="n">cloud_objects</span><span class="p">,</span>
+                                           <span class="n">dT</span><span class="p">,</span>
+                                           <span class="n">min_tsteps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="n">dT</span><span class="p">))</span>
+    <span class="n">end_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">analyze_cloud_history</span><span class="p">:</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="mi">8</span>
