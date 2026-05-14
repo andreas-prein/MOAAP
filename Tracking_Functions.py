@@ -682,12 +682,16 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
     DayStop = datetime.datetime(TIME[-1].year, TIME[-1].month, TIME[-1].day,TIME[-1].hour)
     TimeDD=pd.date_range(DayStart, end=DayStop, freq='d')
     # TimeMM=pd.date_range(DayStart, end=DayStop + relativedelta(months=+1), freq='m')
-    TimeMM=pd.date_range(DayStart, end=DayStop, freq='m')
+    TimeMM=pd.date_range(
+                            pd.Timestamp(DayStart).replace(day=1),
+                            pd.Timestamp(DayStop).replace(day=1),
+                            freq='MS'
+                        )
     if len(TimeMM) == 0:
         TimeMM = [TimeDD[0]]
 
     dT = int(divmod((TimeDD[1] - TimeDD[0]).total_seconds(), 60)[0]/60)
-    ERA5dir = '/highres_nobackup/observations/ERA5/hourly/'
+    ERA5dir = '/nfs/cumulus/highres_nobackup/observations/ERA5/hourly/'
     if PL != -1:
         DirName = str(var)+str(PL)
     else:
@@ -695,7 +699,7 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
 
     print(var)
     # read in the coordinates
-    ncid=Dataset("/highres_nobackup/observations/ERA5/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc", mode='r')
+    ncid=Dataset("/nfs/cumulus/highres_nobackup/observations/ERA5/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc", mode='r')
     Lat=np.squeeze(ncid.variables['latitude'][:])
     Lon=np.squeeze(ncid.variables['longitude'][:])
     # Zfull=np.squeeze(ncid.variables['Z'][:])
@@ -724,7 +728,7 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
 
     DataAll = np.zeros((len(TIME),Lon.shape[0],Lon.shape[1]), dtype=np.float32); DataAll[:]=np.nan
     tt=0
-    
+
     for mm in tqdm(range(len(TimeMM))):
         YYYYMM = str(TimeMM[mm].year)+str(TimeMM[mm].month).zfill(2)
         YYYY = TimeMM[mm].year
@@ -746,38 +750,82 @@ def ReadERA5_2D(TIME,      # Time period to read (this program will read hourly 
                 ncid.close()
         
         else: 
-            iRoll=0
-            ncid = Dataset("/net/atmos/data/era5-land_cds/original/swvl1/1hr/"+str(TimeMM[mm].year)+'/swvl1_1hr_era5-land_'+YYYYMM+'.nc', mode='r')
-            DATAact = np.squeeze(ncid.variables[var][TT,:,:])
-            # go to ERA5 grid
+            # iRoll=0
+            # ncid = Dataset(ERA5dir+"/swvl1/swvl1_1hr_era5-land_"+YYYYMM+'.nc', mode='r')
+            # DATAact = np.squeeze(ncid.variables[var][TT,:,:])
+            # # go to ERA5 grid
+            # latl = np.squeeze(ncid.variables["lat"][:])
+            # lonl = np.squeeze(ncid.variables["lon"][:])
+            # if mm == 0:
+            #     # -----------
+            #     # Remap ERA5-Land to ERA5
+            #     import xarray as xr
+            #     import xesmf as xe
+                
+            #     # data: np.ndarray with shape (time, lat, lon)
+            #     # lat_in: 1D (nlat,), lon_in: 1D (nlon,)
+            #     # lat_out: 1D (nlat2,), lon_out: 1D (nlon2,)
+                
+            #     da = xr.DataArray(
+            #         DATAact,
+            #         dims=("time", "lat", "lon"),
+            #         coords={"time": range(DATAact.shape[0]), "lat": latl, "lon": lonl},
+            #         name="var",
+            #     )
+                
+            #     grid_out = xr.Dataset({"lat": (["lat"], Lat[:,0]), "lon": (["lon"], Lon[0,:])})
+            #     regridder = xe.Regridder(da.to_dataset(), grid_out, method="bilinear", reuse_weights=False)
+            #     da_out = regridder(da)
+            #     DATAact = da_out.values  # shape: (time, nlat2, nlon2)
+
+
+            iRoll = 0
+            ncid = Dataset(ERA5dir + "/swvl1/swvl1_1hr_era5-land_" + YYYYMM + '.nc', mode='r')
+            DATAact = np.squeeze(ncid.variables[var][TT, :, :])
             latl = np.squeeze(ncid.variables["lat"][:])
             lonl = np.squeeze(ncid.variables["lon"][:])
+
             if mm == 0:
-                # -----------
-                # Remap ERA5-Land to ERA5
-                import xarray as xr
-                import xesmf as xe
-                
-                # data: np.ndarray with shape (time, lat, lon)
-                # lat_in: 1D (nlat,), lon_in: 1D (nlon,)
-                # lat_out: 1D (nlat2,), lon_out: 1D (nlon2,)
-                
-                da = xr.DataArray(
-                    DATAact,
-                    dims=("time", "lat", "lon"),
-                    coords={"time": range(DATAact.shape[0]), "lat": latl, "lon": lonl},
-                    name="var",
-                )
-                
-                grid_out = xr.Dataset({"lat": (["lat"], Lat[:,0]), "lon": (["lon"], Lon[0,:])})
-                regridder = xe.Regridder(da.to_dataset(), grid_out, method="bilinear", reuse_weights=False)
-                da_out = regridder(da)
-                DATAact = da_out.values  # shape: (time, nlat2, nlon2)
+                from scipy.interpolate import RegularGridInterpolator
             
+                # ensure increasing coordinates
+                if latl[0] > latl[-1]:
+                    latl = latl[::-1]
+                    DATAact = DATAact[:, ::-1, :]
+            
+                if lonl[0] > lonl[-1]:
+                    lonl = lonl[::-1]
+                    DATAact = DATAact[:, :, ::-1]
+            
+                target_lat = Lat[:, 0]
+                target_lon = Lon[0, :]
+
+                if np.min(target_lon) < 0:
+                    target_lon[target_lon < 0] = target_lon[target_lon < 0] + 360
+
+            
+                lon2d, lat2d = np.meshgrid(target_lon, target_lat)
+                points = np.column_stack([lat2d.ravel(), lon2d.ravel()])
+            
+            out = np.empty((DATAact.shape[0], len(target_lat), len(target_lon)), dtype=DATAact.dtype)
+        
+            for t in range(DATAact.shape[0]):
+                f = RegularGridInterpolator(
+                    (latl, lonl),
+                    DATAact[t, :, :],
+                    method="linear",
+                    bounds_error=False,
+                    fill_value=np.nan,
+                )
+                out[t, :, :] = f(points).reshape(len(target_lat), len(target_lon))
+            out[np.abs(out) > 9999] = np.nan
+            DATAact = out
+
         # cut out region
         if len(DATAact.shape) == 2:
             DATAact=DATAact[None,:,:]
         DATAact=np.roll(DATAact,iRoll, axis=2)
+
         if iRoll != 0:
             DATAact = DATAact[:,:,iWest:iEeast]
         try:

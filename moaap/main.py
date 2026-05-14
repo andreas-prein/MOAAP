@@ -285,61 +285,101 @@ def moaap(
         connectLon= 0
 
     ### print out which phenomenon can be investigated
-    if slp is not None:
-        slp_test = 'yes'
+    if params["slp_test"] == None:
+        if slp is not None:
+            slp_test = 'yes'
+        else:
+            slp_test = 'no'
     else:
-        slp_test = 'no'
-    if (ivte is not None) & (ivtn is not None):
-        ar_test = 'yes'
+        slp_test = params["slp_test"]
+    if params["ar_test"] == None:
+        if (ivte is not None) & (ivtn is not None):
+            ar_test = 'yes'
+        else:
+            ar_test = 'no'
     else:
-        ar_test = 'no'
-    if (v850 is not None) & (u850 is not None) & (t850 is not None):
-        front_test = 'yes'
+        ar_test = params["ar_test"]
+    if params["front_test"] == None:
+        if (v850 is not None) & (u850 is not None) & (t850 is not None):
+            front_test = 'yes'
+        else:
+            front_test = 'no'
     else:
-        front_test = 'no'
-    if (slp is not None) & (tb is not None) \
-       & (t850 is not None) & (pr is not None):
-        tc_test = 'yes'
+        front_test = params["front_test"]
+    if params["tc_test"] == None:
+        if (slp is not None) & (tb is not None) \
+           & (t850 is not None) \
+           & (u850 is not None) & (v850 is not None):
+            tc_test = 'yes'
+        else:
+            tc_test = 'no'
     else:
-        tc_test = 'no'
-    if z500 is not None:
-        z500_test = 'yes'
+        tc_test = params["tc_test"]
+    if params["z500_test"] == None:
+        if z500 is not None:
+            z500_test = 'yes'
+        else:
+            z500_test = 'no'
     else:
-        z500_test = 'no'
-    if (z500 is not None) & (front_test == 'yes') & \
-       (u200 is not None):
-        col_test = 'yes'
+        z500_test = params["z500_test"]
+    if params["col_test"] == None:
+        if (z500 is not None) & (front_test == 'yes') & \
+           (u200 is not None):
+            col_test = 'yes'
+        else:
+            col_test = 'no'
     else:
-        col_test = 'no'
-    if (v200 is not None) & (u200 is not None):
-        jet_test = 'yes'
+        col_test = params["col_test"]
+    if params["jet_test"] == None:
+        if (v200 is not None) & (u200 is not None):
+            jet_test = 'yes'
+        else:
+            jet_test = 'no'
     else:
-        jet_test = 'no'
-    if (pr is not None) & (tb is not None):
-        mcs_tb_test = 'yes'
+        jet_test = params["jet_test"]
+    if params["mcs_tb_test"] == None:
+        if (pr is not None) & (tb is not None):
+            mcs_tb_test = 'yes'
+        else:
+            mcs_tb_test = 'no'
     else:
-        mcs_tb_test = 'no'
-    if (pr is not None) & (tb is not None):
-        cloud_test = 'yes'
+        mcs_tb_test = params["mcs_tb_test"]
+    if params["cloud_test"] == None:
+        if (pr is not None) & (tb is not None):
+            cloud_test = 'yes'
+        else:
+            cloud_test = 'no'
     else:
-        cloud_test = 'no'
-    if (q850 is not None) & (v850 is not None) & \
-       (u850 is not None):
-        ms_test = 'yes'
+        cloud_test = params["cloud_test"]
+    if params["ms_test"] == None:
+        if (q850 is not None) & (v850 is not None) & \
+           (u850 is not None):
+            ms_test = 'yes'
+        else:
+            ms_test = 'no'
     else:
-        ms_test = 'no'
-    if (pr is not None):
-        ew_test = 'yes'
+        ms_test = params["ms_test"]
+    if params["ew_test"] == None:
+        if (tb is not None) & (pr is not None) :
+            ew_test = 'yes'
+        else:
+            ew_test = 'no'
     else:
-        ew_test = 'no'
-    if (sst is not None):
-        sst_test = 'yes'
+        ew_test = params["ew_test"]
+    if params["sst_test"] == None:
+        if (sst is not None):
+            sst_test = 'yes'
+        else:
+            sst_test = 'no'
     else:
-        sst_test = 'no'
-    if (sm is not None):
-        sm_test = 'yes'
+        sst_test = params["sst_test"]
+    if params["sm_test"] == None:
+        if (sm is not None):
+            sm_test = 'yes'
+        else:
+            sm_test = 'no'
     else:
-        sm_test = 'no'
+        sm_test = params["sm_test"]
 
     """
     jet_test =  'no'
@@ -469,7 +509,7 @@ def moaap(
         print('======> track tropical waves')
         start = time.perf_counter()
         mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects, \
-        mrg_history, igw_history, kelvin_history, eig0_history, er_history= track_tropwaves_tb(
+        mrg_history, igw_history, kelvin_history, eig0_history, er_history = track_tropwaves_tb(
                         tb,
                         Lat,
                         connectLon,
@@ -790,7 +830,8 @@ def moaap(
         end_1 = time.perf_counter()
         timer(start_1, end_1)
 
-        
+
+        """
         start_1 = time.perf_counter()
         print("        Cloud characteristics")
         grCs = calc_object_characteristics(C_objects, # feature object file
@@ -804,6 +845,7 @@ def moaap(
                              min_tsteps=int(params["MinTimeC"]/dT))      # minimum livetime in hours
         end_1 = time.perf_counter()
         timer(start_1, end_1)
+        """
 
         start_1 = time.perf_counter()
         print("        MCS characteristics")
@@ -858,7 +900,6 @@ def moaap(
     if tc_test == 'yes':
         print('======> Check if cyclones qualify as TCs')
         start = time.perf_counter()
-
         TC_obj, TC_Tracks = tc_tracking(CY_objects,
                                         slp,
                         t850,

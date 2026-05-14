@@ -53,8 +53,8 @@ def jetstream_tracking(
         #smoothed_data = smooth_spatial_gaussian(uv200, 80, Gridspacing)
 
         uv200_smooth = smooth_uniform(uv200,
-                                 1,
-                                 int(250/(Gridspacing/1000.)))
+                                 int(6/dT),
+                                 int(500/(Gridspacing/1000.))) #int(250/(Gridspacing/1000.)))
         uv200smoothAn = smooth_uniform(uv200,
                                      int(78/dT),
                                      int(int(5000/(Gridspacing/1000.))))
@@ -62,7 +62,7 @@ def jetstream_tracking(
         uv200_Anomaly = uv200_smooth - uv200smoothAn
         jet_objects = watershed_3d_overlap_parallel(uv200_Anomaly,
                                     js_min_anomaly,
-                                    js_min_anomaly * 1.1,
+                                    js_min_anomaly * 1.1, # 1.1
                                     int(2500 * 10**3/Gridspacing), # this setting sets the size of jet objects
                                     dT,
                                     mintime = MinTimeJS,

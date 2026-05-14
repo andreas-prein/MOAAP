@@ -262,12 +262,12 @@ def cloud_tracking(
         cloud_objects (np.ndarray): labeled cloud objects of dimension [time,lat,lon]
     """
 
-    CL_Area = min_dist * Gridspacing
+    CL_Area = 40000*2 # min_dist * Gridspacing
    
     print('        track  clouds')    
     print('        break up long living cloud shield objects with wathershedding')
     
-    min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))*4
+    min_dist=int(((CL_Area/np.pi)**0.5)/(Gridspacing/1000))
     print(f"    Minimum distance between TB minima for watershed analysis: {min_dist} grid cells")
 
     cloud_objects = watershed_3d_overlap_parallel(
@@ -296,6 +296,14 @@ def cloud_tracking(
         pr_act[~pr_object_act] = np.nan
         if np.nanmax(pr_act) < min_pr:
             cloud_objects[object_indices[iobj]][cloud_objects[object_indices[iobj]] == iobj+1] = 0
+
+    # remove objects that are too short-lived
+    import time
+    start_t = time.time()
+    cloud_objects, _ = clean_up_objects(cloud_objects,
+                                           dT,
+                                           min_tsteps=int(3/dT))
+    end_t = time.time()
 
     if analyze_cloud_history:
         min_dist=8

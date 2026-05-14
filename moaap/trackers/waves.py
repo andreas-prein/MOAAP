@@ -69,10 +69,15 @@ def track_tropwaves_tb(tb,
     tb_eq = tb_eq * win[:, None, None]
     pad_size = int(tb_eq.shape[0] * 0.2)
     tb_eq = np.pad(tb_eq, ((pad_size,pad_size),(0,0),(0,0)), mode='reflect')
-     
+
+    # remove high-latitude regions to speeed up the processing and reduce memory loading
+    lat_cut = (np.abs(Lat[:,0]) <= 25)
+    tb_eq = tb_eq[:,lat_cut,:]
     tb_eq = interpolate_temporal(tb_eq)
     tropical_waves = KFfilter(tb_eq,
                      int(24/dT))
+    del tb_eq
+    gc.collect()
 
     wave_names = ['ER','MRG','IGW','Kelvin','Eig0']
 
@@ -186,8 +191,30 @@ def track_tropwaves_tb(tb,
 
         del wave
         del wave_objects
+        del amplitude
+        del wave_amp
+        del union_array, events, histories, history_obj
         gc.collect()
-    return mrg_objects, igw_objects, kelvin_objects, eig0_objects, er_objects, \
+
+    # bring matrices back to full lat range
+    mrg_objects_f = np.zeros((tb.shape[0],tb.shape[1],tb.shape[2]), dtype=er_objects.dtype)
+    mrg_objects_f[:,lat_cut,:] = mrg_objects
+    del mrg_objects
+    igw_objects_f = np.zeros((tb.shape[0],tb.shape[1],tb.shape[2]), dtype=er_objects.dtype)
+    igw_objects_f[:,lat_cut,:] = igw_objects
+    del igw_objects
+    kelvin_objects_f = np.zeros((tb.shape[0],tb.shape[1],tb.shape[2]), dtype=er_objects.dtype)
+    kelvin_objects_f[:,lat_cut,:] = kelvin_objects
+    del kelvin_objects
+    eig0_objects_f = np.zeros((tb.shape[0],tb.shape[1],tb.shape[2]), dtype=er_objects.dtype)
+    eig0_objects_f[:,lat_cut,:] = eig0_objects
+    del eig0_objects
+    er_objects_f = np.zeros((tb.shape[0],tb.shape[1],tb.shape[2]), dtype=er_objects.dtype)
+    er_objects_f[:,lat_cut,:] = er_objects
+    del er_objects
+    gc.collect()
+    
+    return mrg_objects_f, igw_objects_f, kelvin_objects_f, eig0_objects_f, er_objects_f, \
            mrg_history, igw_history, kelvin_history, eig0_history, er_history
 
 class KFfilter:

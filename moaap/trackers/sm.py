@@ -54,7 +54,7 @@ def sm_anom_tracking(
     xy_win = _to_cells(SM_BG_spatial_km, Gridspacing)
 
 
-    bg = smooth_uniform(sm, t_win, 1)
+    #bg = smooth_uniform(sm, t_win, 1)
 
     from scipy.ndimage import uniform_filter1d
     bg = uniform_filter1d(sm, size=t_win, axis=0, mode="wrap")
@@ -66,7 +66,7 @@ def sm_anom_tracking(
 
     # --------------------------------------------------
     # --------------------------------------------------
-    # Start working on warm features
+    # Start working on wet features
     # --------------------------------------------------   
     # --------------------------------------------------
     objects = watershed_3d_overlap_parallel(
@@ -78,7 +78,6 @@ def sm_anom_tracking(
         mintime=0,
         connectLon=0,
     )
-
 
     # --------------------------------------------------
     # Lifetime cleanup
@@ -122,7 +121,7 @@ def sm_anom_tracking(
 
     # --------------------------------------------------
     # --------------------------------------------------
-    # Start working on cold features
+    # Start working on dry features
     # --------------------------------------------------   
     # --------------------------------------------------
     objects = watershed_3d_overlap_parallel(

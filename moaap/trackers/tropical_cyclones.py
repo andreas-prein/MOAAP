@@ -115,7 +115,7 @@ def tc_tracking(CY_objects,
             # check if the cyclone has strong enough wind speed
             speed_test = (uv850_core > 15)
 
-            # check if cyclone has strong low level winds compared to outflow
+            # check if cyclone has strong low-level winds compared to outflow
             rmax_test = (uv850_core/uv200_core) > 1
 
             tc_sel_act = (t_test) & (anvil_test) & (speed_test) & (rmax_test)

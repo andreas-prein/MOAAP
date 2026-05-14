@@ -126,4 +126,20 @@ MOAAP_DEFAULTS = {
     "MinAreaSM_ANOM": 500,       # km2
     "breakup_sm_anom": "watershed",
     "analyze_sm_anom_history": True,
+
+    # these keys can be used to enable or disable the tracking of specific features
+    # None lets moaap decide what to track based on the available variables. Otherwise, set "yes" or "no"
+    "jet_test" :  None,
+    "slp_test" : None,
+    "z500_test" :  None,
+    "col_test" : None,
+    "ar_test" :  None,
+    "ms_test" :  None,
+    "front_test" :  None,
+    "tc_test" : None,
+    "mcs_tb_test" :  None,
+    "cloud_test" :  None,
+    "ew_test" :  None,
+    "sst_test" : None,
+    "sm_test" : None
 }
